@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>DRMS - Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            font-size: 24px;
+        }
+
+        header p {
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
+
+        .welcome {
+            margin-bottom: 25px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.07);
+        }
+
+        .card h2 {
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .logout {
+            margin-top: 30px;
+            background: #dc2626;
+        }
+
+        .logout:hover {
+            background: #b91c1c;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>DRMS</h1>
+        <p>Digital Results Management System</p>
+    </header>
+
+    <div class="container">
+
+        <div class="welcome">
+            <h2>Administrator Dashboard</h2>
+            <p>Welcome, Owner</p>
+        </div>
+
+        <div class="cards">
+
+            <div class="card">
+                <h2>📤 Upload Results</h2>
+
+                <p>
+                    Upload learner results using Excel or PDF.
+                </p>
+
+                <button onclick="uploadResults()">
+                    Upload Results
+                </button>
+            </div>
+
+
+            <div class="card">
+                <h2>📁 Uploaded Results</h2>
+
+                <p>
+                    View files that have been uploaded.
+                </p>
+
+                <button onclick="viewUploads()">
+                    View Uploads
+                </button>
+            </div>
+
+
+            <div class="card">
+                <h2>🏫 Schools</h2>
+
+                <p>
+                    Manage schools and administrators.
+                </p>
+
+                <button onclick="manageSchools()">
+                    Manage Schools
+                </button>
+            </div>
+
+        </div>
+
+        <button class="logout" onclick="logout()">
+            Logout
+        </button>
+
+    </div>
+
+
+    <script>
+
+        function uploadResults() {
+            alert("Results upload section coming next.");
+        }
+
+
+        function viewUploads() {
+            alert("Uploaded results section coming next.");
+        }
+
+
+        function manageSchools() {
+            alert("School management section coming next.");
+        }
+
+
+        function logout() {
+            window.location.href = "admin.html";
+        }
+
+    </script>
+
+</body>
+</html>
