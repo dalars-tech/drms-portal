@@ -149,18 +149,41 @@
 
     </div>
 
-    <script>
-        document
-            .getElementById("loginForm")
-            .addEventListener("submit", function(event) {
+   <script>
+    document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function(event) {
 
-                event.preventDefault();
+            event.preventDefault();
 
-                document.getElementById("message").textContent =
-                    "Login will be connected to Supabase next.";
+            const email =
+                document.getElementById("email").value.trim();
 
-            });
-    </script>
+            const password =
+                document.getElementById("password").value;
+
+            const message =
+                document.getElementById("message");
+
+            message.textContent = "Signing in...";
+
+            const { data, error } =
+                await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+            if (error) {
+
+                message.textContent =
+                    "Login failed: " + error.message;
+
+                return;
+            }
+
+            window.location.href = "dashboard.html";
+        });
+</script>
 
 </body>
 </html>
