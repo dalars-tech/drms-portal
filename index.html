@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>DRMS - Digital Results Management System</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .admin-link {
+            display: block;
+            margin-top: 25px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>DRMS</h1>
+
+        <p class="subtitle">
+            Digital Results Management System
+        </p>
+
+        <h2>Check Learner Results</h2>
+
+        <br>
+
+        <input
+            type="text"
+            id="assessmentNumber"
+            placeholder="Enter Assessment Number"
+        >
+
+        <button onclick="searchResults()">
+            Search Results
+        </button>
+
+        <a href="admin.html" class="admin-link">
+            Administrator Login
+        </a>
+
+    </div>
+
+    <script>
+        function searchResults() {
+
+            const assessmentNumber =
+                document.getElementById("assessmentNumber").value.trim();
+
+            if (!assessmentNumber) {
+                alert("Please enter an Assessment Number.");
+                return;
+            }
+
+            alert(
+                "Results search will be connected to the database next."
+            );
+        }
+    </script>
+
+</body>
+</html>
