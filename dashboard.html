@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>DRMS - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
 
     <style>
         * {
@@ -153,28 +155,59 @@
     </div>
 
 
-    <script>
+   <script>
 
-        function uploadResults() {
-            alert("Results upload section coming next.");
-        }
+    async function checkLogin() {
 
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
 
-        function viewUploads() {
-            alert("Uploaded results section coming next.");
-        }
-
-
-        function manageSchools() {
-            alert("School management section coming next.");
-        }
-
-
-        function logout() {
+        if (!session) {
             window.location.href = "admin.html";
+            return;
         }
 
-    </script>
+        const { data: profile } =
+            await supabaseClient
+                .from("admin_profiles")
+                .select("full_name, role")
+                .eq("id", session.user.id)
+                .single();
+
+        if (profile) {
+            document.querySelector(".welcome p").textContent =
+                "Welcome, " + (profile.full_name || "Administrator");
+        }
+    }
+
+
+    async function logout() {
+
+        await supabaseClient.auth.signOut();
+
+        window.location.href = "admin.html";
+    }
+
+
+    function uploadResults() {
+        alert("Results upload section coming next.");
+    }
+
+
+    function viewUploads() {
+        alert("Uploaded results section coming next.");
+    }
+
+
+    function manageSchools() {
+        alert("School management section coming next.");
+    }
+
+
+    checkLogin();
+
+</script>
 
 </body>
 </html>
