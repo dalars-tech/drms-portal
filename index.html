@@ -6,39 +6,66 @@
 
     <title>DRMS - Digital Results Management System</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
         }
 
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
             background: #f4f7fb;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: #222;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 25px 15px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        header p {
+            margin: 8px 0 0;
         }
 
         .container {
-            width: 90%;
-            max-width: 500px;
+            width: 92%;
+            max-width: 700px;
+            margin: 35px auto;
+        }
+
+        .card {
             background: white;
-            padding: 40px 30px;
-            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-top: 0;
             text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
 
-        h1 {
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
+        .description {
+            text-align: center;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
         }
 
         input {
@@ -65,28 +92,78 @@
             background: #1d4ed8;
         }
 
-        .admin-link {
-            display: block;
-            margin-top: 25px;
-            color: #2563eb;
-            text-decoration: none;
+        .admin-button {
+            background: #111827;
+        }
+
+        .admin-button:hover {
+            background: #000;
+        }
+
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 11px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-row strong {
+            color: #333;
+        }
+
+        .aggregate {
+            margin-top: 20px;
+            padding: 18px;
+            background: #eef4ff;
+            border-radius: 10px;
+        }
+
+        .logout {
+            background: #dc2626;
+            margin-top: 15px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
+<header>
+    <h1>DRMS</h1>
+    <p>Digital Results Management System</p>
+</header>
 
-        <h1>DRMS</h1>
 
-        <p class="subtitle">
-            Digital Results Management System
-        </p>
+<div class="container">
+
+    <!-- PARENT PORTAL -->
+
+    <div class="card">
 
         <h2>Check Learner Results</h2>
 
-        <br>
+        <p class="description">
+            Enter the learner's Assessment Number to view results.
+        </p>
+
+        <label for="assessmentNumber">
+            Assessment Number
+        </label>
 
         <input
             type="text"
@@ -98,28 +175,307 @@
             Search Results
         </button>
 
-        <a href="admin.html" class="admin-link">
-            Administrator Login
-        </a>
+        <div id="searchMessage" class="message"></div>
 
     </div>
 
-    <script>
-        function searchResults() {
 
-            const assessmentNumber =
-                document.getElementById("assessmentNumber").value.trim();
+    <!-- RESULTS -->
 
-            if (!assessmentNumber) {
-                alert("Please enter an Assessment Number.");
-                return;
+    <div id="resultsCard" class="card hidden">
+
+        <h2>Learner Results</h2>
+
+        <div class="result-row">
+            <strong>Assessment Number</strong>
+            <span id="resultAssessment"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Learner Name</strong>
+            <span id="resultName"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Grade</strong>
+            <span id="resultGrade"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Class</strong>
+            <span id="resultClass"></span>
+        </div>
+
+        <br>
+
+        <div class="result-row">
+            <strong>Mathematics</strong>
+            <span id="mathematics"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>English</strong>
+            <span id="english"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Kiswahili</strong>
+            <span id="kiswahili"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Integrated Science</strong>
+            <span id="integratedScience"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Social Studies</strong>
+            <span id="socialStudies"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>CRE/IRE</strong>
+            <span id="creIre"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Agriculture</strong>
+            <span id="agriculture"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Creative Arts and Sports</strong>
+            <span id="creativeArtsSports"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Pre-Technical Studies</strong>
+            <span id="preTechnical"></span>
+        </div>
+
+
+        <div class="aggregate">
+
+            <div class="result-row">
+                <strong>Aggregate Points</strong>
+                <span id="aggregatePoints"></span>
+            </div>
+
+            <div class="result-row">
+                <strong>Aggregate Rubrics</strong>
+                <span id="aggregateRubrics"></span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ADMIN LOGIN -->
+
+    <div class="card">
+
+        <h2>Administrator</h2>
+
+        <p class="description">
+            Authorized administrators only.
+        </p>
+
+        <input
+            type="email"
+            id="adminEmail"
+            placeholder="Administrator Email"
+        >
+
+        <input
+            type="password"
+            id="adminPassword"
+            placeholder="Password"
+        >
+
+        <button
+            class="admin-button"
+            onclick="adminLogin()"
+        >
+            Administrator Sign In
+        </button>
+
+        <div id="loginMessage" class="message"></div>
+
+    </div>
+
+</div>
+
+
+<footer>
+    © 2026 Digital Results Management System
+</footer>
+
+
+<script>
+
+async function searchResults() {
+
+    const assessmentNumber =
+        document
+        .getElementById("assessmentNumber")
+        .value
+        .trim();
+
+    const message =
+        document.getElementById("searchMessage");
+
+    const resultsCard =
+        document.getElementById("resultsCard");
+
+
+    if (!assessmentNumber) {
+
+        message.textContent =
+            "Please enter an Assessment Number.";
+
+        resultsCard.classList.add("hidden");
+
+        return;
+    }
+
+
+    message.textContent = "Searching...";
+
+
+    const { data, error } =
+        await supabaseClient.rpc(
+            "search_learner_result",
+            {
+                search_assessment_number:
+                    assessmentNumber
             }
+        );
 
-            alert(
-                "Results search will be connected to the database next."
-            );
-        }
-    </script>
+
+    if (error) {
+
+        console.error(error);
+
+        message.textContent =
+            "Unable to search results.";
+
+        resultsCard.classList.add("hidden");
+
+        return;
+    }
+
+
+    if (!data) {
+
+        message.textContent =
+            "No learner found with that Assessment Number.";
+
+        resultsCard.classList.add("hidden");
+
+        return;
+    }
+
+
+    message.textContent = "";
+
+
+    document.getElementById("resultAssessment").textContent =
+        data.assessment_number || "";
+
+    document.getElementById("resultName").textContent =
+        data.learner_name || "";
+
+    document.getElementById("resultGrade").textContent =
+        data.grade || "";
+
+    document.getElementById("resultClass").textContent =
+        data.class || "";
+
+
+    document.getElementById("mathematics").textContent =
+        data.mathematics ?? "";
+
+    document.getElementById("english").textContent =
+        data.english ?? "";
+
+    document.getElementById("kiswahili").textContent =
+        data.kiswahili ?? "";
+
+    document.getElementById("integratedScience").textContent =
+        data.integrated_science ?? "";
+
+    document.getElementById("socialStudies").textContent =
+        data.social_studies ?? "";
+
+    document.getElementById("creIre").textContent =
+        data.cre_ire ?? "";
+
+    document.getElementById("agriculture").textContent =
+        data.agriculture ?? "";
+
+    document.getElementById("creativeArtsSports").textContent =
+        data.creative_arts_sports ?? "";
+
+    document.getElementById("preTechnical").textContent =
+        data.pre_technical_studies ?? "";
+
+
+    document.getElementById("aggregatePoints").textContent =
+        data.aggregate_points ?? "";
+
+    document.getElementById("aggregateRubrics").textContent =
+        data.aggregate_rubrics ?? "";
+
+
+    resultsCard.classList.remove("hidden");
+}
+
+
+async function adminLogin() {
+
+    const email =
+        document.getElementById("adminEmail").value.trim();
+
+    const password =
+        document.getElementById("adminPassword").value;
+
+    const message =
+        document.getElementById("loginMessage");
+
+
+    if (!email || !password) {
+
+        message.textContent =
+            "Enter your email and password.";
+
+        return;
+    }
+
+
+    message.textContent = "Signing in...";
+
+
+    const { error } =
+        await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+
+    if (error) {
+
+        message.textContent =
+            "Login failed: " + error.message;
+
+        return;
+    }
+
+
+    window.location.href = "dashboard.html";
+}
+
+</script>
 
 </body>
 </html>
