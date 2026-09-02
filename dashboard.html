@@ -89,6 +89,55 @@
         .logout:hover {
             background: #b91c1c;
         }
+
+        .upload-status,
+        .uploads-list {
+            margin-top: 15px;
+        }
+
+        .upload-status {
+            min-height: 20px;
+            color: #374151;
+        }
+
+        .uploads-list {
+            list-style: none;
+        }
+
+        .uploads-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .uploads-list a {
+            color: #2563eb;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .uploads-list a:hover {
+            text-decoration: underline;
+        }
+
+        .uploads-empty {
+            color: #666;
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 500px) {
+            .uploads-list li {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 
@@ -118,6 +167,16 @@
                 <button onclick="uploadResults()">
                     Upload Results
                 </button>
+
+                <input
+                    id="resultsFile"
+                    type="file"
+                    accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    hidden
+                    onchange="handleResultsFile(this)"
+                >
+
+                <div id="uploadStatus" class="upload-status" aria-live="polite"></div>
             </div>
 
 
@@ -131,6 +190,8 @@
                 <button onclick="viewUploads()">
                     View Uploads
                 </button>
+
+                <ul id="uploadsList" class="uploads-list"></ul>
             </div>
 
 
@@ -179,6 +240,8 @@
             document.querySelector(".welcome p").textContent =
                 "Welcome, " + (profile.full_name || "Administrator");
         }
+
+        await viewUploads();
     }
 
 
@@ -191,12 +254,142 @@
 
 
     function uploadResults() {
-        alert("Results upload section coming next.");
+        document.getElementById("resultsFile").click();
     }
 
 
-    function viewUploads() {
-        alert("Uploaded results section coming next.");
+    async function handleResultsFile(input) {
+        const file = input.files[0];
+        const status = document.getElementById("uploadStatus");
+        const uploadButton = input.previousElementSibling;
+
+        if (!file) {
+            return;
+        }
+
+        const allowedExtensions = ["xlsx", "xls", "pdf"];
+        const extension = file.name.split(".").pop().toLowerCase();
+
+        if (!allowedExtensions.includes(extension)) {
+            status.textContent = "Please choose an Excel or PDF file.";
+            input.value = "";
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            status.textContent = "The file must be smaller than 10 MB.";
+            input.value = "";
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "admin.html";
+            return;
+        }
+
+        uploadButton.disabled = true;
+        status.textContent = "Uploading...";
+
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `${session.user.id}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+
+        const { error: uploadError } = await supabaseClient
+            .storage
+            .from("results")
+            .upload(filePath, file, {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: file.type || "application/octet-stream"
+            });
+
+        if (uploadError) {
+            status.textContent = `Upload failed: ${uploadError.message}`;
+            uploadButton.disabled = false;
+            input.value = "";
+            return;
+        }
+
+        const { error: recordError } = await supabaseClient
+            .from("result_uploads")
+            .insert({
+                file_name: file.name,
+                storage_path: filePath,
+                file_type: file.type,
+                uploaded_by: session.user.id
+            });
+
+        if (recordError) {
+            await supabaseClient.storage.from("results").remove([filePath]);
+            status.textContent = `Upload details could not be saved: ${recordError.message}`;
+            uploadButton.disabled = false;
+            input.value = "";
+            return;
+        }
+
+        status.textContent = "Results uploaded successfully.";
+        uploadButton.disabled = false;
+        input.value = "";
+        await viewUploads();
+    }
+
+
+    async function viewUploads() {
+        const list = document.getElementById("uploadsList");
+        list.innerHTML = "<li>Loading uploads...</li>";
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "admin.html";
+            return;
+        }
+
+        const { data: uploads, error } = await supabaseClient
+            .from("result_uploads")
+            .select("id, file_name, storage_path, uploaded_at")
+            .eq("uploaded_by", session.user.id)
+            .order("uploaded_at", { ascending: false });
+
+        if (error) {
+            list.innerHTML = `<li class="uploads-empty">Could not load uploads: ${error.message}</li>`;
+            return;
+        }
+
+        list.innerHTML = "";
+
+        if (!uploads.length) {
+            list.innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
+            return;
+        }
+
+        for (const upload of uploads) {
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(upload.storage_path, 3600);
+
+            const item = document.createElement("li");
+            const name = document.createElement("span");
+            name.textContent = upload.file_name;
+            item.appendChild(name);
+
+            if (!urlError) {
+                const link = document.createElement("a");
+                link.href = signedUrl.signedUrl;
+                link.target = "_blank";
+                link.rel = "noopener";
+                link.textContent = "Download";
+                item.appendChild(link);
+            }
+
+            list.appendChild(item);
+        }
     }
 
 
