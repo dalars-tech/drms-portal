@@ -190,6 +190,34 @@
             background: #d1d5db;
         }
 
+        .school-toolbar {
+            margin-bottom: 14px;
+        }
+
+        .school-search {
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .school-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-school {
+            background: #0f766e;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .edit-school:hover {
+            background: #115e59;
+        }
+
         .upload-status,
         .uploads-list {
             margin-top: 15px;
@@ -322,11 +350,15 @@
                 <button type="button" class="close-school" onclick="closeSchools()">Close</button>
             </div>
 
-            <form class="school-form" onsubmit="event.preventDefault(); addSchool();">
+            <form class="school-form" onsubmit="event.preventDefault(); saveSchool();">
                 <input id="schoolName" type="text" placeholder="School name" required>
                 <input id="schoolAdmin" type="text" placeholder="Administrator name">
-                <button type="submit">Add School</button>
+                <button id="schoolSubmitButton" type="submit">Add School</button>
             </form>
+
+            <div class="school-toolbar">
+                <input id="schoolSearch" class="school-search" type="search" placeholder="Search schools...">
+            </div>
 
             <div id="schoolStatus" class="school-status" aria-live="polite"></div>
             <ul id="schoolsList" class="schools-list"></ul>
@@ -511,7 +543,29 @@
     }
 
 
-    async function renderSchools() {
+    let editingSchoolId = null;
+
+    function resetSchoolForm() {
+        const nameInput = document.getElementById("schoolName");
+        const adminInput = document.getElementById("schoolAdmin");
+        const submitButton = document.getElementById("schoolSubmitButton");
+
+        editingSchoolId = null;
+
+        if (nameInput) {
+            nameInput.value = "";
+        }
+
+        if (adminInput) {
+            adminInput.value = "";
+        }
+
+        if (submitButton) {
+            submitButton.textContent = "Add School";
+        }
+    }
+
+    async function renderSchools(searchTerm = "") {
         const list = document.getElementById("schoolsList");
         const status = document.getElementById("schoolStatus");
 
@@ -548,14 +602,23 @@
             status.textContent = "";
         }
 
-        if (!schools || !schools.length) {
+        const normalizedTerm = (searchTerm || "").trim().toLowerCase();
+        const filteredSchools = normalizedTerm
+            ? schools.filter((school) => {
+                const schoolName = (school.school_name || "").toLowerCase();
+                const adminName = (school.administrator_name || "").toLowerCase();
+                return schoolName.includes(normalizedTerm) || adminName.includes(normalizedTerm);
+            })
+            : schools;
+
+        if (!filteredSchools || !filteredSchools.length) {
             list.innerHTML = "<li class='schools-empty'>No schools added yet.</li>";
             return;
         }
 
         list.innerHTML = "";
 
-        schools.forEach((school) => {
+        filteredSchools.forEach((school) => {
             const item = document.createElement("li");
 
             const meta = document.createElement("div");
@@ -569,6 +632,33 @@
 
             meta.appendChild(name);
             meta.appendChild(admin);
+
+            const actions = document.createElement("div");
+            actions.className = "school-actions";
+
+            const editButton = document.createElement("button");
+            editButton.type = "button";
+            editButton.className = "edit-school";
+            editButton.textContent = "Edit";
+            editButton.addEventListener("click", () => {
+                const nameInput = document.getElementById("schoolName");
+                const adminInput = document.getElementById("schoolAdmin");
+                const submitButton = document.getElementById("schoolSubmitButton");
+
+                editingSchoolId = school.id;
+
+                if (nameInput) {
+                    nameInput.value = school.school_name || "";
+                }
+
+                if (adminInput) {
+                    adminInput.value = school.administrator_name || "";
+                }
+
+                if (submitButton) {
+                    submitButton.textContent = "Update School";
+                }
+            });
 
             const removeButton = document.createElement("button");
             removeButton.type = "button";
@@ -597,16 +687,23 @@
                     return;
                 }
 
-                renderSchools();
+                if (editingSchoolId === school.id) {
+                    resetSchoolForm();
+                }
+
+                renderSchools(document.getElementById("schoolSearch")?.value || "");
             });
 
+            actions.appendChild(editButton);
+            actions.appendChild(removeButton);
+
             item.appendChild(meta);
-            item.appendChild(removeButton);
+            item.appendChild(actions);
             list.appendChild(item);
         });
     }
 
-    async function addSchool() {
+    async function saveSchool() {
         const nameInput = document.getElementById("schoolName");
         const adminInput = document.getElementById("schoolAdmin");
         const status = document.getElementById("schoolStatus");
@@ -634,27 +731,44 @@
             return;
         }
 
-        const { error } = await supabaseClient
-            .from("schools")
-            .insert({
-                school_name: name,
-                administrator_name: admin || null,
-                created_by: session.user.id
-            });
+        if (editingSchoolId) {
+            const { error } = await supabaseClient
+                .from("schools")
+                .update({
+                    school_name: name,
+                    administrator_name: admin || null
+                })
+                .eq("id", editingSchoolId)
+                .eq("created_by", session.user.id);
 
-        if (error) {
-            if (status) {
-                status.textContent = `Could not save school: ${error.message}`;
+            if (error) {
+                if (status) {
+                    status.textContent = `Could not update school: ${error.message}`;
+                }
+                return;
             }
-            return;
+        } else {
+            const { error } = await supabaseClient
+                .from("schools")
+                .insert({
+                    school_name: name,
+                    administrator_name: admin || null,
+                    created_by: session.user.id
+                });
+
+            if (error) {
+                if (status) {
+                    status.textContent = `Could not save school: ${error.message}`;
+                }
+                return;
+            }
         }
 
-        nameInput.value = "";
-        adminInput.value = "";
+        resetSchoolForm();
         if (status) {
             status.textContent = "";
         }
-        renderSchools();
+        renderSchools(document.getElementById("schoolSearch")?.value || "");
     }
 
     function closeSchools() {
@@ -662,6 +776,7 @@
         if (manager) {
             manager.hidden = true;
         }
+        resetSchoolForm();
     }
 
     function manageSchools() {
@@ -672,9 +787,18 @@
 
         manager.hidden = !manager.hidden;
         if (!manager.hidden) {
-            renderSchools();
+            renderSchools(document.getElementById("schoolSearch")?.value || "");
         }
     }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const searchInput = document.getElementById("schoolSearch");
+        if (searchInput) {
+            searchInput.addEventListener("input", (event) => {
+                renderSchools(event.target.value);
+            });
+        }
+    });
 
 
     checkLogin();
