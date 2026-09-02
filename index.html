@@ -266,10 +266,10 @@
                 <span id="aggregateRubrics"></span>
             </div>
 
+        <div class="result-row" id="resultFileRow" style="display: none;">
+            <strong>Uploaded File</strong>
+            <a id="resultFileLink" href="#" target="_blank" rel="noopener">Download</a>
         </div>
-
-    </div>
-
 
     <!-- ADMIN LOGIN -->
 
@@ -313,6 +313,79 @@
 
 
 <script>
+
+async function loadResultDownload(assessmentNumber) {
+    const row = document.getElementById("resultFileRow");
+    const link = document.getElementById("resultFileLink");
+
+    if (!row || !link) {
+        return;
+    }
+
+    row.style.display = "none";
+    link.removeAttribute("href");
+    link.textContent = "Download";
+
+    const candidates = [
+        "assessment_number",
+        "assessmentNumber",
+        "assessment_no"
+    ];
+
+    for (const column of candidates) {
+        const { data, error } = await supabaseClient
+            .from("result_uploads")
+            .select("storage_path, file_name")
+            .eq(column, assessmentNumber)
+            .limit(1);
+
+        if (!error && data && data.length) {
+            const file = data[0];
+            if (!file.storage_path) {
+                continue;
+            }
+
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(file.storage_path, 3600);
+
+            if (!urlError && signedUrl?.signedUrl) {
+                row.style.display = "flex";
+                link.href = signedUrl.signedUrl;
+                link.textContent = file.file_name || "Download uploaded file";
+                return;
+            }
+        }
+
+        if (error && /does not exist|column .* does not exist|not found/i.test(error.message)) {
+            continue;
+        }
+    }
+
+    const { data: fallbackData, error: fallbackError } = await supabaseClient
+        .from("result_uploads")
+        .select("storage_path, file_name")
+        .ilike("file_name", `%${assessmentNumber}%`)
+        .limit(1);
+
+    if (!fallbackError && fallbackData && fallbackData.length) {
+        const file = fallbackData[0];
+        if (file.storage_path) {
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(file.storage_path, 3600);
+
+            if (!urlError && signedUrl?.signedUrl) {
+                row.style.display = "flex";
+                link.href = signedUrl.signedUrl;
+                link.textContent = file.file_name || "Download uploaded file";
+                return;
+            }
+        }
+    }
+}
 
 async function searchResults() {
 
@@ -427,6 +500,7 @@ async function searchResults() {
     document.getElementById("aggregateRubrics").textContent =
         data.aggregate_rubrics ?? "";
 
+    await loadResultDownload(assessmentNumber);
 
     resultsCard.classList.remove("hidden");
 }
