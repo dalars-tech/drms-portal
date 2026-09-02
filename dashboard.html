@@ -90,6 +90,106 @@
             background: #b91c1c;
         }
 
+        .school-manager {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 20;
+        }
+
+        .school-manager[hidden] {
+            display: none;
+        }
+
+        .school-panel {
+            width: min(700px, 100%);
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+        }
+
+        .school-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .school-form {
+            display: grid;
+            grid-template-columns: 1fr 180px auto;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .school-form input,
+        .school-form button {
+            width: 100%;
+            min-height: 46px;
+        }
+
+        .school-status {
+            min-height: 20px;
+            margin-bottom: 12px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .schools-list {
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
+
+        .schools-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .schools-list .school-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .schools-empty {
+            color: #666;
+            padding: 12px 0;
+        }
+
+        .remove-school {
+            background: #dc2626;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .remove-school:hover {
+            background: #b91c1c;
+        }
+
+        .close-school {
+            background: #e5e7eb;
+            color: #111827;
+            padding: 9px 12px;
+            font-size: 14px;
+        }
+
+        .close-school:hover {
+            background: #d1d5db;
+        }
+
         .upload-status,
         .uploads-list {
             margin-top: 15px;
@@ -213,6 +313,24 @@
             Logout
         </button>
 
+    </div>
+
+    <div id="schoolManager" class="school-manager" hidden>
+        <div class="school-panel">
+            <div class="school-header">
+                <h3>School Management</h3>
+                <button type="button" class="close-school" onclick="closeSchools()">Close</button>
+            </div>
+
+            <form class="school-form" onsubmit="event.preventDefault(); addSchool();">
+                <input id="schoolName" type="text" placeholder="School name" required>
+                <input id="schoolAdmin" type="text" placeholder="Administrator name">
+                <button type="submit">Add School</button>
+            </form>
+
+            <div id="schoolStatus" class="school-status" aria-live="polite"></div>
+            <ul id="schoolsList" class="schools-list"></ul>
+        </div>
     </div>
 
 
@@ -393,8 +511,169 @@
     }
 
 
+    async function renderSchools() {
+        const list = document.getElementById("schoolsList");
+        const status = document.getElementById("schoolStatus");
+
+        if (!list) {
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "admin.html";
+            return;
+        }
+
+        list.innerHTML = "<li class='schools-empty'>Loading schools...</li>";
+
+        const { data: schools, error } = await supabaseClient
+            .from("schools")
+            .select("id, school_name, administrator_name, created_at")
+            .eq("created_by", session.user.id)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            list.innerHTML = "";
+            if (status) {
+                status.textContent = `Could not load schools: ${error.message}`;
+            }
+            return;
+        }
+
+        if (status) {
+            status.textContent = "";
+        }
+
+        if (!schools || !schools.length) {
+            list.innerHTML = "<li class='schools-empty'>No schools added yet.</li>";
+            return;
+        }
+
+        list.innerHTML = "";
+
+        schools.forEach((school) => {
+            const item = document.createElement("li");
+
+            const meta = document.createElement("div");
+            meta.className = "school-meta";
+
+            const name = document.createElement("strong");
+            name.textContent = school.school_name;
+
+            const admin = document.createElement("span");
+            admin.textContent = school.administrator_name || "No administrator assigned";
+
+            meta.appendChild(name);
+            meta.appendChild(admin);
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-school";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", async () => {
+                const {
+                    data: { session: currentSession }
+                } = await supabaseClient.auth.getSession();
+
+                if (!currentSession) {
+                    window.location.href = "admin.html";
+                    return;
+                }
+
+                const { error: deleteError } = await supabaseClient
+                    .from("schools")
+                    .delete()
+                    .eq("id", school.id)
+                    .eq("created_by", currentSession.user.id);
+
+                if (deleteError) {
+                    if (status) {
+                        status.textContent = `Could not remove school: ${deleteError.message}`;
+                    }
+                    return;
+                }
+
+                renderSchools();
+            });
+
+            item.appendChild(meta);
+            item.appendChild(removeButton);
+            list.appendChild(item);
+        });
+    }
+
+    async function addSchool() {
+        const nameInput = document.getElementById("schoolName");
+        const adminInput = document.getElementById("schoolAdmin");
+        const status = document.getElementById("schoolStatus");
+
+        if (!nameInput || !adminInput) {
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const admin = adminInput.value.trim();
+
+        if (!name) {
+            if (status) {
+                status.textContent = "School name is required.";
+            }
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "admin.html";
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from("schools")
+            .insert({
+                school_name: name,
+                administrator_name: admin || null,
+                created_by: session.user.id
+            });
+
+        if (error) {
+            if (status) {
+                status.textContent = `Could not save school: ${error.message}`;
+            }
+            return;
+        }
+
+        nameInput.value = "";
+        adminInput.value = "";
+        if (status) {
+            status.textContent = "";
+        }
+        renderSchools();
+    }
+
+    function closeSchools() {
+        const manager = document.getElementById("schoolManager");
+        if (manager) {
+            manager.hidden = true;
+        }
+    }
+
     function manageSchools() {
-        alert("School management section coming next.");
+        const manager = document.getElementById("schoolManager");
+        if (!manager) {
+            return;
+        }
+
+        manager.hidden = !manager.hidden;
+        if (!manager.hidden) {
+            renderSchools();
+        }
     }
 
 
