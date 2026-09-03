@@ -457,7 +457,9 @@
             });
 
         if (uploadError) {
-            status.textContent = `Upload failed: ${uploadError.message}`;
+            status.textContent = uploadError.message.toLowerCase().includes("bucket not found")
+                ? "Upload failed: the Supabase storage bucket \"results\" does not exist. Create it in Supabase Storage, then try again."
+                : `Upload failed: ${uploadError.message}`;
             uploadButton.disabled = false;
             input.value = "";
             return;
