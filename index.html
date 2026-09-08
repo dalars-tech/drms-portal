@@ -452,19 +452,19 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                     data: {
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
                         learner_name: spreadsheetValue(row, ["learnername", "name"]),
-                        grade: spreadsheetValue(row, ["grade"]),
-                        class: spreadsheetValue(row, ["class", "classname"]),
+                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]),
+                        class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]),
                         mathematics: spreadsheetValue(row, ["mathematics", "math"]),
                         english: spreadsheetValue(row, ["english"]),
                         kiswahili: spreadsheetValue(row, ["kiswahili"]),
                         integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                        social_studies: spreadsheetValue(row, ["socialstudies"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience"]),
                         cre_ire: spreadsheetValue(row, ["creire", "cre"]),
                         agriculture: spreadsheetValue(row, ["agriculture"]),
                         creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
                         pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "points"]),
-                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "rubric"])
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "totalpoints", "points"]),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics"])
                     },
                     upload
                 };
@@ -599,11 +599,31 @@ async function searchResults() {
 
     let uploadedFile = null;
 
-    if (error || !data) {
+    const requiredResultFields = [
+        "grade",
+        "class",
+        "social_studies",
+        "aggregate_points",
+        "aggregate_rubrics"
+    ];
+    const hasIncompleteData = !data || requiredResultFields.some((field) =>
+        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+    );
+
+    if (error || hasIncompleteData) {
         try {
             const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber);
-            data = uploadedResult?.data || null;
-            uploadedFile = uploadedResult?.upload || null;
+            if (uploadedResult?.data) {
+                data = data
+                    ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
+                        field,
+                        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+                            ? value
+                            : data[field]
+                    ]))
+                    : uploadedResult.data;
+                uploadedFile = uploadedResult.upload;
+            }
         } catch (fallbackError) {
             console.error(error || fallbackError);
             message.textContent = error?.code === "42883"
