@@ -81,4 +81,3 @@ grant execute on function public.search_learner_result(text) to anon;
 ```
 
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
-
