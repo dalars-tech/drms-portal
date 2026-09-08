@@ -247,6 +247,16 @@
             text-decoration: none;
         }
 
+        .upload-actions {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .upload-actions .download-link {
+            color: #374151;
+        }
+
         .uploads-list a:hover {
             text-decoration: underline;
         }
@@ -457,9 +467,12 @@
             });
 
         if (uploadError) {
-            status.textContent = uploadError.message.toLowerCase().includes("bucket not found")
+            const uploadMessage = uploadError.message.toLowerCase();
+            status.textContent = uploadMessage.includes("bucket not found")
                 ? "Upload failed: the Supabase storage bucket \"results\" does not exist. Create it in Supabase Storage, then try again."
-                : `Upload failed: ${uploadError.message}`;
+                : uploadMessage.includes("row-level security")
+                    ? "Upload failed: Supabase Storage is blocking this upload. Add the storage INSERT policy from README.md, then try again."
+                    : `Upload failed: ${uploadError.message}`;
             uploadButton.disabled = false;
             input.value = "";
             return;
@@ -521,23 +534,45 @@
         }
 
         for (const upload of uploads) {
-            const { data: signedUrl, error: urlError } = await supabaseClient
+            const { data: viewUrl, error: viewError } = await supabaseClient
                 .storage
                 .from("results")
-                .createSignedUrl(upload.storage_path, 3600);
+                .createSignedUrl(upload.storage_path, 3600, { download: false });
 
             const item = document.createElement("li");
             const name = document.createElement("span");
             name.textContent = upload.file_name;
             item.appendChild(name);
 
-            if (!urlError) {
-                const link = document.createElement("a");
-                link.href = signedUrl.signedUrl;
-                link.target = "_blank";
-                link.rel = "noopener";
-                link.textContent = "Download";
-                item.appendChild(link);
+            if (!viewError) {
+                const actions = document.createElement("span");
+                actions.className = "upload-actions";
+
+                const viewLink = document.createElement("a");
+                viewLink.href = viewUrl.signedUrl;
+                viewLink.target = "_blank";
+                viewLink.rel = "noopener";
+                viewLink.textContent = "View";
+                actions.appendChild(viewLink);
+
+                const { data: downloadUrl, error: downloadError } = await supabaseClient
+                    .storage
+                    .from("results")
+                    .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
+
+                if (!downloadError) {
+                    const downloadLink = document.createElement("a");
+                    downloadLink.className = "download-link";
+                    downloadLink.href = downloadUrl.signedUrl;
+                    downloadLink.textContent = "Download";
+                    actions.appendChild(downloadLink);
+                }
+
+                item.appendChild(actions);
+            } else {
+                const unavailable = document.createElement("small");
+                unavailable.textContent = `View unavailable: ${viewError.message}`;
+                item.appendChild(unavailable);
             }
 
             list.appendChild(item);
