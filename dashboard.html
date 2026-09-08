@@ -252,6 +252,75 @@
             text-decoration: underline;
         }
 
+        .upload-actions {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .upload-actions button {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #2563eb;
+            font: inherit;
+            font-weight: bold;
+        }
+
+        .upload-actions button:hover {
+            background: transparent;
+            text-decoration: underline;
+        }
+
+        .upload-actions .download-link {
+            color: #374151;
+        }
+
+        .preview-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .preview-modal[hidden] {
+            display: none;
+        }
+
+        .preview-panel {
+            width: min(1100px, 100%);
+            height: min(85vh, 800px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+        }
+
+        .preview-close {
+            background: #e5e7eb;
+            color: #111827;
+            padding: 8px 12px;
+        }
+
+        .preview-frame {
+            width: 100%;
+            flex: 1;
+            border: 0;
+        }
+
         .uploads-empty {
             color: #666;
         }
@@ -363,6 +432,16 @@
 
             <div id="schoolStatus" class="school-status" aria-live="polite"></div>
             <ul id="schoolsList" class="schools-list"></ul>
+        </div>
+    </div>
+
+    <div id="previewModal" class="preview-modal" hidden>
+        <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+            <div class="preview-header">
+                <h3 id="previewTitle">Document preview</h3>
+                <button type="button" class="preview-close" onclick="closePreview()">Close</button>
+            </div>
+            <iframe id="previewFrame" class="preview-frame" title="Document preview"></iframe>
         </div>
     </div>
 
@@ -598,6 +677,28 @@
     }
 
 
+    function openPreview(fileName, fileType, signedUrl) {
+        const modal = document.getElementById("previewModal");
+        const frame = document.getElementById("previewFrame");
+        const title = document.getElementById("previewTitle");
+        const isExcel = fileType === "application/vnd.ms-excel"
+            || fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            || /\.(xlsx?|xls)$/i.test(fileName);
+
+        title.textContent = fileName;
+        frame.src = isExcel
+            ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`
+            : signedUrl;
+        modal.hidden = false;
+    }
+
+
+    function closePreview() {
+        document.getElementById("previewFrame").src = "about:blank";
+        document.getElementById("previewModal").hidden = true;
+    }
+
+
     async function viewUploads() {
         const list = document.getElementById("uploadsList");
         list.innerHTML = "<li>Loading uploads...</li>";
@@ -613,7 +714,7 @@
 
         const { data: uploads, error } = await supabaseClient
             .from("result_uploads")
-            .select("id, file_name, storage_path, uploaded_at")
+            .select("id, file_name, file_type, storage_path, uploaded_at")
             .eq("uploaded_by", session.user.id)
             .order("uploaded_at", { ascending: false });
 
@@ -630,26 +731,45 @@
         }
 
         for (const upload of uploads) {
-            const { data: signedUrl, error: urlError } = await supabaseClient
+            const { data: viewUrl, error: viewError } = await supabaseClient
                 .storage
                 .from("results")
-                .createSignedUrl(upload.storage_path, 3600);
+                .createSignedUrl(upload.storage_path, 3600, { download: false });
 
             const item = document.createElement("li");
             const name = document.createElement("span");
             name.textContent = upload.file_name;
             item.appendChild(name);
 
-            if (!urlError) {
-                const link = document.createElement("a");
-                link.href = signedUrl.signedUrl;
-                link.target = "_blank";
-                link.rel = "noopener";
-                link.textContent = "Download";
-                item.appendChild(link);
+            if (!viewError) {
+                const actions = document.createElement("span");
+                actions.className = "upload-actions";
+
+                const viewLink = document.createElement("button");
+                viewLink.type = "button";
+                viewLink.textContent = "View";
+                viewLink.addEventListener("click", () => {
+                    openPreview(upload.file_name, upload.file_type, viewUrl.signedUrl);
+                });
+                actions.appendChild(viewLink);
+
+                const { data: downloadUrl, error: downloadError } = await supabaseClient
+                    .storage
+                    .from("results")
+                    .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
+
+                if (!downloadError) {
+                    const downloadLink = document.createElement("a");
+                    downloadLink.className = "download-link";
+                    downloadLink.href = downloadUrl.signedUrl;
+                    downloadLink.textContent = "Download";
+                    actions.appendChild(downloadLink);
+                }
+
+                item.appendChild(actions);
             } else {
                 const unavailable = document.createElement("small");
-                unavailable.textContent = `Download unavailable: ${urlError.message}`;
+                unavailable.textContent = `View unavailable: ${viewError.message}`;
                 item.appendChild(unavailable);
             }
 
