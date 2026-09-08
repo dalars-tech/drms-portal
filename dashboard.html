@@ -248,77 +248,8 @@
             text-decoration: none;
         }
 
-        .upload-actions {
-            display: flex;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-
-        .upload-actions .download-link {
-            color: #374151;
-        }
-
         .uploads-list a:hover {
             text-decoration: underline;
-        }
-
-        .upload-actions button {
-            padding: 0;
-            border: 0;
-            background: transparent;
-            color: #2563eb;
-            font: inherit;
-            font-weight: bold;
-        }
-
-        .upload-actions button:hover {
-            background: transparent;
-            text-decoration: underline;
-        }
-
-        .preview-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 30;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: rgba(15, 23, 42, 0.7);
-        }
-
-        .preview-modal[hidden] {
-            display: none;
-        }
-
-        .preview-panel {
-            width: min(1100px, 100%);
-            height: min(85vh, 800px);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: white;
-            border-radius: 12px;
-        }
-
-        .preview-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 16px;
-        }
-
-        .preview-close {
-            background: #e5e7eb;
-            color: #111827;
-            padding: 8px 12px;
-        }
-
-        .preview-frame {
-            width: 100%;
-            flex: 1;
-            border: 0;
         }
 
         .uploads-empty {
@@ -435,16 +366,6 @@
         </div>
     </div>
 
-    <div id="previewModal" class="preview-modal" hidden>
-        <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
-            <div class="preview-header">
-                <h3 id="previewTitle">Document preview</h3>
-                <button type="button" class="preview-close" onclick="closePreview()">Close</button>
-            </div>
-            <iframe id="previewFrame" class="preview-frame" title="Document preview"></iframe>
-        </div>
-    </div>
-
 
    <script>
 
@@ -488,7 +409,7 @@
     }
 
 
-    function spreadsheetValue(row, names) {
+    function getSpreadsheetValue(row, names) {
         for (const name of names) {
             const value = row[name];
             if (value !== undefined && value !== null && String(value).trim() !== "") {
@@ -516,33 +437,19 @@
         }
 
         const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval: null })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null })
             .map(normalizeSpreadsheetRow);
 
-        if (!rows.length) {
-            throw new Error("The spreadsheet does not contain any result rows.");
-        }
-
-        const learners = [];
-        const results = [];
-
-        for (const row of rows) {
-            const assessmentNumber = spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]);
-            if (!assessmentNumber) {
-                continue;
-            }
-
-            learners.push({
-                assessment_number: assessmentNumber,
-                learner_name: spreadsheetValue(row, ["learnername", "name"]),
-                grade: spreadsheetValue(row, ["grade"]),
-                class: spreadsheetValue(row, ["class", "classname"])
-            });
-        }
+        const learners = rows.map((row) => ({
+            assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
+            learner_name: getSpreadsheetValue(row, ["learnername", "name"]),
+            grade: getSpreadsheetValue(row, ["grade"]),
+            class: getSpreadsheetValue(row, ["class", "classname"])
+        })).filter((learner) => learner.assessment_number);
 
         if (!learners.length) {
-            throw new Error("No assessment_number column or assessment numbers were found in the first worksheet.");
+            throw new Error("No assessment number was found. Add an assessment_number column to the first worksheet.");
         }
 
         const { data: savedLearners, error: learnerError } = await supabaseClient
@@ -554,28 +461,34 @@
             throw learnerError;
         }
 
-        const learnerIds = new Map(savedLearners.map((learner) => [learner.assessment_number, learner.id]));
-        for (const row of rows) {
-            const assessmentNumber = spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]);
+        const learnerIds = new Map(savedLearners.map((learner) => [
+            String(learner.assessment_number),
+            learner.id
+        ]));
+
+        const results = rows.map((row) => {
+            const assessmentNumber = getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]);
             const learnerId = learnerIds.get(assessmentNumber);
 
-            if (learnerId) {
-                results.push({
-                    learner_id: learnerId,
-                    mathematics: spreadsheetValue(row, ["mathematics", "math"]),
-                    english: spreadsheetValue(row, ["english"]),
-                    kiswahili: spreadsheetValue(row, ["kiswahili"]),
-                    integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                    social_studies: spreadsheetValue(row, ["socialstudies"]),
-                    cre_ire: spreadsheetValue(row, ["creire", "cre"]),
-                    agriculture: spreadsheetValue(row, ["agriculture"]),
-                    creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
-                    pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                    aggregate_points: spreadsheetValue(row, ["aggregatepoints", "points"]),
-                    aggregate_rubric: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "rubric"])
-                });
+            if (!learnerId) {
+                return null;
             }
-        }
+
+            return {
+                learner_id: learnerId,
+                mathematics: getSpreadsheetValue(row, ["mathematics", "math"]),
+                english: getSpreadsheetValue(row, ["english"]),
+                kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
+                integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences"]),
+                social_studies: getSpreadsheetValue(row, ["socialstudies"]),
+                cre_ire: getSpreadsheetValue(row, ["creire", "cre"]),
+                agriculture: getSpreadsheetValue(row, ["agriculture"]),
+                creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts"]),
+                pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "points"]),
+                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "rubric"])
+            };
+        }).filter(Boolean);
 
         const { error: resultError } = await supabaseClient
             .from("results")
@@ -666,45 +579,22 @@
             return;
         }
 
-        status.textContent = "Results uploaded successfully.";
+        status.textContent = "File uploaded. Indexing learner results...";
 
         if (extension === "xlsx" || extension === "xls") {
             try {
                 const importedCount = await importSpreadsheetResults(file);
                 status.textContent = `${importedCount} learner results uploaded and indexed successfully.`;
             } catch (importError) {
-                status.textContent = `File uploaded, but learner search indexing failed: ${importError.message}`;
+                status.textContent = `File uploaded, but assessment search indexing failed: ${importError.message}`;
             }
+        } else {
+            status.textContent = "PDF uploaded successfully. PDF contents must be entered in the learner tables before assessment search can find them.";
         }
 
         uploadButton.disabled = false;
         input.value = "";
         await viewUploads();
-    }
-
-
-    function openPreview(fileName, fileType, signedUrl) {
-        const modal = document.getElementById("previewModal");
-        const frame = document.getElementById("previewFrame");
-        const title = document.getElementById("previewTitle");
-        const isExcel = fileType === "application/vnd.ms-excel"
-            || fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            || /\.(xlsx?|xls)$/i.test(fileName);
-
-        title.textContent = fileName;
-        frame.src = isExcel
-            ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`
-            : signedUrl;
-        modal.hidden = false;
-    }
-
-
-    function closePreview() {
-        const modal = document.getElementById("previewModal");
-        const frame = document.getElementById("previewFrame");
-
-        frame.src = "about:blank";
-        modal.hidden = true;
     }
 
 
@@ -723,7 +613,7 @@
 
         const { data: uploads, error } = await supabaseClient
             .from("result_uploads")
-            .select("id, file_name, file_type, storage_path, uploaded_at")
+            .select("id, file_name, storage_path, uploaded_at")
             .eq("uploaded_by", session.user.id)
             .order("uploaded_at", { ascending: false });
 
@@ -740,45 +630,26 @@
         }
 
         for (const upload of uploads) {
-            const { data: viewUrl, error: viewError } = await supabaseClient
+            const { data: signedUrl, error: urlError } = await supabaseClient
                 .storage
                 .from("results")
-                .createSignedUrl(upload.storage_path, 3600, { download: false });
+                .createSignedUrl(upload.storage_path, 3600);
 
             const item = document.createElement("li");
             const name = document.createElement("span");
             name.textContent = upload.file_name;
             item.appendChild(name);
 
-            if (!viewError) {
-                const actions = document.createElement("span");
-                actions.className = "upload-actions";
-
-                const viewLink = document.createElement("button");
-                viewLink.type = "button";
-                viewLink.textContent = "View";
-                viewLink.addEventListener("click", () => {
-                    openPreview(upload.file_name, upload.file_type, viewUrl.signedUrl);
-                });
-                actions.appendChild(viewLink);
-
-                const { data: downloadUrl, error: downloadError } = await supabaseClient
-                    .storage
-                    .from("results")
-                    .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
-
-                if (!downloadError) {
-                    const downloadLink = document.createElement("a");
-                    downloadLink.className = "download-link";
-                    downloadLink.href = downloadUrl.signedUrl;
-                    downloadLink.textContent = "Download";
-                    actions.appendChild(downloadLink);
-                }
-
-                item.appendChild(actions);
+            if (!urlError) {
+                const link = document.createElement("a");
+                link.href = signedUrl.signedUrl;
+                link.target = "_blank";
+                link.rel = "noopener";
+                link.textContent = "Download";
+                item.appendChild(link);
             } else {
                 const unavailable = document.createElement("small");
-                unavailable.textContent = `View unavailable: ${viewError.message}`;
+                unavailable.textContent = `Download unavailable: ${urlError.message}`;
                 item.appendChild(unavailable);
             }
 
