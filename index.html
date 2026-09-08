@@ -400,6 +400,17 @@ function spreadsheetRows(sheet) {
     );
 }
 
+function fileMetadata(fileName) {
+    const name = String(fileName || "");
+    const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
+    const classMatch = name.match(/\b(?:class|stream)\s*([a-z0-9-]+)\b/i);
+
+    return {
+        grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
+        class: classMatch ? classMatch[1] : ""
+    };
+}
+
 async function findUploadedSpreadsheetResult(assessmentNumber) {
     if (typeof XLSX === "undefined") {
         throw new Error("The spreadsheet reader could not be loaded.");
@@ -452,19 +463,19 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                     data: {
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
                         learner_name: spreadsheetValue(row, ["learnername", "name"]),
-                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]),
-                        class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]),
+                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(upload.file_name).grade,
+                        class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
                         mathematics: spreadsheetValue(row, ["mathematics", "math"]),
                         english: spreadsheetValue(row, ["english"]),
                         kiswahili: spreadsheetValue(row, ["kiswahili"]),
                         integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
                         cre_ire: spreadsheetValue(row, ["creire", "cre"]),
                         agriculture: spreadsheetValue(row, ["agriculture"]),
                         creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
                         pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "totalpoints", "points"]),
-                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics"])
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
                     },
                     upload
                 };
