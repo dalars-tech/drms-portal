@@ -7,6 +7,7 @@
     <title>DRMS - Digital Results Management System</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase.js"></script>
 
     <style>
@@ -39,8 +40,26 @@
 
         .container {
             width: 92%;
-            max-width: 700px;
+            max-width: 980px;
             margin: 35px auto;
+        }
+
+        .portal-intro {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #475569;
+        }
+
+        .portal-intro h2 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 4vw, 34px);
+        }
+
+        .portal-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+            align-items: start;
         }
 
         .card {
@@ -151,31 +170,76 @@
 
 <div class="container">
 
-    <!-- PARENT PORTAL -->
+    <div class="portal-intro">
+        <h2>School Results Portal</h2>
+        <p>Parents can check a learner’s performance quickly and securely.</p>
+    </div>
 
-    <div class="card">
+    <div class="portal-grid">
 
-        <h2>Check Learner Results</h2>
+        <!-- PARENT PORTAL -->
 
-        <p class="description">
-            Enter the learner's Assessment Number to view results.
-        </p>
+        <div class="card">
 
-        <label for="assessmentNumber">
-            Assessment Number
-        </label>
+            <h2>Check Learner Results</h2>
 
-        <input
-            type="text"
-            id="assessmentNumber"
-            placeholder="Enter Assessment Number"
-        >
+            <p class="description">
+                Enter the learner's Assessment Number to view results.
+            </p>
 
-        <button onclick="searchResults()">
-            Search Results
-        </button>
+            <label for="assessmentNumber">
+                Assessment Number
+            </label>
 
-        <div id="searchMessage" class="message"></div>
+            <input
+                type="text"
+                id="assessmentNumber"
+                placeholder="Enter Assessment Number"
+            >
+
+            <button onclick="searchResults()">
+                Search Results
+            </button>
+
+            <div id="searchMessage" class="message"></div>
+
+        </div>
+
+
+        <!-- ADMIN LOGIN -->
+
+        <div class="card">
+
+            <h2>Administrator</h2>
+
+            <p class="description">
+                Authorized administrators only.
+            </p>
+
+            <input
+                type="email"
+                id="adminEmail"
+                placeholder="Administrator Email"
+            >
+
+            <input
+                type="password"
+                id="adminPassword"
+                placeholder="Password"
+            >
+
+            <button
+                class="admin-button"
+                onclick="adminLogin()"
+            >
+                Administrator Sign In
+            </button>
+
+            <div id="loginMessage" class="message"></div>
+
+            <a class="mini-link" href="Admin.html">Open Admin page</a>
+
+        </div>
 
     </div>
 
@@ -272,40 +336,7 @@
 
     </div>
 
-    <!-- ADMIN LOGIN -->
-
-    <div class="card">
-
-        <h2>Administrator</h2>
-
-        <p class="description">
-            Authorized administrators only.
-        </p>
-
-        <input
-            type="email"
-            id="adminEmail"
-            placeholder="Administrator Email"
-        >
-
-        <input
-            type="password"
-            id="adminPassword"
-            placeholder="Password"
-        >
-
-        <button
-            class="admin-button"
-            onclick="adminLogin()"
-        >
-            Administrator Sign In
-        </button>
-
-        <div id="loginMessage" class="message"></div>
-
-    </div>
-
-
+</div>
 
 <footer>
     © 2026 Digital Results Management System
@@ -313,6 +344,108 @@
 
 
 <script>
+
+function messageForDownload(text) {
+    const message = document.getElementById("searchMessage");
+    if (message) {
+        message.textContent = text;
+    }
+}
+
+function normalizeSpreadsheetRow(row) {
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+            key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+            value
+        ])
+    );
+}
+
+function spreadsheetValue(row, names) {
+    for (const name of names) {
+        const value = row[name];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+            return String(value).trim();
+        }
+    }
+
+    return "";
+}
+
+async function findUploadedSpreadsheetResult(assessmentNumber) {
+    if (typeof XLSX === "undefined") {
+        throw new Error("The spreadsheet reader could not be loaded.");
+    }
+
+    const { data: uploads, error } = await supabaseClient
+        .from("result_uploads")
+        .select("file_name, file_type, storage_path")
+        .order("uploaded_at", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+
+    const normalizedAssessmentNumber = assessmentNumber.trim().toLowerCase();
+    const spreadsheetUploads = (uploads || []).filter((upload) =>
+        /\.(xlsx?|xls)$/i.test(upload.file_name || "")
+        || /spreadsheet|excel/i.test(upload.file_type || "")
+    );
+
+    for (const upload of spreadsheetUploads) {
+        const { data: signedUrl, error: urlError } = await supabaseClient
+            .storage
+            .from("results")
+            .createSignedUrl(upload.storage_path, 3600);
+
+        if (urlError) {
+            continue;
+        }
+
+        const response = await fetch(signedUrl.signedUrl);
+        if (!response.ok) {
+            continue;
+        }
+
+        const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+        for (const originalRow of rows) {
+            const row = normalizeSpreadsheetRow(originalRow);
+            const rowAssessmentNumber = spreadsheetValue(row, [
+                "assessmentnumber",
+                "assessmentno",
+                "assessment"
+            ]).toLowerCase();
+
+            if (rowAssessmentNumber === normalizedAssessmentNumber) {
+                return {
+                    data: {
+                        assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
+                        learner_name: spreadsheetValue(row, ["learnername", "name"]),
+                        grade: spreadsheetValue(row, ["grade"]),
+                        class: spreadsheetValue(row, ["class", "classname"]),
+                        mathematics: spreadsheetValue(row, ["mathematics", "math"]),
+                        english: spreadsheetValue(row, ["english"]),
+                        kiswahili: spreadsheetValue(row, ["kiswahili"]),
+                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies"]),
+                        cre_ire: spreadsheetValue(row, ["creire", "cre"]),
+                        agriculture: spreadsheetValue(row, ["agriculture"]),
+                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
+                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "points"]),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "rubric"])
+                    },
+                    upload
+                };
+            }
+        }
+    }
+
+    return null;
+}
 
 async function loadResultDownload(assessmentNumber) {
     const row = document.getElementById("resultFileRow");
@@ -361,6 +494,11 @@ async function loadResultDownload(assessmentNumber) {
         if (error && /does not exist|column .* does not exist|not found/i.test(error.message)) {
             continue;
         }
+
+        if (error) {
+            messageForDownload("The result was found, but its uploaded file cannot be read. Check the result_uploads SELECT policy.");
+            return;
+        }
     }
 
     const { data: fallbackData, error: fallbackError } = await supabaseClient
@@ -381,6 +519,11 @@ async function loadResultDownload(assessmentNumber) {
                 row.style.display = "flex";
                 link.href = signedUrl.signedUrl;
                 link.textContent = file.file_name || "Download uploaded file";
+                return;
+            }
+
+            if (urlError) {
+                messageForDownload("The result was found, but its uploaded file cannot be downloaded. Check the storage SELECT policy.");
                 return;
             }
         }
@@ -416,7 +559,7 @@ async function searchResults() {
     message.textContent = "Searching...";
 
 
-    const { data, error } =
+    let { data, error } =
         await supabaseClient.rpc(
             "search_learner_result",
             {
@@ -426,26 +569,26 @@ async function searchResults() {
         );
 
 
-    if (error) {
+    let uploadedFile = null;
 
-        console.error(error);
-
-        message.textContent =
-            "Unable to search results.";
-
-        resultsCard.classList.add("hidden");
-
-        return;
+    if (error || !data) {
+        try {
+            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber);
+            data = uploadedResult?.data || null;
+            uploadedFile = uploadedResult?.upload || null;
+        } catch (fallbackError) {
+            console.error(error || fallbackError);
+            message.textContent = error?.code === "42883"
+                ? "Search setup is incomplete, and uploaded files could not be searched. Check the result_uploads and storage SELECT policies."
+                : `Unable to search results: ${error?.message || fallbackError.message}`;
+            resultsCard.classList.add("hidden");
+            return;
+        }
     }
 
-
     if (!data) {
-
-        message.textContent =
-            "No learner found with that Assessment Number.";
-
+        message.textContent = "No learner found with that Assessment Number.";
         resultsCard.classList.add("hidden");
-
         return;
     }
 
@@ -500,7 +643,22 @@ async function searchResults() {
     document.getElementById("aggregateRubrics").textContent =
         data.aggregate_rubrics ?? "";
 
-    await loadResultDownload(assessmentNumber);
+    if (uploadedFile?.storage_path) {
+        const { data: signedUrl, error: urlError } = await supabaseClient
+            .storage
+            .from("results")
+            .createSignedUrl(uploadedFile.storage_path, 3600);
+
+        if (!urlError && signedUrl?.signedUrl) {
+            const fileRow = document.getElementById("resultFileRow");
+            const fileLink = document.getElementById("resultFileLink");
+            fileRow.style.display = "flex";
+            fileLink.href = signedUrl.signedUrl;
+            fileLink.textContent = uploadedFile.file_name || "Download uploaded file";
+        }
+    } else {
+        await loadResultDownload(assessmentNumber);
+    }
 
     resultsCard.classList.remove("hidden");
 }
