@@ -372,6 +372,34 @@ function spreadsheetValue(row, names) {
     return "";
 }
 
+function canonicalAssessmentNumber(value) {
+    return String(value ?? "")
+        .trim()
+        .replace(/\.0+$/, "")
+        .replace(/[^a-z0-9]/gi, "")
+        .toLowerCase();
+}
+
+function spreadsheetRows(sheet) {
+    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+        const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return ["assessmentnumber", "assessmentno", "assessment"].includes(header);
+    }));
+
+    if (headerIndex < 0) {
+        return [];
+    }
+
+    const headers = matrix[headerIndex].map((header) =>
+        String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    );
+
+    return matrix.slice(headerIndex + 1).map((values) =>
+        Object.fromEntries(headers.map((header, index) => [header, values[index]]))
+    );
+}
+
 async function findUploadedSpreadsheetResult(assessmentNumber) {
     if (typeof XLSX === "undefined") {
         throw new Error("The spreadsheet reader could not be loaded.");
@@ -386,7 +414,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
         throw error;
     }
 
-    const normalizedAssessmentNumber = assessmentNumber.trim().toLowerCase();
+    const normalizedAssessmentNumber = canonicalAssessmentNumber(assessmentNumber);
     const spreadsheetUploads = (uploads || []).filter((upload) =>
         /\.(xlsx?|xls)$/i.test(upload.file_name || "")
         || /spreadsheet|excel/i.test(upload.file_type || "")
@@ -409,7 +437,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
 
         const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+        const rows = spreadsheetRows(sheet);
 
         for (const originalRow of rows) {
             const row = normalizeSpreadsheetRow(originalRow);
@@ -417,9 +445,9 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                 "assessmentnumber",
                 "assessmentno",
                 "assessment"
-            ]).toLowerCase();
+            ]);
 
-            if (rowAssessmentNumber === normalizedAssessmentNumber) {
+            if (canonicalAssessmentNumber(rowAssessmentNumber) === normalizedAssessmentNumber) {
                 return {
                     data: {
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
