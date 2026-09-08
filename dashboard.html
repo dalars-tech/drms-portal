@@ -510,6 +510,18 @@
     }
 
 
+    function fileMetadata(fileName) {
+        const name = String(fileName || "");
+        const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
+        const classMatch = name.match(/\b(?:class|stream)\s*([a-z0-9-]+)\b/i);
+
+        return {
+            grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
+            class: classMatch ? classMatch[1] : ""
+        };
+    }
+
+
     async function importSpreadsheetResults(file) {
         if (typeof XLSX === "undefined") {
             throw new Error("The spreadsheet reader could not be loaded. Check your internet connection and try again.");
@@ -523,8 +535,8 @@
         const learners = rows.map((row) => ({
             assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
             learner_name: getSpreadsheetValue(row, ["learnername", "name"]),
-            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel"]),
-            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"])
+            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(file.name).grade,
+            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class
         })).filter((learner) => learner.assessment_number);
 
         if (!learners.length) {
@@ -559,13 +571,13 @@
                 english: getSpreadsheetValue(row, ["english"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
                 integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience"]),
+                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
                 cre_ire: getSpreadsheetValue(row, ["creire", "cre"]),
                 agriculture: getSpreadsheetValue(row, ["agriculture"]),
                 creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts"]),
                 pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "totalpoints", "points"]),
-                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics"])
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]),
+                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
             };
         }).filter(Boolean);
 
