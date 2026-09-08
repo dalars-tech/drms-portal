@@ -523,8 +523,8 @@
         const learners = rows.map((row) => ({
             assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
             learner_name: getSpreadsheetValue(row, ["learnername", "name"]),
-            grade: getSpreadsheetValue(row, ["grade"]),
-            class: getSpreadsheetValue(row, ["class", "classname"])
+            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel"]),
+            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"])
         })).filter((learner) => learner.assessment_number);
 
         if (!learners.length) {
@@ -559,13 +559,13 @@
                 english: getSpreadsheetValue(row, ["english"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
                 integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                social_studies: getSpreadsheetValue(row, ["socialstudies"]),
+                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience"]),
                 cre_ire: getSpreadsheetValue(row, ["creire", "cre"]),
                 agriculture: getSpreadsheetValue(row, ["agriculture"]),
                 creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts"]),
                 pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "points"]),
-                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "rubric"])
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "totalpoints", "points"]),
+                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics"])
             };
         }).filter(Boolean);
 
