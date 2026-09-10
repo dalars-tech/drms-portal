@@ -523,6 +523,26 @@
     }
 
 
+    function calculateAggregatePoints(row) {
+        const subjects = [
+            ["mathematics", "math"],
+            ["english"],
+            ["kiswahili"],
+            ["integratedscience", "integratedsciences"],
+            ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"],
+            ["creire", "cre"],
+            ["agriculture"],
+            ["creativeartssports", "creativearts"],
+            ["pretechnicalstudies", "pretechnical"]
+        ];
+        const values = subjects.map((names) => Number.parseFloat(getSpreadsheetValue(row, names)));
+
+        return values.every((value) => Number.isFinite(value))
+            ? String(values.reduce((total, value) => total + value, 0))
+            : null;
+    }
+
+
     function normalizeSpreadsheetRow(row) {
         return Object.fromEntries(
             Object.entries(row).map(([key, value]) => [
@@ -594,12 +614,12 @@
                 english: getSpreadsheetValue(row, ["english"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
                 integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
+                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
                 cre_ire: getSpreadsheetValue(row, ["creire", "cre"]),
                 agriculture: getSpreadsheetValue(row, ["agriculture"]),
                 creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts"]),
                 pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]),
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]) || calculateAggregatePoints(row),
                 aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
             };
         }).filter(Boolean);
