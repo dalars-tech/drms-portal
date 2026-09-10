@@ -265,11 +265,6 @@
             <span id="resultGrade"></span>
         </div>
 
-        <div class="result-row">
-            <strong>Class</strong>
-            <span id="resultClass"></span>
-        </div>
-
         <br>
 
         <div class="result-row">
@@ -663,9 +658,6 @@ async function searchResults() {
 
     document.getElementById("resultGrade").textContent =
         data.grade || "";
-
-    document.getElementById("resultClass").textContent =
-        data.class || "";
 
 
     document.getElementById("mathematics").textContent =
