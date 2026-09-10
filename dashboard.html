@@ -276,6 +276,29 @@
             color: #374151;
         }
 
+        .delete-upload {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #dc2626;
+            font: inherit;
+            font-weight: bold;
+        }
+
+        .delete-upload:hover {
+            background: transparent;
+            color: #b91c1c;
+            text-decoration: underline;
+        }
+
+        .upload-actions .delete-upload {
+            color: #dc2626;
+        }
+
+        .upload-actions .delete-upload:hover {
+            color: #b91c1c;
+        }
+
         .preview-modal {
             position: fixed;
             inset: 0;
@@ -711,6 +734,47 @@
     }
 
 
+    async function deleteUpload(upload, item) {
+        if (!confirm(`Delete "${upload.file_name}"? This cannot be undone.`)) {
+            return;
+        }
+
+        const deleteButton = item.querySelector(".delete-upload");
+        deleteButton.disabled = true;
+        deleteButton.textContent = "Deleting...";
+
+        const { error: storageError } = await supabaseClient
+            .storage
+            .from("results")
+            .remove([upload.storage_path]);
+
+        if (storageError) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete";
+            document.getElementById("uploadStatus").textContent = `Could not delete file: ${storageError.message}`;
+            return;
+        }
+
+        const { error: recordError } = await supabaseClient
+            .from("result_uploads")
+            .delete()
+            .eq("id", upload.id);
+
+        if (recordError) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete";
+            document.getElementById("uploadStatus").textContent = `File deleted, but its upload record could not be removed: ${recordError.message}`;
+            return;
+        }
+
+        item.remove();
+        document.getElementById("uploadStatus").textContent = "Upload deleted successfully.";
+        if (!document.querySelector("#uploadsList li")) {
+            document.getElementById("uploadsList").innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
+        }
+    }
+
+
     async function viewUploads() {
         const list = document.getElementById("uploadsList");
         list.innerHTML = "<li>Loading uploads...</li>";
@@ -778,11 +842,25 @@
                     actions.appendChild(downloadLink);
                 }
 
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "delete-upload";
+                deleteButton.textContent = "Delete";
+                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                actions.appendChild(deleteButton);
+
                 item.appendChild(actions);
             } else {
                 const unavailable = document.createElement("small");
                 unavailable.textContent = `View unavailable: ${viewError.message}`;
                 item.appendChild(unavailable);
+
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "delete-upload";
+                deleteButton.textContent = "Delete";
+                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                item.appendChild(deleteButton);
             }
 
             list.appendChild(item);
