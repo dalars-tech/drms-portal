@@ -248,7 +248,7 @@
 
     <div id="resultsCard" class="card hidden">
 
-        <h2>Learner Results</h2>
+        <h2>Learner's Results</h2>
 
         <div class="result-row">
             <strong>Assessment Number</strong>
@@ -256,7 +256,7 @@
         </div>
 
         <div class="result-row">
-            <strong>Learner Name</strong>
+            <strong>Learner's Name</strong>
             <span id="resultName"></span>
         </div>
 
@@ -367,6 +367,25 @@ function spreadsheetValue(row, names) {
     return "";
 }
 
+function calculateAggregatePoints(row) {
+    const subjects = [
+        ["mathematics", "math"],
+        ["english"],
+        ["kiswahili"],
+        ["integratedscience", "integratedsciences"],
+        ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"],
+        ["creire", "cre"],
+        ["agriculture"],
+        ["creativeartssports", "creativearts"],
+        ["pretechnicalstudies", "pretechnical"]
+    ];
+    const values = subjects.map((names) => Number.parseFloat(spreadsheetValue(row, names)));
+
+    return values.every((value) => Number.isFinite(value))
+        ? String(values.reduce((total, value) => total + value, 0))
+        : "";
+}
+
 function canonicalAssessmentNumber(value) {
     return String(value ?? "")
         .trim()
@@ -469,7 +488,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                         agriculture: spreadsheetValue(row, ["agriculture"]),
                         creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
                         pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]),
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]) || calculateAggregatePoints(row),
                         aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
                     },
                     upload
