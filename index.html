@@ -464,7 +464,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                         english: spreadsheetValue(row, ["english"]),
                         kiswahili: spreadsheetValue(row, ["kiswahili"]),
                         integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
-                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
                         cre_ire: spreadsheetValue(row, ["creire", "cre"]),
                         agriculture: spreadsheetValue(row, ["agriculture"]),
                         creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
@@ -601,6 +601,12 @@ async function searchResults() {
                     assessmentNumber
             }
         );
+
+    if (data) {
+        data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
+        data.aggregate_points = data.aggregate_points ?? data.aggregatePoints ?? data.total_points;
+        data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
+    }
 
 
     let uploadedFile = null;
