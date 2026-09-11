@@ -36,16 +36,24 @@ The bucket must be created before running these policies. If policies with these
 
 ## Spreadsheet upload format
 
-Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number. The first worksheet must contain one learner per row and an `assessment_number` column. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`.
+Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number and term. The first worksheet must contain one learner per row and `assessment_number` and `term` columns. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`. Use values such as `Term 1`, `Term 2`, and `Term 3` in the `term` column.
 
 Column names may use spaces or capitalization, such as `Assessment Number` or `Learner Name`. PDF files are stored for viewing and downloading, but their contents are not automatically imported into searchable learner records.
 
 ## Learner search setup
 
+Before importing termly results, add the term column and unique constraint:
+
+```sql
+alter table public.results add column if not exists term text;
+alter table public.results drop constraint if exists results_learner_id_key;
+alter table public.results add constraint results_learner_id_term_key unique (learner_id, term);
+```
+
 The public portal searches learner data through a database function named `search_learner_result`. That function must exist in Supabase and must be executable by the anonymous role:
 
 ```sql
-create or replace function public.search_learner_result(search_assessment_number text)
+create or replace function public.search_learner_result(search_assessment_number text, search_term text)
 returns jsonb
 language sql
 stable
@@ -59,6 +67,7 @@ as $$
 			l.learner_name,
 			l.grade,
 			l.class,
+			r.term,
 			r.mathematics,
 			r.english,
 			r.kiswahili,
@@ -73,11 +82,12 @@ as $$
 		from public.learners l
 		join public.results r on r.learner_id = l.id
 		where l.assessment_number = search_assessment_number
+		  and lower(r.term) = lower(search_term)
 		limit 1
 	) as result_row;
 $$;
 
-grant execute on function public.search_learner_result(text) to anon;
+grant execute on function public.search_learner_result(text, text) to anon;
 ```
 
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
