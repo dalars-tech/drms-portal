@@ -96,6 +96,31 @@
             margin-bottom: 15px;
         }
 
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 92px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: auto;
+            padding: 14px 10px;
+            background: transparent;
+            color: #2563eb;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .password-toggle:hover {
+            background: transparent;
+            color: #1d4ed8;
+        }
+
         button {
             width: 100%;
             padding: 14px;
@@ -231,11 +256,22 @@
                 placeholder="Administrator Email"
             >
 
-            <input
-                type="password"
-                id="adminPassword"
-                placeholder="Password"
-            >
+            <div class="password-field">
+                <input
+                    type="password"
+                    id="adminPassword"
+                    placeholder="Password"
+                >
+                <button
+                    type="button"
+                    class="password-toggle"
+                    id="passwordToggle"
+                    onclick="togglePassword()"
+                    aria-label="Show password"
+                >
+                    Show
+                </button>
+            </div>
 
             <button
                 class="admin-button"
@@ -359,6 +395,16 @@ function messageForDownload(text) {
     if (message) {
         message.textContent = text;
     }
+}
+
+function togglePassword() {
+    const password = document.getElementById("adminPassword");
+    const toggle = document.getElementById("passwordToggle");
+    const isHidden = password.type === "password";
+
+    password.type = isHidden ? "text" : "password";
+    toggle.textContent = isHidden ? "Hide" : "Show";
+    toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
 }
 
 function normalizeSpreadsheetRow(row) {
