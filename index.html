@@ -197,6 +197,15 @@
                 placeholder="Enter Assessment Number"
             >
 
+            <label for="term">Term</label>
+
+            <select id="term">
+                <option value="">Select term</option>
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+            </select>
+
             <button onclick="searchResults()">
                 Search Results
             </button>
@@ -263,6 +272,11 @@
         <div class="result-row">
             <strong>Grade</strong>
             <span id="resultGrade"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Term</strong>
+            <span id="resultTerm"></span>
         </div>
 
         <br>
@@ -425,7 +439,7 @@ function fileMetadata(fileName) {
     };
 }
 
-async function findUploadedSpreadsheetResult(assessmentNumber) {
+async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
     if (typeof XLSX === "undefined") {
         throw new Error("The spreadsheet reader could not be loaded.");
     }
@@ -472,11 +486,15 @@ async function findUploadedSpreadsheetResult(assessmentNumber) {
                 "assessment"
             ]);
 
-            if (canonicalAssessmentNumber(rowAssessmentNumber) === normalizedAssessmentNumber) {
+            const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm"]);
+
+            if (canonicalAssessmentNumber(rowAssessmentNumber) === normalizedAssessmentNumber
+                && rowTerm.toLowerCase() === selectedTerm.toLowerCase()) {
                 return {
                     data: {
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
                         learner_name: spreadsheetValue(row, ["learnername", "name"]),
+                        term: rowTerm,
                         grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(upload.file_name).grade,
                         class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
                         mathematics: spreadsheetValue(row, ["mathematics", "math"]),
@@ -591,6 +609,8 @@ async function searchResults() {
         .value
         .trim();
 
+    const selectedTerm = document.getElementById("term").value;
+
     const message =
         document.getElementById("searchMessage");
 
@@ -598,10 +618,10 @@ async function searchResults() {
         document.getElementById("resultsCard");
 
 
-    if (!assessmentNumber) {
+    if (!assessmentNumber || !selectedTerm) {
 
         message.textContent =
-            "Please enter an Assessment Number.";
+            "Please enter an Assessment Number and select a term.";
 
         resultsCard.classList.add("hidden");
 
@@ -616,8 +636,8 @@ async function searchResults() {
         await supabaseClient.rpc(
             "search_learner_result",
             {
-                search_assessment_number:
-                    assessmentNumber
+                search_assessment_number: assessmentNumber,
+                search_term: selectedTerm
             }
         );
 
@@ -643,7 +663,7 @@ async function searchResults() {
 
     if (error || hasIncompleteData) {
         try {
-            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber);
+            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber, selectedTerm);
             if (uploadedResult?.data) {
                 data = data
                     ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
@@ -683,6 +703,9 @@ async function searchResults() {
 
     document.getElementById("resultGrade").textContent =
         data.grade || "";
+
+    document.getElementById("resultTerm").textContent =
+        data.term || selectedTerm;
 
 
     document.getElementById("mathematics").textContent =
