@@ -535,11 +535,7 @@
 
 
     function schoolLabel(school) {
-        const number = school.school_number === null || school.school_number === undefined
-            ? "Unnumbered"
-            : `School ${String(school.school_number).padStart(3, "0")}`;
-
-        return `${number} - ${school.school_name}`;
+        return school.school_name;
     }
 
 
@@ -560,9 +556,9 @@
 
         const { data: schools, error } = await supabaseClient
             .from("schools")
-            .select("id, school_name, school_number")
+            .select("id, school_name")
             .eq("created_by", session.user.id)
-            .order("school_number", { ascending: true });
+            .order("school_name", { ascending: true });
 
         if (error) {
             select.innerHTML = "<option value=\"\">Could not load schools</option>";
@@ -887,7 +883,7 @@
 
         const { data: schools, error: schoolsError } = await supabaseClient
             .from("schools")
-            .select("id, school_name, school_number")
+            .select("id, school_name")
             .eq("created_by", session.user.id);
 
         if (schoolsError) {
@@ -927,7 +923,7 @@
             const name = document.createElement("span");
             const school = schoolsById.get(upload.school_id);
             name.textContent = school
-                ? `${schoolLabel(school)} | ${upload.file_name}`
+                ? `${school.school_name} | ${upload.file_name}`
                 : `Unassigned | ${upload.file_name}`;
             item.appendChild(name);
 
@@ -1037,7 +1033,7 @@
 
         const { data: schools, error } = await supabaseClient
             .from("schools")
-            .select("id, school_name, school_number, administrator_name, created_at")
+            .select("id, school_name, administrator_name, created_at")
             .eq("created_by", session.user.id)
             .order("created_at", { ascending: false });
 
