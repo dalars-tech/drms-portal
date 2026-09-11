@@ -228,6 +228,15 @@
             min-height: 20px;
             color: #374151;
         }
+            #uploadSchool {
+                width: 100%;
+                min-height: 42px;
+                margin-bottom: 15px;
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                font-size: 14px;
+            }
 
         .uploads-list {
             list-style: none;
@@ -386,6 +395,12 @@
                 </p>
 
                 <button onclick="uploadResults()">
+
+                <label for="uploadSchool">School</label>
+                <select id="uploadSchool" required>
+                    <option value="">Select school</option>
+                </select>
+
                     Upload Results
                 </button>
 
@@ -494,6 +509,7 @@
                 "Welcome, " + (profile.full_name || "Administrator");
         }
 
+        await loadUploadSchools();
         await viewUploads();
     }
 
@@ -507,7 +523,60 @@
 
 
     function uploadResults() {
+        const school = document.getElementById("uploadSchool");
+        const status = document.getElementById("uploadStatus");
+
+        if (!school.value) {
+            status.textContent = "Select a school before uploading results.";
+            return;
+        }
+
         document.getElementById("resultsFile").click();
+    }
+
+
+    function schoolLabel(school) {
+        const number = school.school_number === null || school.school_number === undefined
+            ? "Unnumbered"
+            : `School ${String(school.school_number).padStart(3, "0")}`;
+
+        return `${number} - ${school.school_name}`;
+    }
+
+
+    async function loadUploadSchools() {
+        const select = document.getElementById("uploadSchool");
+
+        if (!select) {
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            return;
+        }
+
+        const { data: schools, error } = await supabaseClient
+            .from("schools")
+            .select("id, school_name, school_number")
+            .eq("created_by", session.user.id)
+            .order("school_number", { ascending: true });
+
+        if (error) {
+            select.innerHTML = "<option value=\"\">Could not load schools</option>";
+            return;
+        }
+
+        select.innerHTML = "<option value=\"\">Select school</option>";
+        (schools || []).forEach((school) => {
+            const option = document.createElement("option");
+            option.value = school.id;
+            option.textContent = schoolLabel(school);
+            select.appendChild(option);
+        });
     }
 
 
@@ -640,9 +709,16 @@
     async function handleResultsFile(input) {
         const file = input.files[0];
         const status = document.getElementById("uploadStatus");
-        const uploadButton = input.previousElementSibling;
+        const schoolId = document.getElementById("uploadSchool").value;
+        const uploadButton = document.querySelector("button[onclick=\"uploadResults()\"]");
 
         if (!file) {
+            return;
+        }
+
+        if (!schoolId) {
+            status.textContent = "Select a school before uploading results.";
+            input.value = "";
             return;
         }
 
@@ -703,6 +779,7 @@
                 file_name: file.name,
                 storage_path: filePath,
                 file_type: file.type,
+                school_id: schoolId,
                 uploaded_by: session.user.id
             });
 
@@ -764,24 +841,16 @@
         deleteButton.disabled = true;
         deleteButton.textContent = "Deleting...";
 
-        const { data: deletedRecords, error: recordError } = await supabaseClient
+        const { error: recordError } = await supabaseClient
             .from("result_uploads")
             .delete()
             .eq("uploaded_by", upload.uploaded_by)
-            .eq("storage_path", upload.storage_path)
-            .select("id");
+            .eq("storage_path", upload.storage_path);
 
         if (recordError) {
             deleteButton.disabled = false;
             deleteButton.textContent = "Delete";
             document.getElementById("uploadStatus").textContent = `Could not delete upload record: ${recordError.message}. Add the result_uploads DELETE policy from README.md.`;
-            return;
-        }
-
-        if (!deletedRecords || !deletedRecords.length) {
-            deleteButton.disabled = false;
-            deleteButton.textContent = "Delete";
-            document.getElementById("uploadStatus").textContent = "The upload record was not deleted. Add the result_uploads DELETE policy from README.md.";
             return;
         }
 
@@ -817,9 +886,16 @@
             return;
         }
 
+        const { data: schools } = await supabaseClient
+            .from("schools")
+            .select("id, school_name, school_number")
+            .eq("created_by", session.user.id);
+
+        const schoolsById = new Map((schools || []).map((school) => [school.id, school]));
+
         const { data: uploads, error } = await supabaseClient
             .from("result_uploads")
-            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by")
+            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
             .eq("uploaded_by", session.user.id)
             .order("uploaded_at", { ascending: false });
 
@@ -845,7 +921,10 @@
 
             const item = document.createElement("li");
             const name = document.createElement("span");
-            name.textContent = upload.file_name;
+            const school = schoolsById.get(upload.school_id);
+            name.textContent = school
+                ? `${schoolLabel(school)} | ${upload.file_name}`
+                : `Unassigned | ${upload.file_name}`;
             item.appendChild(name);
 
             if (!viewError) {
@@ -954,7 +1033,7 @@
 
         const { data: schools, error } = await supabaseClient
             .from("schools")
-            .select("id, school_name, administrator_name, created_at")
+            .select("id, school_name, school_number, administrator_name, created_at")
             .eq("created_by", session.user.id)
             .order("created_at", { ascending: false });
 
