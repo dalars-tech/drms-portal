@@ -47,6 +47,17 @@
             margin-bottom: 25px;
         }
 
+        .account-role {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -383,6 +394,7 @@
         <div class="welcome">
             <h2>Administrator Dashboard</h2>
             <p>Welcome, Owner</p>
+            <span id="accountRole" class="account-role">Role: checking...</span>
         </div>
 
         <div class="cards">
@@ -430,7 +442,7 @@
             </div>
 
 
-            <div class="card">
+            <div class="card" id="schoolManagementCard">
                 <h2>🏫 Schools</h2>
 
                 <p>
@@ -503,9 +515,17 @@
                 .eq("id", session.user.id)
                 .single();
 
-        if (profile) {
-            document.querySelector(".welcome p").textContent =
-                "Welcome, " + (profile.full_name || "Administrator");
+        const role = String(profile?.role || "administrator").toLowerCase();
+        const displayName = profile?.full_name || "Administrator";
+        const roleLabel = role === "owner" ? "Project Owner" : "Administrator";
+
+        document.querySelector(".welcome p").textContent =
+            "Welcome, " + displayName;
+        document.getElementById("accountRole").textContent =
+            "Role: " + roleLabel;
+
+        if (role !== "owner") {
+            document.getElementById("schoolManagementCard").hidden = true;
         }
 
         await loadUploadSchools();
