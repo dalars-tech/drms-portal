@@ -30,6 +30,11 @@ create policy "Anyone can read upload records"
 on public.result_uploads for select
 to anon, authenticated
 using (true);
+
+create policy "Authenticated users can delete their upload records"
+on public.result_uploads for delete
+to authenticated
+using (uploaded_by = (select auth.uid()));
 ```
 
 The bucket must be created before running these policies. If policies with these names already exist, delete or rename the existing policies first. The browser's publishable Supabase key cannot create buckets or bypass RLS automatically.
