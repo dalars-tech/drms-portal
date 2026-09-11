@@ -764,27 +764,35 @@
         deleteButton.disabled = true;
         deleteButton.textContent = "Deleting...";
 
+        const { data: deletedRecords, error: recordError } = await supabaseClient
+            .from("result_uploads")
+            .delete()
+            .eq("uploaded_by", upload.uploaded_by)
+            .eq("storage_path", upload.storage_path)
+            .select("id");
+
+        if (recordError) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete";
+            document.getElementById("uploadStatus").textContent = `Could not delete upload record: ${recordError.message}. Add the result_uploads DELETE policy from README.md.`;
+            return;
+        }
+
+        if (!deletedRecords || !deletedRecords.length) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete";
+            document.getElementById("uploadStatus").textContent = "The upload record was not deleted. Add the result_uploads DELETE policy from README.md.";
+            return;
+        }
+
         const { error: storageError } = await supabaseClient
             .storage
             .from("results")
             .remove([upload.storage_path]);
 
         if (storageError) {
-            deleteButton.disabled = false;
-            deleteButton.textContent = "Delete";
-            document.getElementById("uploadStatus").textContent = `Could not delete file: ${storageError.message}`;
-            return;
-        }
-
-        const { error: recordError } = await supabaseClient
-            .from("result_uploads")
-            .delete()
-            .eq("id", upload.id);
-
-        if (recordError) {
-            deleteButton.disabled = false;
-            deleteButton.textContent = "Delete";
-            document.getElementById("uploadStatus").textContent = `File deleted, but its upload record could not be removed: ${recordError.message}`;
+            item.remove();
+            document.getElementById("uploadStatus").textContent = `Upload record deleted, but the stored file could not be removed: ${storageError.message}`;
             return;
         }
 
@@ -811,7 +819,7 @@
 
         const { data: uploads, error } = await supabaseClient
             .from("result_uploads")
-            .select("id, file_name, file_type, storage_path, uploaded_at")
+            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by")
             .eq("uploaded_by", session.user.id)
             .order("uploaded_at", { ascending: false });
 
