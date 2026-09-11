@@ -408,7 +408,7 @@
                     View files that have been uploaded.
                 </p>
 
-                <button onclick="viewUploads()">
+                <button onclick="viewUploads(true)">
                     View Uploads
                 </button>
 
@@ -610,6 +610,7 @@
 
             return {
                 learner_id: learnerId,
+                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm"]),
                 mathematics: getSpreadsheetValue(row, ["mathematics", "math"]),
                 english: getSpreadsheetValue(row, ["english"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
@@ -626,7 +627,7 @@
 
         const { error: resultError } = await supabaseClient
             .from("results")
-            .upsert(results, { onConflict: "learner_id" });
+            .upsert(results, { onConflict: "learner_id,term" });
 
         if (resultError) {
             throw resultError;
@@ -795,7 +796,7 @@
     }
 
 
-    async function viewUploads() {
+    async function viewUploads(openFirstUpload = false) {
         const list = document.getElementById("uploadsList");
         list.innerHTML = "<li>Loading uploads...</li>";
 
@@ -826,6 +827,8 @@
             return;
         }
 
+        let firstPreview = null;
+
         for (const upload of uploads) {
             const { data: viewUrl, error: viewError } = await supabaseClient
                 .storage
@@ -838,6 +841,14 @@
             item.appendChild(name);
 
             if (!viewError) {
+                if (!firstPreview) {
+                    firstPreview = {
+                        fileName: upload.file_name,
+                        fileType: upload.file_type,
+                        signedUrl: viewUrl.signedUrl
+                    };
+                }
+
                 const actions = document.createElement("span");
                 actions.className = "upload-actions";
 
@@ -884,6 +895,10 @@
             }
 
             list.appendChild(item);
+        }
+
+        if (openFirstUpload && firstPreview) {
+            openPreview(firstPreview.fileName, firstPreview.fileType, firstPreview.signedUrl);
         }
     }
 
