@@ -394,13 +394,12 @@
                     Upload learner results using Excel or PDF.
                 </p>
 
-                <button onclick="uploadResults()">
-
                 <label for="uploadSchool">School</label>
                 <select id="uploadSchool" required>
                     <option value="">Select school</option>
                 </select>
 
+                <button onclick="uploadResults()">
                     Upload Results
                 </button>
 
@@ -886,10 +885,15 @@
             return;
         }
 
-        const { data: schools } = await supabaseClient
+        const { data: schools, error: schoolsError } = await supabaseClient
             .from("schools")
             .select("id, school_name, school_number")
             .eq("created_by", session.user.id);
+
+        if (schoolsError) {
+            list.innerHTML = `<li class="uploads-empty">Could not load schools: ${schoolsError.message}. Run the school migration from README.md in Supabase.</li>`;
+            return;
+        }
 
         const schoolsById = new Map((schools || []).map((school) => [school.id, school]));
 
