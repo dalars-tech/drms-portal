@@ -146,6 +146,10 @@
             min-height: 46px;
         }
 
+        .school-form input[type="email"] {
+            min-width: 0;
+        }
+
         .school-status {
             min-height: 20px;
             margin-bottom: 12px;
@@ -472,6 +476,7 @@
             <form class="school-form" onsubmit="event.preventDefault(); saveSchool();">
                 <input id="schoolName" type="text" placeholder="School name" required>
                 <input id="schoolAdmin" type="text" placeholder="Administrator name">
+                <input id="schoolAdminEmail" type="email" placeholder="Administrator email">
                 <button id="schoolSubmitButton" type="submit">Add School</button>
             </form>
 
@@ -495,7 +500,9 @@
     </div>
 
 
-   <script>
+    <script>
+
+     const PORTAL_OWNER_EMAIL = "bert36766@gmail.com";
 
     async function checkLogin() {
 
@@ -515,21 +522,21 @@
                 .eq("id", session.user.id)
                 .single();
 
-        const role = String(profile?.role || "administrator").toLowerCase();
+        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
         const displayName = profile?.full_name || "Administrator";
-        const roleLabel = role === "owner" ? "Project Owner" : "Administrator";
+        const roleLabel = isOwner ? "Project Owner" : "School Administrator";
 
         document.querySelector(".welcome p").textContent =
             "Welcome, " + displayName;
         document.getElementById("accountRole").textContent =
             "Role: " + roleLabel;
 
-        if (role !== "owner") {
+        if (!isOwner) {
             document.getElementById("schoolManagementCard").hidden = true;
         }
 
-        await loadUploadSchools();
-        await viewUploads();
+        await loadUploadSchools(isOwner);
+        await viewUploads(false, isOwner);
     }
 
 
@@ -559,7 +566,7 @@
     }
 
 
-    async function loadUploadSchools() {
+    async function loadUploadSchools(isOwner = false) {
         const select = document.getElementById("uploadSchool");
 
         if (!select) {
@@ -574,11 +581,16 @@
             return;
         }
 
-        const { data: schools, error } = await supabaseClient
+        let schoolQuery = supabaseClient
             .from("schools")
             .select("id, school_name")
-            .eq("created_by", session.user.id)
             .order("school_name", { ascending: true });
+
+        schoolQuery = isOwner
+            ? schoolQuery.eq("created_by", session.user.id)
+            : schoolQuery.eq("administrator_email", session.user.email);
+
+        const { data: schools, error } = await schoolQuery;
 
         if (error) {
             select.innerHTML = "<option value=\"\">Could not load schools</option>";
@@ -888,7 +900,7 @@
     }
 
 
-    async function viewUploads(openFirstUpload = false) {
+    async function viewUploads(openFirstUpload = false, isOwner = null) {
         const list = document.getElementById("uploadsList");
         list.innerHTML = "<li>Loading uploads...</li>";
 
@@ -901,10 +913,18 @@
             return;
         }
 
-        const { data: schools, error: schoolsError } = await supabaseClient
+        isOwner = isOwner ?? session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+
+        let schoolQuery = supabaseClient
             .from("schools")
             .select("id, school_name")
-            .eq("created_by", session.user.id);
+            .order("school_name", { ascending: true });
+
+        schoolQuery = isOwner
+            ? schoolQuery.eq("created_by", session.user.id)
+            : schoolQuery.eq("administrator_email", session.user.email);
+
+        const { data: schools, error: schoolsError } = await schoolQuery;
 
         if (schoolsError) {
             list.innerHTML = `<li class="uploads-empty">Could not load schools: ${schoolsError.message}. Run the school migration from README.md in Supabase.</li>`;
@@ -913,11 +933,16 @@
 
         const schoolsById = new Map((schools || []).map((school) => [school.id, school]));
 
-        const { data: uploads, error } = await supabaseClient
+        let uploadQuery = supabaseClient
             .from("result_uploads")
             .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
-            .eq("uploaded_by", session.user.id)
             .order("uploaded_at", { ascending: false });
+
+        if (!isOwner) {
+            uploadQuery = uploadQuery.eq("uploaded_by", session.user.id);
+        }
+
+        const { data: uploads, error } = await uploadQuery;
 
         if (error) {
             list.innerHTML = `<li class="uploads-empty">Could not load uploads: ${error.message}</li>`;
@@ -1015,6 +1040,7 @@
     function resetSchoolForm() {
         const nameInput = document.getElementById("schoolName");
         const adminInput = document.getElementById("schoolAdmin");
+        const adminEmailInput = document.getElementById("schoolAdminEmail");
         const submitButton = document.getElementById("schoolSubmitButton");
 
         editingSchoolId = null;
@@ -1025,6 +1051,10 @@
 
         if (adminInput) {
             adminInput.value = "";
+        }
+
+        if (adminEmailInput) {
+            adminEmailInput.value = "";
         }
 
         if (submitButton) {
@@ -1053,7 +1083,7 @@
 
         const { data: schools, error } = await supabaseClient
             .from("schools")
-            .select("id, school_name, administrator_name, created_at")
+            .select("id, school_name, administrator_name, administrator_email, created_at")
             .eq("created_by", session.user.id)
             .order("created_at", { ascending: false });
 
@@ -1110,6 +1140,7 @@
             editButton.addEventListener("click", () => {
                 const nameInput = document.getElementById("schoolName");
                 const adminInput = document.getElementById("schoolAdmin");
+                const adminEmailInput = document.getElementById("schoolAdminEmail");
                 const submitButton = document.getElementById("schoolSubmitButton");
 
                 editingSchoolId = school.id;
@@ -1120,6 +1151,10 @@
 
                 if (adminInput) {
                     adminInput.value = school.administrator_name || "";
+                }
+
+                if (adminEmailInput) {
+                    adminEmailInput.value = school.administrator_email || "";
                 }
 
                 if (submitButton) {
@@ -1173,14 +1208,16 @@
     async function saveSchool() {
         const nameInput = document.getElementById("schoolName");
         const adminInput = document.getElementById("schoolAdmin");
+        const adminEmailInput = document.getElementById("schoolAdminEmail");
         const status = document.getElementById("schoolStatus");
 
-        if (!nameInput || !adminInput) {
+        if (!nameInput || !adminInput || !adminEmailInput) {
             return;
         }
 
         const name = nameInput.value.trim();
         const admin = adminInput.value.trim();
+        const adminEmail = adminEmailInput.value.trim().toLowerCase();
 
         if (!name) {
             if (status) {
@@ -1203,7 +1240,8 @@
                 .from("schools")
                 .update({
                     school_name: name,
-                    administrator_name: admin || null
+                    administrator_name: admin || null,
+                    administrator_email: adminEmail || null
                 })
                 .eq("id", editingSchoolId)
                 .eq("created_by", session.user.id);
@@ -1220,6 +1258,7 @@
                 .insert({
                     school_name: name,
                     administrator_name: admin || null,
+                    administrator_email: adminEmail || null,
                     created_by: session.user.id
                 });
 
