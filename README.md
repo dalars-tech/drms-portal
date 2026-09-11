@@ -48,9 +48,12 @@ Run this migration to connect each uploaded file to the school selected by the a
 ```sql
 alter table public.result_uploads
 add column if not exists school_id uuid references public.schools(id);
+
+alter table public.schools
+add column if not exists administrator_email text;
 ```
 
-When uploading a file, select the school from the list of schools already added in the dashboard. The database keeps the school's internal ID automatically, while the administrator sees only the school name. Existing uploads without a `school_id` appear as `Unassigned`.
+The owner account is `bert36766@gmail.com`. Add each school administrator's Supabase Auth email in the school form. Administrators can then select only their assigned school, upload results, and view only files they uploaded. The owner can view all uploads and manage schools. Existing uploads without a `school_id` appear as `Unassigned`.
 
 ## Spreadsheet upload format
 
