@@ -257,13 +257,42 @@
             list-style: none;
         }
 
-        .uploads-list li {
+        .uploads-list > li {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .school-upload-group {
+            padding: 0;
+        }
+
+        .school-upload-group details {
+            width: 100%;
+        }
+
+        .school-upload-group summary {
+            padding: 12px 0;
+            color: #1e3a8a;
+            cursor: pointer;
+            font-weight: bold;
+            list-style-position: inside;
+        }
+
+        .school-upload-group summary:hover {
+            color: #1d4ed8;
+        }
+
+        .school-upload-files {
+            list-style: none;
+            padding: 0 0 8px 24px;
+        }
+
+        .school-upload-file {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
             padding: 10px 0;
-            border-bottom: 1px solid #e5e7eb;
+            border-top: 1px solid #f1f5f9;
         }
 
         .uploads-list a {
@@ -893,8 +922,13 @@
         }
 
         item.remove();
+        const fileList = item.parentElement;
+        if (fileList && !fileList.querySelector(".school-upload-file")) {
+            fileList.closest(".school-upload-group")?.remove();
+        }
+
         document.getElementById("uploadStatus").textContent = "Upload deleted successfully.";
-        if (!document.querySelector("#uploadsList li")) {
+        if (!document.querySelector("#uploadsList .school-upload-file")) {
             document.getElementById("uploadsList").innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
         }
     }
@@ -958,18 +992,45 @@
 
         let firstPreview = null;
 
+        const uploadsBySchool = new Map();
+
         for (const upload of uploads) {
+            const school = schoolsById.get(upload.school_id);
+            const schoolKey = upload.school_id || "unassigned";
+            const schoolName = school?.school_name || "Unassigned";
+
+            if (!uploadsBySchool.has(schoolKey)) {
+                uploadsBySchool.set(schoolKey, {
+                    name: schoolName,
+                    uploads: []
+                });
+            }
+
+            uploadsBySchool.get(schoolKey).uploads.push(upload);
+        }
+
+        for (const schoolGroup of uploadsBySchool.values()) {
+            const groupItem = document.createElement("li");
+            groupItem.className = "school-upload-group";
+
+            const details = document.createElement("details");
+            const summary = document.createElement("summary");
+            summary.textContent = `${schoolGroup.name} (${schoolGroup.uploads.length} file${schoolGroup.uploads.length === 1 ? "" : "s"})`;
+            details.appendChild(summary);
+
+            const fileList = document.createElement("ul");
+            fileList.className = "school-upload-files";
+
+            for (const upload of schoolGroup.uploads) {
             const { data: viewUrl, error: viewError } = await supabaseClient
                 .storage
                 .from("results")
                 .createSignedUrl(upload.storage_path, 3600, { download: false });
 
             const item = document.createElement("li");
+            item.className = "school-upload-file";
             const name = document.createElement("span");
-            const school = schoolsById.get(upload.school_id);
-            name.textContent = school
-                ? `${school.school_name} | ${upload.file_name}`
-                : `Unassigned | ${upload.file_name}`;
+            name.textContent = upload.file_name;
             item.appendChild(name);
 
             if (!viewError) {
@@ -1026,7 +1087,12 @@
                 item.appendChild(deleteButton);
             }
 
-            list.appendChild(item);
+                fileList.appendChild(item);
+            }
+
+            details.appendChild(fileList);
+            groupItem.appendChild(details);
+            list.appendChild(groupItem);
         }
 
         if (openFirstUpload && firstPreview) {
