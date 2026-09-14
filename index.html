@@ -4,77 +4,130 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>DRMS - Administrator Login</title>
+    <title>DRMS - Digital Results Management System</title>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="supabase.js"></script>
 
     <style>
         * {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
         }
 
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
             background: #f4f7fb;
-            min-height: 100vh;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: #222;
         }
 
-        .login-box {
-            width: 90%;
-            max-width: 420px;
-
-            background: white;
-            padding: 35px 30px;
-
-            border-radius: 12px;
-
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-
-        h1 {
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 25px 15px;
             text-align: center;
-            margin-bottom: 8px;
         }
 
-        .subtitle {
+        header h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 980px;
+            margin: 35px auto;
+        }
+
+        .portal-intro {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #475569;
+        }
+
+        .portal-intro h2 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 4vw, 34px);
+        }
+
+        .portal-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            margin-bottom: 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .description {
             text-align: center;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         label {
             display: block;
-            margin-bottom: 7px;
             font-weight: bold;
+            margin-bottom: 8px;
         }
 
         input {
             width: 100%;
-            padding: 13px;
-
+            padding: 14px;
             border: 1px solid #ccc;
             border-radius: 8px;
-
             font-size: 16px;
-            margin-bottom: 18px;
+            margin-bottom: 15px;
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 92px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: auto;
+            padding: 14px 10px;
+            background: transparent;
+            color: #2563eb;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .password-toggle:hover {
+            background: transparent;
+            color: #1d4ed8;
         }
 
         button {
             width: 100%;
             padding: 14px;
-
             border: none;
             border-radius: 8px;
-
             background: #2563eb;
             color: white;
-
             font-size: 16px;
             cursor: pointer;
         }
@@ -83,112 +136,739 @@
             background: #1d4ed8;
         }
 
-        .back {
-            display: block;
-
-            text-align: center;
-
-            margin-top: 20px;
-
-            color: #2563eb;
-            text-decoration: none;
+        .admin-button {
+            background: #111827;
         }
 
-        #message {
+        .admin-button:hover {
+            background: #000;
+        }
+
+        .message {
             margin-top: 15px;
             text-align: center;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 11px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-row strong {
+            color: #333;
+        }
+
+        .aggregate {
+            margin-top: 20px;
+            padding: 18px;
+            background: #eef4ff;
+            border-radius: 10px;
+        }
+
+        .logout {
+            background: #dc2626;
+            margin-top: 15px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="login-box">
+<header>
+    <h1>DRMS</h1>
+    <p>Digital Results Management System</p>
+</header>
 
-        <h1>DRMS</h1>
 
-        <p class="subtitle">
-            Administrator Login
-        </p>
+<div class="container">
 
-        <form id="loginForm">
+    <div class="portal-intro">
+        <h2>School Results Portal</h2>
+        <p>Parents can check a learner’s performance quickly and securely.</p>
+    </div>
 
-            <label for="email">
-                Email Address
+    <div class="portal-grid">
+
+        <!-- PARENT PORTAL -->
+
+        <div class="card">
+
+            <h2>Check Learner Results</h2>
+
+            <p class="description">
+                Enter the learner's Assessment Number to view results.
+            </p>
+
+            <label for="assessmentNumber">
+                Assessment Number
             </label>
+
+            <input
+                type="text"
+                id="assessmentNumber"
+                placeholder="Enter Assessment Number"
+            >
+
+            <label for="term">Term</label>
+
+            <select id="term">
+                <option value="">Select term</option>
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+            </select>
+
+            <button onclick="searchResults()">
+                Search Results
+            </button>
+
+            <div id="searchMessage" class="message"></div>
+
+        </div>
+
+
+        <!-- ADMIN LOGIN -->
+
+        <div class="card">
+
+            <h2>Administrator</h2>
+
+            <p class="description">
+                Authorized administrators only.
+            </p>
 
             <input
                 type="email"
-                id="email"
-                placeholder="Enter administrator email"
-                required
+                id="adminEmail"
+                placeholder="Administrator Email"
             >
 
-            <label for="password">
-                Password
-            </label>
+            <div class="password-field">
+                <input
+                    type="password"
+                    id="adminPassword"
+                    placeholder="Password"
+                >
+                <button
+                    type="button"
+                    class="password-toggle"
+                    id="passwordToggle"
+                    onclick="togglePassword()"
+                    aria-label="Show password"
+                >
+                    Show
+                </button>
+            </div>
 
-            <input
-                type="password"
-                id="password"
-                placeholder="Enter password"
-                required
+            <button
+                class="admin-button"
+                onclick="adminLogin()"
             >
-
-            <button type="submit">
-                Sign In
+                Administrator Sign In
             </button>
 
-        </form>
+            <div id="loginMessage" class="message"></div>
 
-        <div id="message"></div>
+            <a class="mini-link" href="Admin.html">Open Admin page</a>
 
-        <a href="../index.html" class="back" onclick="return openResultsPortal(event)">
-            ← Back to Results Portal
-        </a>
+        </div>
 
     </div>
 
-   <script>
-    function openResultsPortal(event) {
-        event.preventDefault();
-        window.location.href = new URL("../index.html", window.location.href).href;
-        return false;
+
+    <!-- RESULTS -->
+
+    <div id="resultsCard" class="card hidden">
+
+        <h2>Learner's Results</h2>
+
+        <div class="result-row">
+            <strong>Assessment Number</strong>
+            <span id="resultAssessment"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Learner's Name</strong>
+            <span id="resultName"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Grade</strong>
+            <span id="resultGrade"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Term</strong>
+            <span id="resultTerm"></span>
+        </div>
+
+        <br>
+
+        <div class="result-row">
+            <strong>Mathematics</strong>
+            <span id="mathematics"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>English</strong>
+            <span id="english"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Kiswahili</strong>
+            <span id="kiswahili"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Integrated Science</strong>
+            <span id="integratedScience"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Social Studies</strong>
+            <span id="socialStudies"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>CRE/IRE</strong>
+            <span id="creIre"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Agriculture</strong>
+            <span id="agriculture"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Creative Arts and Sports</strong>
+            <span id="creativeArtsSports"></span>
+        </div>
+
+        <div class="result-row">
+            <strong>Pre-Technical Studies</strong>
+            <span id="preTechnical"></span>
+        </div>
+
+        <div class="aggregate">
+            <div class="result-row">
+                <strong>Aggregate Points</strong>
+                <span id="aggregatePoints"></span>
+            </div>
+
+            <div class="result-row">
+                <strong>Rubrics</strong>
+                <span id="aggregateRubrics"></span>
+            </div>
+        </div>
+
+        <div class="result-row" id="resultFileRow" style="display: none;">
+            <strong>Uploaded File</strong>
+            <a id="resultFileLink" href="#" target="_blank" rel="noopener">Download</a>
+        </div>
+
+    </div>
+
+</div>
+
+<footer>
+    © 2026 Digital Results Management System
+</footer>
+
+
+<script>
+
+function messageForDownload(text) {
+    const message = document.getElementById("searchMessage");
+    if (message) {
+        message.textContent = text;
+    }
+}
+
+function togglePassword() {
+    const password = document.getElementById("adminPassword");
+    const toggle = document.getElementById("passwordToggle");
+    const isHidden = password.type === "password";
+
+    password.type = isHidden ? "text" : "password";
+    toggle.textContent = isHidden ? "Hide" : "Show";
+    toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+}
+
+function normalizeSpreadsheetRow(row) {
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+            key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+            value
+        ])
+    );
+}
+
+function spreadsheetValue(row, names) {
+    for (const name of names) {
+        const value = row[name];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+            return String(value).trim();
+        }
     }
 
-    document
-        .getElementById("loginForm")
-        .addEventListener("submit", async function(event) {
+    return "";
+}
 
-            event.preventDefault();
+function calculateAggregatePoints(row) {
+    const subjects = [
+        ["mathematics", "math"],
+        ["english"],
+        ["kiswahili"],
+        ["integratedscience", "integratedsciences"],
+        ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"],
+        ["creire", "cre"],
+        ["agriculture"],
+        ["creativeartssports", "creativearts"],
+        ["pretechnicalstudies", "pretechnical"]
+    ];
+    const values = subjects.map((names) => Number.parseFloat(spreadsheetValue(row, names)));
 
-            const email =
-                document.getElementById("email").value.trim();
+    return values.every((value) => Number.isFinite(value))
+        ? String(values.reduce((total, value) => total + value, 0))
+        : "";
+}
 
-            const password =
-                document.getElementById("password").value;
+function canonicalAssessmentNumber(value) {
+    return String(value ?? "")
+        .trim()
+        .replace(/\.0+$/, "")
+        .replace(/[^a-z0-9]/gi, "")
+        .toLowerCase();
+}
 
-            const message =
-                document.getElementById("message");
+function canonicalTerm(value) {
+    const normalized = String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "");
 
-            message.textContent = "Signing in...";
+    if (/^\d+$/.test(normalized)) {
+        return `term${normalized}`;
+    }
 
-            const { data, error } =
-                await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
+    return normalized.replace(/^term/, "term");
+}
 
-            if (error) {
+function spreadsheetRows(sheet) {
+    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+        const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return ["assessmentnumber", "assessmentno", "assessment"].includes(header);
+    }));
 
-                message.textContent =
-                    "Login failed: " + error.message;
+    if (headerIndex < 0) {
+        return [];
+    }
 
+    const headers = matrix[headerIndex].map((header) =>
+        String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    );
+
+    return matrix.slice(headerIndex + 1).map((values) =>
+        Object.fromEntries(headers.map((header, index) => [header, values[index]]))
+    );
+}
+
+function fileMetadata(fileName) {
+    const name = String(fileName || "");
+    const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
+    const classMatch = name.match(/\b(?:class|stream)\s*([a-z0-9-]+)\b/i);
+    const termMatch = name.match(/\bterm\s*([1-3])\b/i);
+
+    return {
+        grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
+        class: classMatch ? classMatch[1] : "",
+        term: termMatch ? `Term ${termMatch[1]}` : ""
+    };
+}
+
+async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
+    if (typeof XLSX === "undefined") {
+        throw new Error("The spreadsheet reader could not be loaded.");
+    }
+
+    const { data: uploads, error } = await supabaseClient
+        .from("result_uploads")
+        .select("file_name, file_type, storage_path")
+        .order("uploaded_at", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+
+    const normalizedAssessmentNumber = canonicalAssessmentNumber(assessmentNumber);
+    const spreadsheetUploads = (uploads || []).filter((upload) =>
+        /\.(xlsx?|xls)$/i.test(upload.file_name || "")
+        || /spreadsheet|excel/i.test(upload.file_type || "")
+    );
+
+    for (const upload of spreadsheetUploads) {
+        const { data: signedUrl, error: urlError } = await supabaseClient
+            .storage
+            .from("results")
+            .createSignedUrl(upload.storage_path, 3600);
+
+        if (urlError) {
+            continue;
+        }
+
+        const response = await fetch(signedUrl.signedUrl);
+        if (!response.ok) {
+            continue;
+        }
+
+        const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = spreadsheetRows(sheet);
+
+        for (const originalRow of rows) {
+            const row = normalizeSpreadsheetRow(originalRow);
+            const rowAssessmentNumber = spreadsheetValue(row, [
+                "assessmentnumber",
+                "assessmentno",
+                "assessment"
+            ]);
+
+            const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm"]);
+            const uploadTerm = fileMetadata(upload.file_name).term;
+            const effectiveTerm = rowTerm || uploadTerm;
+
+            if (canonicalAssessmentNumber(rowAssessmentNumber) === normalizedAssessmentNumber
+                && (!effectiveTerm || canonicalTerm(effectiveTerm) === canonicalTerm(selectedTerm))) {
+                return {
+                    data: {
+                        assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
+                        learner_name: spreadsheetValue(row, ["learnername", "name"]),
+                        term: effectiveTerm || selectedTerm,
+                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(upload.file_name).grade,
+                        class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
+                        mathematics: spreadsheetValue(row, ["mathematics", "math"]),
+                        english: spreadsheetValue(row, ["english"]),
+                        kiswahili: spreadsheetValue(row, ["kiswahili"]),
+                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
+                        cre_ire: spreadsheetValue(row, ["creire", "cre"]),
+                        agriculture: spreadsheetValue(row, ["agriculture"]),
+                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
+                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]) || calculateAggregatePoints(row),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
+                    },
+                    upload
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
+async function loadResultDownload(assessmentNumber) {
+    const row = document.getElementById("resultFileRow");
+    const link = document.getElementById("resultFileLink");
+
+    if (!row || !link) {
+        return;
+    }
+
+    row.style.display = "none";
+    link.removeAttribute("href");
+    link.textContent = "Download";
+
+    const candidates = [
+        "assessment_number",
+        "assessmentNumber",
+        "assessment_no"
+    ];
+
+    for (const column of candidates) {
+        const { data, error } = await supabaseClient
+            .from("result_uploads")
+            .select("storage_path, file_name")
+            .eq(column, assessmentNumber)
+            .limit(1);
+
+        if (!error && data && data.length) {
+            const file = data[0];
+            if (!file.storage_path) {
+                continue;
+            }
+
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(file.storage_path, 3600);
+
+            if (!urlError && signedUrl?.signedUrl) {
+                row.style.display = "flex";
+                link.href = signedUrl.signedUrl;
+                link.textContent = file.file_name || "Download uploaded file";
+                return;
+            }
+        }
+
+        if (error && /does not exist|column .* does not exist|not found/i.test(error.message)) {
+            continue;
+        }
+
+        if (error) {
+            messageForDownload("The result was found, but its uploaded file cannot be read. Check the result_uploads SELECT policy.");
+            return;
+        }
+    }
+
+    const { data: fallbackData, error: fallbackError } = await supabaseClient
+        .from("result_uploads")
+        .select("storage_path, file_name")
+        .ilike("file_name", `%${assessmentNumber}%`)
+        .limit(1);
+
+    if (!fallbackError && fallbackData && fallbackData.length) {
+        const file = fallbackData[0];
+        if (file.storage_path) {
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(file.storage_path, 3600);
+
+            if (!urlError && signedUrl?.signedUrl) {
+                row.style.display = "flex";
+                link.href = signedUrl.signedUrl;
+                link.textContent = file.file_name || "Download uploaded file";
                 return;
             }
 
-            window.location.href = "../dashboard.html";
+            if (urlError) {
+                messageForDownload("The result was found, but its uploaded file cannot be downloaded. Check the storage SELECT policy.");
+                return;
+            }
+        }
+    }
+}
+
+async function searchResults() {
+
+    const assessmentNumber =
+        document
+        .getElementById("assessmentNumber")
+        .value
+        .trim();
+
+    const selectedTerm = document.getElementById("term").value;
+
+    const message =
+        document.getElementById("searchMessage");
+
+    const resultsCard =
+        document.getElementById("resultsCard");
+
+
+    if (!assessmentNumber || !selectedTerm) {
+
+        message.textContent =
+            "Please enter an Assessment Number and select a term.";
+
+        resultsCard.classList.add("hidden");
+
+        return;
+    }
+
+
+    message.textContent = "Searching...";
+
+
+    let { data, error } =
+        await supabaseClient.rpc(
+            "search_learner_result",
+            {
+                search_assessment_number: assessmentNumber,
+                search_term: selectedTerm
+            }
+        );
+
+    if (data) {
+        data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
+        data.aggregate_points = data.aggregate_points ?? data.aggregatePoints ?? data.total_points;
+        data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
+    }
+
+
+    let uploadedFile = null;
+
+    const requiredResultFields = [
+        "grade",
+        "class",
+        "social_studies",
+        "aggregate_points",
+        "aggregate_rubrics"
+    ];
+    const hasIncompleteData = !data || requiredResultFields.some((field) =>
+        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+    );
+
+    if (error || hasIncompleteData) {
+        try {
+            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber, selectedTerm);
+            if (uploadedResult?.data) {
+                data = data
+                    ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
+                        field,
+                        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+                            ? value
+                            : data[field]
+                    ]))
+                    : uploadedResult.data;
+                uploadedFile = uploadedResult.upload;
+            }
+        } catch (fallbackError) {
+            console.error(error || fallbackError);
+            message.textContent = error?.code === "42883"
+                ? "Search setup is incomplete, and uploaded files could not be searched. Check the result_uploads and storage SELECT policies."
+                : `Unable to search results: ${error?.message || fallbackError.message}`;
+            resultsCard.classList.add("hidden");
+            return;
+        }
+    }
+
+    if (!data) {
+        message.textContent = "No learner found with that Assessment Number.";
+        resultsCard.classList.add("hidden");
+        return;
+    }
+
+
+    message.textContent = "";
+
+
+    document.getElementById("resultAssessment").textContent =
+        data.assessment_number || "";
+
+    document.getElementById("resultName").textContent =
+        data.learner_name || "";
+
+    document.getElementById("resultGrade").textContent =
+        data.grade || "";
+
+    document.getElementById("resultTerm").textContent =
+        data.term || selectedTerm;
+
+
+    document.getElementById("mathematics").textContent =
+        data.mathematics ?? "";
+
+    document.getElementById("english").textContent =
+        data.english ?? "";
+
+    document.getElementById("kiswahili").textContent =
+        data.kiswahili ?? "";
+
+    document.getElementById("integratedScience").textContent =
+        data.integrated_science ?? "";
+
+    document.getElementById("socialStudies").textContent =
+        data.social_studies ?? "";
+
+    document.getElementById("creIre").textContent =
+        data.cre_ire ?? "";
+
+    document.getElementById("agriculture").textContent =
+        data.agriculture ?? "";
+
+    document.getElementById("creativeArtsSports").textContent =
+        data.creative_arts_sports ?? "";
+
+    document.getElementById("preTechnical").textContent =
+        data.pre_technical_studies ?? "";
+
+
+    document.getElementById("aggregatePoints").textContent =
+        data.aggregate_points ?? "";
+
+    document.getElementById("aggregateRubrics").textContent =
+        data.aggregate_rubrics ?? "";
+
+    if (uploadedFile?.storage_path) {
+        const { data: signedUrl, error: urlError } = await supabaseClient
+            .storage
+            .from("results")
+            .createSignedUrl(uploadedFile.storage_path, 3600);
+
+        if (!urlError && signedUrl?.signedUrl) {
+            const fileRow = document.getElementById("resultFileRow");
+            const fileLink = document.getElementById("resultFileLink");
+            fileRow.style.display = "flex";
+            fileLink.href = signedUrl.signedUrl;
+            fileLink.textContent = uploadedFile.file_name || "Download uploaded file";
+        }
+    } else {
+        await loadResultDownload(assessmentNumber);
+    }
+
+    resultsCard.classList.remove("hidden");
+}
+
+
+async function adminLogin() {
+
+    const email =
+        document.getElementById("adminEmail").value.trim();
+
+    const password =
+        document.getElementById("adminPassword").value;
+
+    const message =
+        document.getElementById("loginMessage");
+
+
+    if (!email || !password) {
+
+        message.textContent =
+            "Enter your email and password.";
+
+        return;
+    }
+
+
+    message.textContent = "Signing in...";
+
+
+    const { error } =
+        await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
         });
+
+
+    if (error) {
+
+        message.textContent =
+            "Login failed: " + error.message;
+
+        return;
+    }
+
+
+    window.location.href = "dashboard.html";
+}
+
 </script>
 
 </body>
