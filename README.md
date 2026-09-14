@@ -21,10 +21,23 @@ on storage.objects for select
 to anon, authenticated
 using (bucket_id = 'results');
 
+drop policy if exists "Authenticated users can create upload records" on public.result_uploads;
+
 create policy "Authenticated users can create upload records"
 on public.result_uploads for insert
 to authenticated
-with check (uploaded_by = (select auth.uid()));
+with check (
+	uploaded_by = (select auth.uid())
+	and exists (
+		select 1
+		from public.schools
+		where schools.id = school_id
+		and (
+			schools.created_by = (select auth.uid())
+			or lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+		)
+	)
+);
 
 create policy "Anyone can read upload records"
 on public.result_uploads for select
@@ -54,6 +67,8 @@ add column if not exists administrator_email text;
 ```
 
 The owner account is `bert36766@gmail.com`. Add each school administrator's Supabase Auth email in the school form. Administrators can then select only their assigned school, upload results, and view only files they uploaded. The owner can view all uploads and manage schools. Existing uploads without a `school_id` appear as `Unassigned`.
+
+Before assigning an administrator to a school, create that person's account in Supabase Dashboard under **Authentication > Users** with the same email and password you give them. The school form only stores the email-to-school assignment; passwords are handled by Supabase Auth and are never stored in this application. An authenticated account cannot open the dashboard until its email is assigned to at least one school.
 
 ## Spreadsheet upload format
 
