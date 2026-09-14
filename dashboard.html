@@ -505,7 +505,7 @@
             <form class="school-form" onsubmit="event.preventDefault(); saveSchool();">
                 <input id="schoolName" type="text" placeholder="School name" required>
                 <input id="schoolAdmin" type="text" placeholder="Administrator name">
-                <input id="schoolAdminEmail" type="email" placeholder="Administrator email">
+                <input id="schoolAdminEmail" type="email" placeholder="Administrator email" required>
                 <button id="schoolSubmitButton" type="submit">Add School</button>
             </form>
 
@@ -544,6 +544,25 @@
             return;
         }
 
+        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+
+        if (!isOwner) {
+            const { data: assignedSchools, error: assignmentError } = await supabaseClient
+                .from("schools")
+                .select("id")
+                .eq("administrator_email", session.user.email?.toLowerCase())
+                .limit(1);
+
+            if (assignmentError || !assignedSchools?.length) {
+                await supabaseClient.auth.signOut();
+                alert(assignmentError
+                    ? "Your administrator account could not be checked. Contact the project owner."
+                    : "Your account is not assigned to a school yet. Contact the project owner.");
+                window.location.href = "Admin.html";
+                return;
+            }
+        }
+
         const { data: profile } =
             await supabaseClient
                 .from("admin_profiles")
@@ -551,7 +570,6 @@
                 .eq("id", session.user.id)
                 .single();
 
-        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
         const displayName = profile?.full_name || "Administrator";
         const roleLabel = isOwner ? "Project Owner" : "School Administrator";
 
@@ -799,6 +817,26 @@
 
         if (!session) {
             window.location.href = "Admin.html";
+            return;
+        }
+
+        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+        let schoolQuery = supabaseClient
+            .from("schools")
+            .select("id")
+            .eq("id", schoolId);
+
+        schoolQuery = isOwner
+            ? schoolQuery.eq("created_by", session.user.id)
+            : schoolQuery.eq("administrator_email", session.user.email?.toLowerCase());
+
+        const { data: assignedSchool, error: schoolError } = await schoolQuery.maybeSingle();
+
+        if (schoolError || !assignedSchool) {
+            status.textContent = schoolError
+                ? "The selected school could not be verified. Try again."
+                : "You can only upload results for your assigned school.";
+            input.value = "";
             return;
         }
 
