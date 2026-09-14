@@ -143,13 +143,19 @@
 
         <div id="message"></div>
 
-        <a href="../index.html" class="back">
+        <a href="../index.html" class="back" onclick="return openResultsPortal(event)">
             ← Back to Results Portal
         </a>
 
     </div>
 
    <script>
+    function openResultsPortal(event) {
+        event.preventDefault();
+        window.location.href = new URL("../index.html", window.location.href).href;
+        return false;
+    }
+
     document
         .getElementById("loginForm")
         .addEventListener("submit", async function(event) {
