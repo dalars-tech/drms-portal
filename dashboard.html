@@ -696,6 +696,27 @@
     }
 
 
+    function spreadsheetRows(sheet) {
+        const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+        const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+            const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
+        }));
+
+        if (headerIndex < 0) {
+            return [];
+        }
+
+        const headers = matrix[headerIndex].map((header) =>
+            String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
+        );
+
+        return matrix.slice(headerIndex + 1).map((values) =>
+            Object.fromEntries(headers.map((header, index) => [header, values[index]]))
+        );
+    }
+
+
     function fileMetadata(fileName) {
         const name = String(fileName || "");
         const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
@@ -715,13 +736,12 @@
 
         const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null })
-            .map(normalizeSpreadsheetRow);
+        const rows = spreadsheetRows(firstSheet).map(normalizeSpreadsheetRow);
 
         const learners = rows.map((row) => ({
-            assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
-            learner_name: getSpreadsheetValue(row, ["learnername", "name"]),
-            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(file.name).grade,
+            assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
+            learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
+            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(file.name).grade,
             class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class
         })).filter((learner) => learner.assessment_number);
 
@@ -744,7 +764,7 @@
         ]));
 
         const results = rows.map((row) => {
-            const assessmentNumber = getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]);
+            const assessmentNumber = getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]);
             const learnerId = learnerIds.get(assessmentNumber);
 
             if (!learnerId) {
@@ -753,18 +773,18 @@
 
             return {
                 learner_id: learnerId,
-                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm"]),
-                mathematics: getSpreadsheetValue(row, ["mathematics", "math"]),
-                english: getSpreadsheetValue(row, ["english"]),
-                kiswahili: getSpreadsheetValue(row, ["kiswahili"]),
-                integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences"]),
+                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]),
+                mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
+                english: getSpreadsheetValue(row, ["english", "eng"]),
+                kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
+                integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
                 social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
-                cre_ire: getSpreadsheetValue(row, ["creire", "cre"]),
-                agriculture: getSpreadsheetValue(row, ["agriculture"]),
-                creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts"]),
-                pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]) || calculateAggregatePoints(row),
-                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
+                cre_ire: getSpreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
+                agriculture: getSpreadsheetValue(row, ["agriculture", "agric"]),
+                creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
+                pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
+                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
             };
         }).filter(Boolean);
 
