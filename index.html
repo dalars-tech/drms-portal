@@ -165,6 +165,20 @@
             color: #333;
         }
 
+        .download-button {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #16a34a;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .download-button:hover {
+            background: #15803d;
+        }
+
         .aggregate {
             margin-top: 20px;
             padding: 18px;
@@ -375,8 +389,8 @@
         </div>
 
         <div class="result-row" id="resultFileRow" style="display: none;">
-            <strong>Uploaded File</strong>
-            <a id="resultFileLink" href="#" target="_blank" rel="noopener">Download</a>
+            <strong>Download Learner Results</strong>
+            <a id="resultFileLink" class="download-button" href="#" download>Download File</a>
         </div>
 
     </div>
@@ -395,6 +409,65 @@ function messageForDownload(text) {
     if (message) {
         message.textContent = text;
     }
+}
+
+let learnerDownloadUrl = null;
+
+function createLearnerDownload(data, selectedTerm) {
+    const fileRow = document.getElementById("resultFileRow");
+    const fileLink = document.getElementById("resultFileLink");
+    const learnerName = data.learner_name || "learner";
+    const assessmentNumber = data.assessment_number || "result";
+
+    if (learnerDownloadUrl) {
+        URL.revokeObjectURL(learnerDownloadUrl);
+    }
+
+    const learnerRow = {
+        "Assessment Number": assessmentNumber,
+        "Learner Name": learnerName,
+        "Grade": data.grade || "",
+        "Term": data.term || selectedTerm,
+        "Mathematics": data.mathematics ?? "",
+        "English": data.english ?? "",
+        "Kiswahili": data.kiswahili ?? "",
+        "Integrated Science": data.integrated_science ?? "",
+        "Social Studies": data.social_studies ?? "",
+        "CRE/IRE": data.cre_ire ?? "",
+        "Agriculture": data.agriculture ?? "",
+        "Creative Arts and Sports": data.creative_arts_sports ?? "",
+        "Pre-Technical Studies": data.pre_technical_studies ?? "",
+        "Aggregate Points": data.aggregate_points ?? "",
+        "Rubrics": data.aggregate_rubrics ?? ""
+    };
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet([learnerRow]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Learner Results");
+    const workbookBytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    learnerDownloadUrl = URL.createObjectURL(new Blob([workbookBytes], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }));
+
+    fileLink.href = learnerDownloadUrl;
+    fileLink.download = `${assessmentNumber}-${learnerName}`
+        .replace(/[^a-z0-9._-]+/gi, "-")
+        .replace(/-+/g, "-") + ".xlsx";
+    fileRow.style.display = "flex";
+}
+
+function clearLearnerDownload() {
+    const fileRow = document.getElementById("resultFileRow");
+    const fileLink = document.getElementById("resultFileLink");
+
+    if (learnerDownloadUrl) {
+        URL.revokeObjectURL(learnerDownloadUrl);
+        learnerDownloadUrl = null;
+    }
+
+    fileRow.style.display = "none";
+    fileLink.removeAttribute("href");
+    fileLink.removeAttribute("download");
 }
 
 function togglePassword() {
@@ -471,7 +544,7 @@ function spreadsheetRows(sheet) {
     const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
     const headerIndex = matrix.findIndex((row) => row.some((cell) => {
         const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        return ["assessmentnumber", "assessmentno", "assessment"].includes(header);
+        return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
     }));
 
     if (headerIndex < 0) {
@@ -544,10 +617,13 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
             const rowAssessmentNumber = spreadsheetValue(row, [
                 "assessmentnumber",
                 "assessmentno",
-                "assessment"
+                "assessment",
+                "admno",
+                "admissionnumber",
+                "indexnumber"
             ]);
 
-            const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm"]);
+            const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]);
             const uploadTerm = fileMetadata(upload.file_name).term;
             const effectiveTerm = rowTerm || uploadTerm;
 
@@ -555,22 +631,22 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
                 && (!effectiveTerm || canonicalTerm(effectiveTerm) === canonicalTerm(selectedTerm))) {
                 return {
                     data: {
-                        assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment"]),
-                        learner_name: spreadsheetValue(row, ["learnername", "name"]),
+                        assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
+                        learner_name: spreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
                         term: effectiveTerm || selectedTerm,
-                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel"]) || fileMetadata(upload.file_name).grade,
+                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(upload.file_name).grade,
                         class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
-                        mathematics: spreadsheetValue(row, ["mathematics", "math"]),
-                        english: spreadsheetValue(row, ["english"]),
-                        kiswahili: spreadsheetValue(row, ["kiswahili"]),
-                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences"]),
+                        mathematics: spreadsheetValue(row, ["mathematics", "math", "maths"]),
+                        english: spreadsheetValue(row, ["english", "eng"]),
+                        kiswahili: spreadsheetValue(row, ["kiswahili", "swahili"]),
+                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
                         social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
-                        cre_ire: spreadsheetValue(row, ["creire", "cre"]),
-                        agriculture: spreadsheetValue(row, ["agriculture"]),
-                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts"]),
-                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical"]),
-                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points"]) || calculateAggregatePoints(row),
-                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints"])
+                        cre_ire: spreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
+                        agriculture: spreadsheetValue(row, ["agriculture", "agric"]),
+                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
+                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
                     },
                     upload
                 };
@@ -680,6 +756,8 @@ async function searchResults() {
     const resultsCard =
         document.getElementById("resultsCard");
 
+    clearLearnerDownload();
+
 
     if (!assessmentNumber || !selectedTerm) {
 
@@ -715,7 +793,6 @@ async function searchResults() {
 
     const requiredResultFields = [
         "grade",
-        "class",
         "social_studies",
         "aggregate_points",
         "aggregate_rubrics"
@@ -805,22 +882,7 @@ async function searchResults() {
     document.getElementById("aggregateRubrics").textContent =
         data.aggregate_rubrics ?? "";
 
-    if (uploadedFile?.storage_path) {
-        const { data: signedUrl, error: urlError } = await supabaseClient
-            .storage
-            .from("results")
-            .createSignedUrl(uploadedFile.storage_path, 3600);
-
-        if (!urlError && signedUrl?.signedUrl) {
-            const fileRow = document.getElementById("resultFileRow");
-            const fileLink = document.getElementById("resultFileLink");
-            fileRow.style.display = "flex";
-            fileLink.href = signedUrl.signedUrl;
-            fileLink.textContent = uploadedFile.file_name || "Download uploaded file";
-        }
-    } else {
-        await loadResultDownload(assessmentNumber);
-    }
+    createLearnerDownload(data, selectedTerm);
 
     resultsCard.classList.remove("hidden");
 }
