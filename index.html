@@ -222,13 +222,20 @@
             }
 
             .result-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 4px;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .result-row strong {
+                max-width: 48%;
             }
 
             .result-row span {
-                text-align: left;
+                margin-left: auto;
+                text-align: right;
+                max-width: 50%;
             }
 
             .password-field input {
