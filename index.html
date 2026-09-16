@@ -317,9 +317,9 @@
 
             <select id="term">
                 <option value="">Select term</option>
-                <option value="Term 1">Term 1</option>
-                <option value="Term 2">Term 2</option>
-                <option value="Term 3">Term 3</option>
+                <option value="Term 1">I</option>
+                <option value="Term 2">II</option>
+                <option value="Term 3">III</option>
             </select>
 
             <button onclick="searchResults()">
@@ -488,6 +488,59 @@ function messageForDownload(text) {
     }
 }
 
+function romanNumeral(value) {
+    const numerals = [
+        [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+        [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+        [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]
+    ];
+
+    const number = Number.parseInt(value, 10);
+    if (!Number.isFinite(number) || number < 1) {
+        return String(value ?? "");
+    }
+
+    let result = "";
+    let remaining = number;
+
+    for (const [intValue, numeral] of numerals) {
+        while (remaining >= intValue) {
+            result += numeral;
+            remaining -= intValue;
+        }
+    }
+
+    return result;
+}
+
+function formatGradeDisplay(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "";
+
+    const match = text.match(/grade\s*([a-z0-9]+)\b/i);
+    if (match) {
+        return match[1];
+    }
+
+    return text.replace(/^grade\s*/i, "");
+}
+
+function formatTermDisplay(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "";
+
+    if (/^[ivxlcdm]+$/i.test(text)) {
+        return text.toUpperCase();
+    }
+
+    const match = text.match(/\bterm\s*([0-9]+)\b/i) || text.match(/\b([0-9]+)\b/);
+    if (match) {
+        return romanNumeral(match[1]);
+    }
+
+    return text.replace(/^term\s*/i, "");
+}
+
 let learnerDownloadUrl = null;
 
 function createLearnerDownload(data, selectedTerm) {
@@ -533,8 +586,8 @@ function createLearnerDownload(data, selectedTerm) {
 
     const rows = [
         ["Assessment Number", assessmentNumber],
-        ["Grade", data.grade || ""],
-        ["Term", data.term || selectedTerm],
+        ["Grade", formatGradeDisplay(data.grade || "")],
+        ["Term", formatTermDisplay(data.term || selectedTerm)],
         ["Mathematics", data.mathematics ?? ""],
         ["English", data.english ?? ""],
         ["Kiswahili", data.kiswahili ?? ""],
@@ -969,10 +1022,10 @@ async function searchResults() {
         data.learner_name || "";
 
     document.getElementById("resultGrade").textContent =
-        data.grade || "";
+        formatGradeDisplay(data.grade || "");
 
     document.getElementById("resultTerm").textContent =
-        data.term || selectedTerm;
+        formatTermDisplay(data.term || selectedTerm);
 
 
     document.getElementById("mathematics").textContent =
