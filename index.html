@@ -353,12 +353,6 @@
                 placeholder="Enter Assessment Number"
             >
 
-            <label for="school">School</label>
-
-            <select id="school">
-                <option value="">Optional: choose school</option>
-            </select>
-
             <label for="term">Term</label>
 
             <select id="term">
@@ -706,33 +700,6 @@ function togglePassword() {
     toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
 }
 
-async function loadPublicSchools() {
-    const schoolSelect = document.getElementById("school");
-    if (!schoolSelect) {
-        return;
-    }
-
-    schoolSelect.innerHTML = '<option value="">Loading schools...</option>';
-
-    const { data, error } = await supabaseClient
-        .from("schools")
-        .select("id, school_name")
-        .order("school_name", { ascending: true });
-
-    if (error) {
-        schoolSelect.innerHTML = '<option value="">Could not load schools</option>';
-        return;
-    }
-
-    schoolSelect.innerHTML = '<option value="">Select school</option>';
-    (data || []).forEach((school) => {
-        const option = document.createElement("option");
-        option.value = school.id;
-        option.textContent = school.school_name || "Unnamed School";
-        schoolSelect.appendChild(option);
-    });
-}
-
 async function callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId) {
     const payload = {
         search_assessment_number: assessmentNumber,
@@ -1029,7 +996,7 @@ async function searchResults() {
         .value
         .trim();
 
-    const selectedSchoolId = document.getElementById("school").value || null;
+    const selectedSchoolId = null;
     const selectedTerm = document.getElementById("term").value;
 
     const message =
@@ -1207,7 +1174,6 @@ async function adminLogin() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-    loadPublicSchools();
 });
 
 </script>
