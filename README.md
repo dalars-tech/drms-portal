@@ -86,44 +86,61 @@ alter table public.results drop constraint if exists results_learner_id_key;
 alter table public.results add constraint results_learner_id_term_key unique (learner_id, term);
 ```
 
-The public portal searches learner data through a database function named `search_learner_result`. That function must exist in Supabase and must be executable by the anonymous role:
+The public portal searches learner data through a database function named `search_learner_result`. That function must exist in Supabase and must be executable by the anonymous role. For multi-school support, the lookup must also be filtered by the selected school:
 
 ```sql
-create or replace function public.search_learner_result(search_assessment_number text, search_term text)
+alter table public.learners
+  add column if not exists school_id uuid references public.schools(id);
+
+alter table public.results
+  add column if not exists school_id uuid references public.schools(id);
+
+create index if not exists learners_school_assessment_idx
+  on public.learners (school_id, assessment_number);
+
+create index if not exists results_school_term_idx
+  on public.results (school_id, term);
+
+create or replace function public.search_learner_result(
+  search_assessment_number text,
+  search_term text,
+  search_school_id uuid
+)
 returns jsonb
 language sql
 stable
 security definer
 set search_path = public
 as $$
-	select to_jsonb(result_row)
-	from (
-		select
-			l.assessment_number,
-			l.learner_name,
-			l.grade,
-			l.class,
-			r.term,
-			r.mathematics,
-			r.english,
-			r.kiswahili,
-			r.integrated_science,
-			r.social_studies,
-			r.cre_ire,
-			r.agriculture,
-			r.creative_arts_sports,
-			r.pre_technical_studies,
-			r.aggregate_points,
-			r.aggregate_rubric as aggregate_rubrics
-		from public.learners l
-		join public.results r on r.learner_id = l.id
-		where l.assessment_number = search_assessment_number
-		  and lower(r.term) = lower(search_term)
-		limit 1
-	) as result_row;
+  select to_jsonb(result_row)
+  from (
+    select
+      l.assessment_number,
+      l.learner_name,
+      l.grade,
+      l.class,
+      r.term,
+      r.mathematics,
+      r.english,
+      r.kiswahili,
+      r.integrated_science,
+      r.social_studies,
+      r.cre_ire,
+      r.agriculture,
+      r.creative_arts_sports,
+      r.pre_technical_studies,
+      r.aggregate_points,
+      r.aggregate_rubric as aggregate_rubrics
+    from public.learners l
+    join public.results r on r.learner_id = l.id
+    where l.school_id = search_school_id
+      and l.assessment_number = search_assessment_number
+      and lower(r.term) = lower(search_term)
+    limit 1
+  ) as result_row;
 $$;
 
-grant execute on function public.search_learner_result(text, text) to anon;
+grant execute on function public.search_learner_result(text, text, uuid) to anon;
 ```
 
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
