@@ -356,7 +356,7 @@
             <label for="school">School</label>
 
             <select id="school">
-                <option value="">Select school</option>
+                <option value="">Optional: choose school</option>
             </select>
 
             <label for="term">Term</label>
@@ -737,7 +737,7 @@ async function callSearchLearnerResult(assessmentNumber, selectedTerm, selectedS
     const payload = {
         search_assessment_number: assessmentNumber,
         search_term: selectedTerm,
-        search_school_id: selectedSchoolId
+        search_school_id: selectedSchoolId || null
     };
 
     let response = await supabaseClient.rpc("search_learner_result", payload);
@@ -1029,7 +1029,7 @@ async function searchResults() {
         .value
         .trim();
 
-    const selectedSchoolId = document.getElementById("school").value;
+    const selectedSchoolId = document.getElementById("school").value || null;
     const selectedTerm = document.getElementById("term").value;
 
     const message =
@@ -1041,10 +1041,10 @@ async function searchResults() {
     clearLearnerDownload();
 
 
-    if (!assessmentNumber || !selectedTerm || !selectedSchoolId) {
+    if (!assessmentNumber || !selectedTerm) {
 
         message.textContent =
-            "Please select a school, enter an Assessment Number, and choose a term.";
+            "Please enter an Assessment Number and choose a term.";
 
         resultsCard.classList.add("hidden");
 
