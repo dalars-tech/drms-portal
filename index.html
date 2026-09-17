@@ -88,6 +88,18 @@
             margin-bottom: 25px;
         }
 
+        .mini-link {
+            display: inline-block;
+            margin-top: 14px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .mini-link:hover {
+            text-decoration: underline;
+        }
+
         label {
             display: block;
             font-weight: bold;
@@ -103,6 +115,14 @@
             font-size: 16px;
             margin-bottom: 15px;
             background: white;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
 
         .password-field {
@@ -166,6 +186,7 @@
         .result-row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             gap: 12px;
             padding: 11px 0;
             border-bottom: 1px solid #eee;
@@ -174,11 +195,15 @@
         .result-row strong {
             color: #333;
             flex-shrink: 0;
+            line-height: 1.4;
         }
 
         .result-row span {
+            flex: 1 1 auto;
+            min-width: 0;
             word-break: break-word;
             text-align: right;
+            line-height: 1.4;
         }
 
         .download-button {
@@ -223,19 +248,34 @@
 
             .result-row {
                 display: flex;
-                flex-wrap: wrap;
                 align-items: center;
                 gap: 8px;
             }
 
             .result-row strong {
-                max-width: 48%;
+                flex: 0 0 46%;
+                max-width: 46%;
             }
 
             .result-row span {
+                flex: 1 1 46%;
                 margin-left: auto;
                 text-align: right;
-                max-width: 50%;
+                max-width: 46%;
+            }
+
+            .aggregate .result-row {
+                align-items: flex-start;
+            }
+
+            #resultFileRow {
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            #resultFileRow strong {
+                flex-basis: 100%;
+                max-width: 100%;
             }
 
             .password-field input {
@@ -312,6 +352,12 @@
                 id="assessmentNumber"
                 placeholder="Enter Assessment Number"
             >
+
+            <label for="school">School</label>
+
+            <select id="school">
+                <option value="">Select school</option>
+            </select>
 
             <label for="term">Term</label>
 
@@ -660,6 +706,59 @@ function togglePassword() {
     toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
 }
 
+async function loadPublicSchools() {
+    const schoolSelect = document.getElementById("school");
+    if (!schoolSelect) {
+        return;
+    }
+
+    schoolSelect.innerHTML = '<option value="">Loading schools...</option>';
+
+    const { data, error } = await supabaseClient
+        .from("schools")
+        .select("id, school_name")
+        .order("school_name", { ascending: true });
+
+    if (error) {
+        schoolSelect.innerHTML = '<option value="">Could not load schools</option>';
+        return;
+    }
+
+    schoolSelect.innerHTML = '<option value="">Select school</option>';
+    (data || []).forEach((school) => {
+        const option = document.createElement("option");
+        option.value = school.id;
+        option.textContent = school.school_name || "Unnamed School";
+        schoolSelect.appendChild(option);
+    });
+}
+
+async function callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId) {
+    const payload = {
+        search_assessment_number: assessmentNumber,
+        search_term: selectedTerm,
+        search_school_id: selectedSchoolId
+    };
+
+    let response = await supabaseClient.rpc("search_learner_result", payload);
+
+    if (!response.error) {
+        return response;
+    }
+
+    const message = response.error?.message || "";
+    const functionShapeMismatch = /search_school_id|school_id|42883|function .*search_learner_result.*does not exist|does not exist/i.test(message);
+
+    if (functionShapeMismatch) {
+        return supabaseClient.rpc("search_learner_result", {
+            search_assessment_number: assessmentNumber,
+            search_term: selectedTerm
+        });
+    }
+
+    return response;
+}
+
 function normalizeSpreadsheetRow(row) {
     return Object.fromEntries(
         Object.entries(row).map(([key, value]) => [
@@ -753,14 +852,14 @@ function fileMetadata(fileName) {
     };
 }
 
-async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
+async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, selectedSchoolId) {
     if (typeof XLSX === "undefined") {
         throw new Error("The spreadsheet reader could not be loaded.");
     }
 
     const { data: uploads, error } = await supabaseClient
         .from("result_uploads")
-        .select("file_name, file_type, storage_path")
+        .select("file_name, file_type, storage_path, school_id")
         .order("uploaded_at", { ascending: false });
 
     if (error) {
@@ -768,10 +867,12 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm) {
     }
 
     const normalizedAssessmentNumber = canonicalAssessmentNumber(assessmentNumber);
-    const spreadsheetUploads = (uploads || []).filter((upload) =>
-        /\.(xlsx?|xls)$/i.test(upload.file_name || "")
-        || /spreadsheet|excel/i.test(upload.file_type || "")
-    );
+    const spreadsheetUploads = (uploads || []).filter((upload) => {
+        const matchesSchool = !selectedSchoolId || upload.school_id === selectedSchoolId;
+        const isSpreadsheet = /\.(xlsx?|xls)$/i.test(upload.file_name || "")
+            || /spreadsheet|excel/i.test(upload.file_type || "");
+        return matchesSchool && isSpreadsheet;
+    });
 
     for (const upload of spreadsheetUploads) {
         const { data: signedUrl, error: urlError } = await supabaseClient
@@ -928,6 +1029,7 @@ async function searchResults() {
         .value
         .trim();
 
+    const selectedSchoolId = document.getElementById("school").value;
     const selectedTerm = document.getElementById("term").value;
 
     const message =
@@ -939,10 +1041,10 @@ async function searchResults() {
     clearLearnerDownload();
 
 
-    if (!assessmentNumber || !selectedTerm) {
+    if (!assessmentNumber || !selectedTerm || !selectedSchoolId) {
 
         message.textContent =
-            "Please enter an Assessment Number and select a term.";
+            "Please select a school, enter an Assessment Number, and choose a term.";
 
         resultsCard.classList.add("hidden");
 
@@ -953,14 +1055,7 @@ async function searchResults() {
     message.textContent = "Searching...";
 
 
-    let { data, error } =
-        await supabaseClient.rpc(
-            "search_learner_result",
-            {
-                search_assessment_number: assessmentNumber,
-                search_term: selectedTerm
-            }
-        );
+    let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId);
 
     if (data) {
         data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
@@ -983,7 +1078,7 @@ async function searchResults() {
 
     if (error || hasIncompleteData) {
         try {
-            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber, selectedTerm);
+            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, selectedSchoolId);
             if (uploadedResult?.data) {
                 data = data
                     ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
@@ -1110,6 +1205,10 @@ async function adminLogin() {
 
     window.location.href = "dashboard.html";
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+    loadPublicSchools();
+});
 
 </script>
 
