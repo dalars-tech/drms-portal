@@ -161,6 +161,21 @@
             color: #1d4ed8;
         }
 
+        .password-reset-link {
+            width: auto;
+            margin-top: 14px;
+            padding: 0;
+            background: transparent;
+            color: #2563eb;
+            font-size: 14px;
+        }
+
+        .password-reset-link:hover {
+            background: transparent;
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
         button {
             width: 100%;
             padding: 14px;
@@ -427,6 +442,10 @@
             </button>
 
             <div id="loginMessage" class="message"></div>
+
+            <button type="button" class="mini-link password-reset-link" onclick="requestPasswordReset('adminEmail', 'loginMessage')">
+                Forgot password?
+            </button>
 
             <a class="mini-link" href="Admin.html">Open Admin page</a>
 
@@ -1187,6 +1206,25 @@ async function adminLogin() {
 
 
     window.location.href = "dashboard.html";
+}
+
+async function requestPasswordReset(emailId, messageId) {
+    const email = document.getElementById(emailId).value.trim();
+    const message = document.getElementById(messageId);
+
+    if (!email) {
+        message.textContent = "Enter your email address first.";
+        return;
+    }
+
+    message.textContent = "Sending password reset email...";
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password.html`
+    });
+
+    message.textContent = error
+        ? `Could not send reset email: ${error.message}`
+        : "Check your email for a password reset link.";
 }
 
 window.addEventListener("DOMContentLoaded", () => {
