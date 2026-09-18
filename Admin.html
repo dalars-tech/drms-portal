@@ -98,6 +98,16 @@
             margin-top: 15px;
             text-align: center;
         }
+
+        .reset-link {
+            display: block;
+            margin-top: 14px;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            color: #2563eb;
+            font-size: 14px;
+        }
     </style>
 </head>
 
@@ -143,19 +153,17 @@
 
         <div id="message"></div>
 
-        <a href="./index.html" class="back" onclick="return openResultsPortal(event)">
+        <button type="button" class="reset-link" onclick="requestPasswordReset()">
+            Forgot password?
+        </button>
+
+        <a href="./index.html" class="back" onclick="window.location.replace('./index.html'); return false;">
             ← Back to Results Portal
         </a>
 
     </div>
 
    <script>
-    function openResultsPortal(event) {
-        event.preventDefault();
-        window.location.href = new URL("./index.html", window.location.href).href;
-        return false;
-    }
-
     document
         .getElementById("loginForm")
         .addEventListener("submit", async function(event) {
@@ -189,6 +197,25 @@
 
             window.location.href = "dashboard.html";
         });
+
+    async function requestPasswordReset() {
+        const email = document.getElementById("email").value.trim();
+        const message = document.getElementById("message");
+
+        if (!email) {
+            message.textContent = "Enter your email address first.";
+            return;
+        }
+
+        message.textContent = "Sending password reset email...";
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password.html`
+        });
+
+        message.textContent = error
+            ? `Could not send reset email: ${error.message}`
+            : "Check your email for a password reset link.";
+    }
 </script>
 
 </body>
