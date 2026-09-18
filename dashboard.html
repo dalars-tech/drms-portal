@@ -428,6 +428,7 @@
             <h2>Administrator Dashboard</h2>
             <p>Welcome, Owner</p>
             <span id="accountRole" class="account-role">Role: checking...</span>
+            <span id="assignedSchool" class="account-role">School: checking...</span>
         </div>
 
         <div class="cards">
@@ -545,13 +546,15 @@
         }
 
         const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+        let assignedSchools = [];
 
         if (!isOwner) {
-            const { data: assignedSchools, error: assignmentError } = await supabaseClient
+            const { data, error: assignmentError } = await supabaseClient
                 .from("schools")
-                .select("id")
+                .select("id, school_name")
                 .eq("administrator_email", session.user.email?.toLowerCase())
                 .limit(1);
+            assignedSchools = data || [];
 
             if (assignmentError || !assignedSchools?.length) {
                 await supabaseClient.auth.signOut();
@@ -577,6 +580,9 @@
             "Welcome, " + displayName;
         document.getElementById("accountRole").textContent =
             "Role: " + roleLabel;
+        document.getElementById("assignedSchool").textContent = isOwner
+            ? "School: All managed schools"
+            : "School: " + (assignedSchools[0].school_name || "Assigned school");
 
         if (!isOwner) {
             document.getElementById("schoolManagementCard").hidden = true;
@@ -711,6 +717,14 @@
             String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
         );
 
+        if (!headers.includes("term")
+            && !headers.includes("schoolterm")
+            && !headers.includes("academicterm")
+            && !headers.includes("examterm")
+            && !headers.includes("period")) {
+            throw new Error("The spreadsheet must include a term column, such as Term 1, Term 2, or Term 3.");
+        }
+
         return matrix.slice(headerIndex + 1).map((values) =>
             Object.fromEntries(headers.map((header, index) => [header, values[index]]))
         );
@@ -729,7 +743,7 @@
     }
 
 
-    async function importSpreadsheetResults(file) {
+    async function importSpreadsheetResults(file, schoolId) {
         if (typeof XLSX === "undefined") {
             throw new Error("The spreadsheet reader could not be loaded. Check your internet connection and try again.");
         }
@@ -742,7 +756,8 @@
             assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
             learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
             grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(file.name).grade,
-            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class
+            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class,
+            school_id: schoolId
         })).filter((learner) => learner.assessment_number);
 
         if (!learners.length) {
@@ -773,6 +788,7 @@
 
             return {
                 learner_id: learnerId,
+                school_id: schoolId,
                 term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]),
                 mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
                 english: getSpreadsheetValue(row, ["english", "eng"]),
@@ -909,7 +925,7 @@
 
         if (extension === "xlsx" || extension === "xls") {
             try {
-                const importedCount = await importSpreadsheetResults(file);
+                const importedCount = await importSpreadsheetResults(file, schoolId);
                 status.textContent = `${importedCount} learner results uploaded and indexed successfully.`;
             } catch (importError) {
                 status.textContent = `File uploaded, but assessment search indexing failed: ${importError.message}`;
