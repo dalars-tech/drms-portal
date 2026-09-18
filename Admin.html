@@ -181,11 +181,7 @@
 
             message.textContent = "Signing in...";
 
-            const { data, error } =
-                await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
+            const { data, error } = await signInWithRateLimit(email, password);
 
             if (error) {
 
