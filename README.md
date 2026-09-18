@@ -68,11 +68,25 @@ add column if not exists administrator_email text;
 
 The owner account is `bert36766@gmail.com`. Add each school administrator's Supabase Auth email in the school form. Administrators can then select only their assigned school, upload results, and view only files they uploaded. The owner can view all uploads and manage schools. Existing uploads without a `school_id` appear as `Unassigned`.
 
+Do not invite school administrators as Supabase organization or project members. Create them as Supabase Auth users only, then assign their exact Auth email to a school. They should receive only the portal URL and their login details. Never share the project's service-role key.
+
+The application hides school management for school administrators, but database RLS policies are the security boundary. Verify that `schools` INSERT, UPDATE, and DELETE policies are owner-only, and that `result_uploads` SELECT is restricted to the uploader or the project owner. Do not use a public `result_uploads` SELECT policy in production if upload metadata should remain private; the public learner portal uses the RPC and does not need direct upload-record access.
+
 Before assigning an administrator to a school, create that person's account in Supabase Dashboard under **Authentication > Users** with the same email and password you give them. The school form only stores the email-to-school assignment; passwords are handled by Supabase Auth and are never stored in this application. An authenticated account cannot open the dashboard until its email is assigned to at least one school.
 
 ## Spreadsheet upload format
 
 Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number and term. The first worksheet must contain one learner per row and `assessment_number` and `term` columns. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`. Use values such as `Term 1`, `Term 2`, and `Term 3` in the `term` column.
+
+The importer assigns the selected school's `school_id` to both the learner and result records. Ensure both tables contain this column before importing:
+
+```sql
+alter table public.learners
+add column if not exists school_id uuid references public.schools(id);
+
+alter table public.results
+add column if not exists school_id uuid references public.schools(id);
+```
 
 Column names may use spaces or capitalization, such as `Assessment Number` or `Learner Name`. PDF files are stored for viewing and downloading, but their contents are not automatically imported into searchable learner records.
 
@@ -144,3 +158,20 @@ grant execute on function public.search_learner_result(text, text, uuid) to anon
 ```
 
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
+
+## Backups and recovery
+
+Backups are configured in the Supabase project, not in the browser application. In the Supabase dashboard:
+
+1. Review **Project Settings > Database > Backups** and enable the available automatic backup plan.
+2. Keep important exports of the `schools`, `learners`, `results`, and `result_uploads` tables, plus Storage files, in a secure location separate from the project.
+3. Test restoring a backup in a separate Supabase project before relying on it.
+4. Record the restore procedure and keep the project owner account protected with MFA.
+
+## Deployment and security
+
+Keep this repository private and deploy only the public site files through a trusted HTTPS host. The Supabase publishable key may appear in browser code, but the service-role key, database passwords, and SMTP credentials must never be committed or placed in HTML or JavaScript. Local environment files are excluded by `.gitignore`.
+
+Configure Supabase **Authentication > URL Configuration** with the real site URL and the exact password-reset redirect URL, for example `https://your-domain.example/reset-password.html`. Do not add untrusted domains to the redirect allow list.
+
+The login pages include a client-side failed-attempt delay for a better user experience. This can be bypassed by a modified browser, so keep Supabase Auth rate limits and any hosting/WAF rate limiting enabled; server-side controls are the actual protection.
