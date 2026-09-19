@@ -105,7 +105,7 @@ Before assigning an administrator to a school, create that person's account in S
 
 ## Spreadsheet upload format
 
-Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number and term. The first worksheet must contain one learner per row and `assessment_number` and `term` columns. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`. Use values such as `Term 1`, `Term 2`, and `Term 3` in the `term` column.
+Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number and term. The first worksheet must contain one learner per row and an `assessment_number` column. The term selected in the dashboard is used automatically; an optional `term` column can override it for individual rows. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`.
 
 The importer assigns the selected school's `school_id` to both the learner and result records. Ensure both tables contain this column before importing:
 
