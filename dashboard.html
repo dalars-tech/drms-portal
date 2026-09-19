@@ -445,6 +445,25 @@
                     <option value="">Select school</option>
                 </select>
 
+                <label for="uploadTerm">Term</label>
+                <select id="uploadTerm" required>
+                    <option value="">Select term</option>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+
+                <label for="uploadGrade">Grade</label>
+                <input id="uploadGrade" type="text" placeholder="e.g. Grade 6" required>
+
+                <label for="uploadAssessment">Assessment</label>
+                <select id="uploadAssessment" required>
+                    <option value="">Select assessment</option>
+                    <option value="1">Assessment 1</option>
+                    <option value="2">Assessment 2</option>
+                    <option value="3">Assessment 3</option>
+                </select>
+
                 <button onclick="uploadResults()">
                     Upload Results
                 </button>
@@ -605,8 +624,10 @@
         const school = document.getElementById("uploadSchool");
         const status = document.getElementById("uploadStatus");
 
-        if (!school.value) {
-            status.textContent = "Select a school before uploading results.";
+        if (!school.value || !document.getElementById("uploadTerm").value
+            || !document.getElementById("uploadGrade").value.trim()
+            || !document.getElementById("uploadAssessment").value) {
+            status.textContent = "Select a school, term, grade, and assessment before uploading results.";
             return;
         }
 
@@ -820,6 +841,9 @@
         const file = input.files[0];
         const status = document.getElementById("uploadStatus");
         const schoolId = document.getElementById("uploadSchool").value;
+        const term = document.getElementById("uploadTerm").value;
+        const grade = document.getElementById("uploadGrade").value.trim();
+        const assessmentPeriod = Number(document.getElementById("uploadAssessment").value);
         const uploadButton = document.querySelector("button[onclick=\"uploadResults()\"]");
 
         if (!file) {
@@ -880,7 +904,9 @@
         status.textContent = "Uploading...";
 
         const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const filePath = `${session.user.id}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+        const safeGrade = grade.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const safeTerm = term.toLowerCase().replace(/\s+/g, "-");
+        const filePath = `${session.user.id}/${schoolId}/${safeTerm}/${safeGrade}/assessment-${assessmentPeriod}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
 
         const { error: uploadError } = await supabaseClient
             .storage
@@ -910,7 +936,10 @@
                 storage_path: filePath,
                 file_type: file.type,
                 school_id: schoolId,
-                uploaded_by: session.user.id
+                uploaded_by: session.user.id,
+                term,
+                grade,
+                assessment_period: assessmentPeriod
             });
 
         if (recordError) {
@@ -1043,7 +1072,7 @@
 
         let uploadQuery = supabaseClient
             .from("result_uploads")
-            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
+            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id, term, grade, assessment_period")
             .order("uploaded_at", { ascending: false });
 
         if (!isOwner) {
@@ -1074,13 +1103,22 @@
             const schoolName = school?.school_name || "Unassigned";
 
             if (!uploadsBySchool.has(schoolKey)) {
-                uploadsBySchool.set(schoolKey, {
-                    name: schoolName,
-                    uploads: []
-                });
+                uploadsBySchool.set(schoolKey, { name: schoolName, terms: new Map() });
             }
 
-            uploadsBySchool.get(schoolKey).uploads.push(upload);
+            const schoolGroup = uploadsBySchool.get(schoolKey);
+            const termName = upload.term || "Term not set";
+            if (!schoolGroup.terms.has(termName)) {
+                schoolGroup.terms.set(termName, new Map());
+            }
+
+            const gradeName = upload.grade || "Grade not set";
+            const termGroup = schoolGroup.terms.get(termName);
+            if (!termGroup.has(gradeName)) {
+                termGroup.set(gradeName, []);
+            }
+
+            termGroup.get(gradeName).push(upload);
         }
 
         for (const schoolGroup of uploadsBySchool.values()) {
@@ -1089,13 +1127,37 @@
 
             const details = document.createElement("details");
             const summary = document.createElement("summary");
-            summary.textContent = `${schoolGroup.name} (${schoolGroup.uploads.length} file${schoolGroup.uploads.length === 1 ? "" : "s"})`;
+            const schoolUploadCount = [...schoolGroup.terms.values()]
+                .reduce((count, gradeGroups) => count + [...gradeGroups.values()]
+                    .reduce((gradeCount, files) => gradeCount + files.length, 0), 0);
+            summary.textContent = `${schoolGroup.name} (${schoolUploadCount} file${schoolUploadCount === 1 ? "" : "s"})`;
             details.appendChild(summary);
 
             const fileList = document.createElement("ul");
             fileList.className = "school-upload-files";
 
-            for (const upload of schoolGroup.uploads) {
+            for (const [termName, gradeGroups] of schoolGroup.terms) {
+                const termItem = document.createElement("li");
+                termItem.className = "school-upload-group";
+                const termDetails = document.createElement("details");
+                const termSummary = document.createElement("summary");
+                termSummary.textContent = termName;
+                termDetails.appendChild(termSummary);
+                const gradeList = document.createElement("ul");
+                gradeList.className = "school-upload-files";
+
+                for (const [gradeName, gradeUploads] of gradeGroups) {
+                    const gradeItem = document.createElement("li");
+                    gradeItem.className = "school-upload-group";
+                    const gradeDetails = document.createElement("details");
+                    const gradeSummary = document.createElement("summary");
+                    gradeSummary.textContent = gradeName;
+                    gradeDetails.appendChild(gradeSummary);
+                    const assessmentList = document.createElement("ul");
+                    assessmentList.className = "school-upload-files";
+
+                    for (const upload of gradeUploads.sort((first, second) =>
+                        (first.assessment_period || 99) - (second.assessment_period || 99))) {
             const { data: viewUrl, error: viewError } = await supabaseClient
                 .storage
                 .from("results")
@@ -1104,7 +1166,9 @@
             const item = document.createElement("li");
             item.className = "school-upload-file";
             const name = document.createElement("span");
-            name.textContent = upload.file_name;
+            name.textContent = upload.assessment_period
+                ? `Assessment ${upload.assessment_period}: ${upload.file_name}`
+                : upload.file_name;
             item.appendChild(name);
 
             if (!viewError) {
@@ -1161,7 +1225,17 @@
                 item.appendChild(deleteButton);
             }
 
-                fileList.appendChild(item);
+                        assessmentList.appendChild(item);
+                    }
+
+                    gradeDetails.appendChild(assessmentList);
+                    gradeItem.appendChild(gradeDetails);
+                    gradeList.appendChild(gradeItem);
+                }
+
+                termDetails.appendChild(gradeList);
+                termItem.appendChild(termDetails);
+                fileList.appendChild(termItem);
             }
 
             details.appendChild(fileList);
