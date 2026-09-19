@@ -629,10 +629,6 @@ function createLearnerDownload(data, selectedTerm) {
         return;
     }
 
-    if (learnerDownloadUrl) {
-        URL.revokeObjectURL(learnerDownloadUrl);
-    }
-
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -711,14 +707,13 @@ function createLearnerDownload(data, selectedTerm) {
 }
 
 function clearLearnerDownload() {
-    const fileRow = document.getElementById("resultFileRow");
-    const fileLink = document.getElementById("resultFileLink");
-
     if (learnerDownloadUrl) {
         URL.revokeObjectURL(learnerDownloadUrl);
         learnerDownloadUrl = null;
     }
 
+    const fileRow = document.getElementById("resultFileRow");
+    const fileLink = document.getElementById("resultFileLink");
     fileRow.style.display = "none";
     fileLink.removeAttribute("href");
     fileLink.removeAttribute("download");
@@ -1023,39 +1018,121 @@ async function loadResultDownload(assessmentNumber) {
     }
 }
 
+async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPeriod) {
+    const selectedSchoolId = null;
+    let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, assessmentPeriod, selectedSchoolId);
+
+    if (data) {
+        data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
+        data.aggregate_points = data.aggregate_points ?? data.aggregatePoints ?? data.total_points;
+        data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
+    }
+
+    const requiredResultFields = ["grade", "social_studies", "aggregate_points", "aggregate_rubrics"];
+    const hasIncompleteData = !data || requiredResultFields.some((field) =>
+        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+    );
+
+    if (error || hasIncompleteData) {
+        const uploadedResult = await findUploadedSpreadsheetResult(
+            assessmentNumber,
+            selectedTerm,
+            assessmentPeriod,
+            selectedSchoolId
+        );
+
+        if (uploadedResult?.data) {
+            data = data
+                ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
+                    field,
+                    data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
+                        ? value
+                        : data[field]
+                ]))
+                : uploadedResult.data;
+        }
+    }
+
+    if (error && !data) {
+        throw error;
+    }
+
+    return data;
+}
+
+function addResultRow(container, label, value) {
+    const row = document.createElement("div");
+    row.className = "result-row";
+    const labelElement = document.createElement("strong");
+    labelElement.textContent = label;
+    const valueElement = document.createElement("span");
+    valueElement.textContent = value ?? "";
+    row.append(labelElement, valueElement);
+    container.appendChild(row);
+}
+
+function renderResultBlock(data, selectedTerm, assessmentPeriod, resultsList) {
+    const block = document.createElement("section");
+    block.className = "assessment-result";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `Assessment ${data.assessment_period || assessmentPeriod}`;
+    block.appendChild(heading);
+
+    addResultRow(block, "Assessment Number", data.assessment_number || "");
+    addResultRow(block, "Learner's Name", data.learner_name || "");
+    addResultRow(block, "Grade", formatGradeDisplay(data.grade || ""));
+    addResultRow(block, "Term", formatTermDisplay(data.term || selectedTerm));
+
+    const subjects = [
+        ["Mathematics", "mathematics"],
+        ["English", "english"],
+        ["Kiswahili", "kiswahili"],
+        ["Integrated Science", "integrated_science"],
+        ["Social Studies", "social_studies"],
+        ["CRE/IRE", "cre_ire"],
+        ["Agriculture", "agriculture"],
+        ["Creative Arts and Sports", "creative_arts_sports"],
+        ["Pre-Technical Studies", "pre_technical_studies"]
+    ];
+    subjects.forEach(([label, field]) => addResultRow(block, label, data[field] ?? ""));
+
+    const aggregate = document.createElement("div");
+    aggregate.className = "aggregate";
+    addResultRow(aggregate, "Aggregate Points", data.aggregate_points ?? "");
+    addResultRow(aggregate, "Rubrics", data.aggregate_rubrics ?? "");
+    block.appendChild(aggregate);
+
+    const fileRow = document.createElement("div");
+    fileRow.className = "result-row";
+    const fileLabel = document.createElement("strong");
+    fileLabel.textContent = "Download Learner Results";
+    const fileLink = document.createElement("a");
+    fileLink.className = "download-button";
+    fileLink.textContent = "Download PDF";
+    fileLink.download = "results.pdf";
+    fileRow.append(fileLabel, fileLink);
+    block.appendChild(fileRow);
+    resultsList.appendChild(block);
+    createLearnerDownload(data, selectedTerm, assessmentPeriod, fileRow, fileLink);
+}
+
 async function searchResults() {
-
-    const assessmentNumber =
-        document
-        .getElementById("assessmentNumber")
-        .value
-        .trim();
-
+    const assessmentNumber = document.getElementById("assessmentNumber").value.trim();
     const selectedSchoolId = null;
     const selectedTerm = document.getElementById("term").value;
-
-    const message =
-        document.getElementById("searchMessage");
-
-    const resultsCard =
-        document.getElementById("resultsCard");
+    const message = document.getElementById("searchMessage");
+    const resultsCard = document.getElementById("resultsCard");
 
     clearLearnerDownload();
 
-
     if (!assessmentNumber || !selectedTerm) {
-
-        message.textContent =
-            "Please enter an Assessment Number and choose a term.";
-
+        message.textContent = "Please enter an Assessment Number and choose a term.";
         resultsCard.classList.add("hidden");
-
         return;
     }
 
-
     message.textContent = "Searching...";
-
 
     let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId);
 
@@ -1065,15 +1142,7 @@ async function searchResults() {
         data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
     }
 
-
-    let uploadedFile = null;
-
-    const requiredResultFields = [
-        "grade",
-        "social_studies",
-        "aggregate_points",
-        "aggregate_rubrics"
-    ];
+    const requiredResultFields = ["grade", "social_studies", "aggregate_points", "aggregate_rubrics"];
     const hasIncompleteData = !data || requiredResultFields.some((field) =>
         data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
     );
@@ -1090,7 +1159,6 @@ async function searchResults() {
                             : data[field]
                     ]))
                     : uploadedResult.data;
-                uploadedFile = uploadedResult.upload;
             }
         } catch (fallbackError) {
             console.error(error || fallbackError);
@@ -1108,59 +1176,23 @@ async function searchResults() {
         return;
     }
 
-
     message.textContent = "";
-
-
-    document.getElementById("resultAssessment").textContent =
-        data.assessment_number || "";
-
-    document.getElementById("resultName").textContent =
-        data.learner_name || "";
-
-    document.getElementById("resultGrade").textContent =
-        formatGradeDisplay(data.grade || "");
-
-    document.getElementById("resultTerm").textContent =
-        formatTermDisplay(data.term || selectedTerm);
-
-
-    document.getElementById("mathematics").textContent =
-        data.mathematics ?? "";
-
-    document.getElementById("english").textContent =
-        data.english ?? "";
-
-    document.getElementById("kiswahili").textContent =
-        data.kiswahili ?? "";
-
-    document.getElementById("integratedScience").textContent =
-        data.integrated_science ?? "";
-
-    document.getElementById("socialStudies").textContent =
-        data.social_studies ?? "";
-
-    document.getElementById("creIre").textContent =
-        data.cre_ire ?? "";
-
-    document.getElementById("agriculture").textContent =
-        data.agriculture ?? "";
-
-    document.getElementById("creativeArtsSports").textContent =
-        data.creative_arts_sports ?? "";
-
-    document.getElementById("preTechnical").textContent =
-        data.pre_technical_studies ?? "";
-
-
-    document.getElementById("aggregatePoints").textContent =
-        data.aggregate_points ?? "";
-
-    document.getElementById("aggregateRubrics").textContent =
-        data.aggregate_rubrics ?? "";
-
+    document.getElementById("resultAssessment").textContent = data.assessment_number || "";
+    document.getElementById("resultName").textContent = data.learner_name || "";
+    document.getElementById("resultGrade").textContent = formatGradeDisplay(data.grade || "");
+    document.getElementById("resultTerm").textContent = formatTermDisplay(data.term || selectedTerm);
+    document.getElementById("mathematics").textContent = data.mathematics ?? "";
+    document.getElementById("english").textContent = data.english ?? "";
+    document.getElementById("kiswahili").textContent = data.kiswahili ?? "";
+    document.getElementById("integratedScience").textContent = data.integrated_science ?? "";
+    document.getElementById("socialStudies").textContent = data.social_studies ?? "";
+    document.getElementById("creIre").textContent = data.cre_ire ?? "";
+    document.getElementById("agriculture").textContent = data.agriculture ?? "";
+    document.getElementById("creativeArtsSports").textContent = data.creative_arts_sports ?? "";
+    document.getElementById("preTechnical").textContent = data.pre_technical_studies ?? "";
+    document.getElementById("aggregatePoints").textContent = data.aggregate_points ?? "";
+    document.getElementById("aggregateRubrics").textContent = data.aggregate_rubrics ?? "";
     createLearnerDownload(data, selectedTerm);
-
     resultsCard.classList.remove("hidden");
 }
 
