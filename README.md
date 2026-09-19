@@ -49,7 +49,23 @@ drop policy if exists "Authenticated users can delete their upload records" on p
 create policy "Authenticated users can delete their upload records"
 on public.result_uploads for delete
 to authenticated
-using (uploaded_by = (select auth.uid()));
+using (
+  uploaded_by = (select auth.uid())
+  or lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+);
+
+drop policy if exists "Upload owners and project owner can delete result files" on storage.objects;
+
+create policy "Upload owners and project owner can delete result files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'results'
+  and (
+    (storage.foldername(name))[1] = (select auth.uid()::text)
+    or lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  )
+);
 ```
 
 The bucket must be created before running these policies. If policies with these names already exist, delete or rename the existing policies first. The browser's publishable Supabase key cannot create buckets or bypass RLS automatically.
