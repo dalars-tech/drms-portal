@@ -738,14 +738,6 @@
             String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
         );
 
-        if (!headers.includes("term")
-            && !headers.includes("schoolterm")
-            && !headers.includes("academicterm")
-            && !headers.includes("examterm")
-            && !headers.includes("period")) {
-            throw new Error("The spreadsheet must include a term column, such as Term 1, Term 2, or Term 3.");
-        }
-
         return matrix.slice(headerIndex + 1).map((values) =>
             Object.fromEntries(headers.map((header, index) => [header, values[index]]))
         );
@@ -764,7 +756,7 @@
     }
 
 
-    async function importSpreadsheetResults(file, schoolId) {
+    async function importSpreadsheetResults(file, schoolId, selectedTerm) {
         if (typeof XLSX === "undefined") {
             throw new Error("The spreadsheet reader could not be loaded. Check your internet connection and try again.");
         }
@@ -810,7 +802,7 @@
             return {
                 learner_id: learnerId,
                 school_id: schoolId,
-                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]),
+                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]) || selectedTerm,
                 mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
                 english: getSpreadsheetValue(row, ["english", "eng"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
@@ -954,7 +946,7 @@
 
         if (extension === "xlsx" || extension === "xls") {
             try {
-                const importedCount = await importSpreadsheetResults(file, schoolId);
+                const importedCount = await importSpreadsheetResults(file, schoolId, term);
                 status.textContent = `${importedCount} learner results uploaded and indexed successfully.`;
             } catch (importError) {
                 status.textContent = `File uploaded, but assessment search indexing failed: ${importError.message}`;
@@ -1079,7 +1071,22 @@
             uploadQuery = uploadQuery.eq("uploaded_by", session.user.id);
         }
 
-        const { data: uploads, error } = await uploadQuery;
+        let { data: uploads, error } = await uploadQuery;
+
+        if (error && /assessment_period|term|grade|schema cache|does not exist/i.test(error.message)) {
+            let legacyUploadQuery = supabaseClient
+                .from("result_uploads")
+                .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
+                .order("uploaded_at", { ascending: false });
+
+            if (!isOwner) {
+                legacyUploadQuery = legacyUploadQuery.eq("uploaded_by", session.user.id);
+            }
+
+            const legacyResult = await legacyUploadQuery;
+            uploads = legacyResult.data;
+            error = legacyResult.error;
+        }
 
         if (error) {
             list.innerHTML = `<li class="uploads-empty">Could not load uploads: ${error.message}</li>`;
