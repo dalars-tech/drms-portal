@@ -56,6 +56,19 @@ The bucket must be created before running these policies. If policies with these
 
 ## School upload organization
 
+Add upload-level term, grade, and assessment metadata so files can be organized as School -> Term -> Grade -> Assessment 1, 2, or 3:
+
+```sql
+alter table public.result_uploads
+add column if not exists term text;
+
+alter table public.result_uploads
+add column if not exists grade text;
+
+alter table public.result_uploads
+add column if not exists assessment_period smallint;
+```
+
 Run this migration to connect each uploaded file to the school selected by the administrator:
 
 ```sql
