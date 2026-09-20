@@ -401,6 +401,52 @@
             color: #666;
         }
 
+        .print-report {
+            display: none;
+        }
+
+        .print-report h1,
+        .print-report h2 {
+            margin-bottom: 10px;
+        }
+
+        .print-learner {
+            margin: 24px 0;
+            break-inside: avoid;
+        }
+
+        .print-learner h3 {
+            margin-bottom: 8px;
+        }
+
+        .print-learner table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .print-learner th,
+        .print-learner td {
+            border: 1px solid #9ca3af;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .print-learner th {
+            background: #e5e7eb;
+        }
+
+        @media print {
+            body > *:not(#printReport) {
+                display: none !important;
+            }
+
+            .print-report {
+                display: block;
+                padding: 20px;
+            }
+        }
+
         button:disabled {
             cursor: wait;
             opacity: 0.7;
@@ -511,6 +557,52 @@
             </div>
 
 
+            <div class="card">
+                <h2>🖨️ Print Grade Results</h2>
+
+                <p>
+                    Print every learner's assessments for a selected school, term, and grade.
+                </p>
+
+                <label for="printSchool">School</label>
+                <select id="printSchool" required>
+                    <option value="">Select school</option>
+                </select>
+
+                <label for="printTerm">Term</label>
+                <select id="printTerm" required>
+                    <option value="">Select term</option>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+
+                <label for="printGrade">Grade</label>
+                <select id="printGrade" required>
+                    <option value="">Select grade</option>
+                    <option value="PP1">PP1</option>
+                    <option value="PP2">PP2</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                </select>
+
+                <button type="button" onclick="printGradeResults()">
+                    Print Results
+                </button>
+                <div id="printStatus" class="upload-status" aria-live="polite"></div>
+            </div>
+
+
             <div class="card" id="schoolManagementCard">
                 <h2>🏫 Schools</h2>
 
@@ -563,6 +655,8 @@
             <iframe id="previewFrame" class="preview-frame" title="Document preview"></iframe>
         </div>
     </div>
+
+    <div id="printReport" class="print-report"></div>
 
 
     <script>
@@ -658,8 +752,9 @@
 
     async function loadUploadSchools(isOwner = false) {
         const select = document.getElementById("uploadSchool");
+        const printSelect = document.getElementById("printSchool");
 
-        if (!select) {
+        if (!select && !printSelect) {
             return;
         }
 
@@ -683,16 +778,20 @@
         const { data: schools, error } = await schoolQuery;
 
         if (error) {
-            select.innerHTML = "<option value=\"\">Could not load schools</option>";
+            [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+                schoolSelect.innerHTML = "<option value=\"\">Could not load schools</option>";
+            });
             return;
         }
 
-        select.innerHTML = "<option value=\"\">Select school</option>";
-        (schools || []).forEach((school) => {
-            const option = document.createElement("option");
-            option.value = school.id;
-            option.textContent = schoolLabel(school);
-            select.appendChild(option);
+        [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+            schoolSelect.innerHTML = "<option value=\"\">Select school</option>";
+            (schools || []).forEach((school) => {
+                const option = document.createElement("option");
+                option.value = school.id;
+                option.textContent = schoolLabel(school);
+                schoolSelect.appendChild(option);
+            });
         });
     }
 
@@ -772,7 +871,7 @@
     }
 
 
-    async function importSpreadsheetResults(file, schoolId, selectedTerm) {
+    async function importSpreadsheetResults(file, schoolId, selectedTerm, assessmentPeriod, selectedGrade) {
         if (typeof XLSX === "undefined") {
             throw new Error("The spreadsheet reader could not be loaded. Check your internet connection and try again.");
         }
@@ -784,7 +883,7 @@
         const learners = rows.map((row) => ({
             assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
             learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
-            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(file.name).grade,
+            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || selectedGrade || fileMetadata(file.name).grade,
             class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class,
             school_id: schoolId
         })).filter((learner) => learner.assessment_number);
@@ -819,6 +918,7 @@
                 learner_id: learnerId,
                 school_id: schoolId,
                 term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]) || selectedTerm,
+                assessment_period: assessmentPeriod,
                 mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
                 english: getSpreadsheetValue(row, ["english", "eng"]),
                 kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
@@ -835,7 +935,7 @@
 
         const { error: resultError } = await supabaseClient
             .from("results")
-            .upsert(results, { onConflict: "learner_id,term" });
+            .upsert(results, { onConflict: "learner_id,term,assessment_period" });
 
         if (resultError) {
             throw resultError;
@@ -962,7 +1062,7 @@
 
         if (extension === "xlsx" || extension === "xls") {
             try {
-                const importedCount = await importSpreadsheetResults(file, schoolId, term);
+                const importedCount = await importSpreadsheetResults(file, schoolId, term, assessmentPeriod, grade);
                 status.textContent = `${importedCount} learner results uploaded and indexed successfully.`;
             } catch (importError) {
                 status.textContent = `File uploaded, but assessment search indexing failed: ${importError.message}`;
@@ -974,6 +1074,125 @@
         uploadButton.disabled = false;
         input.value = "";
         await viewUploads();
+    }
+
+
+    function escapePrintText(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+
+    async function printGradeResults() {
+        const schoolId = document.getElementById("printSchool").value;
+        const term = document.getElementById("printTerm").value;
+        const grade = document.getElementById("printGrade").value;
+        const status = document.getElementById("printStatus");
+        const report = document.getElementById("printReport");
+
+        if (!schoolId || !term || !grade) {
+            status.textContent = "Select a school, term, and grade before printing.";
+            return;
+        }
+
+        status.textContent = "Preparing printable results...";
+
+        const { data: learners, error: learnerError } = await supabaseClient
+            .from("learners")
+            .select("id, assessment_number, learner_name, grade, class")
+            .eq("school_id", schoolId)
+            .eq("grade", grade)
+            .order("assessment_number", { ascending: true });
+
+        if (learnerError) {
+            status.textContent = `Could not load learners: ${learnerError.message}`;
+            return;
+        }
+
+        if (!learners?.length) {
+            status.textContent = "No learners were found for the selected school and grade.";
+            report.innerHTML = "";
+            return;
+        }
+
+        const learnerIds = learners.map((learner) => learner.id);
+        const { data: results, error: resultError } = await supabaseClient
+            .from("results")
+            .select("learner_id, assessment_period, mathematics, english, kiswahili, integrated_science, social_studies, cre_ire, agriculture, creative_arts_sports, pre_technical_studies, aggregate_points, aggregate_rubric")
+            .in("learner_id", learnerIds)
+            .eq("term", term)
+            .order("assessment_period", { ascending: true });
+
+        if (resultError) {
+            status.textContent = resultError.message.includes("assessment_period")
+                ? "Run the assessment results migration from README.md before printing."
+                : `Could not load results: ${resultError.message}`;
+            return;
+        }
+
+        const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
+        const resultMap = new Map();
+        (results || []).forEach((result) => {
+            if (!resultMap.has(result.learner_id)) {
+                resultMap.set(result.learner_id, []);
+            }
+            resultMap.get(result.learner_id).push(result);
+        });
+
+        const subjectColumns = [
+            ["Mathematics Points", "mathematics"],
+            ["English Points", "english"],
+            ["Kiswahili Points", "kiswahili"],
+            ["Integrated Science Points", "integrated_science"],
+            ["Social Studies Points", "social_studies"],
+            ["CRE/IRE Points", "cre_ire"],
+            ["Agriculture Points", "agriculture"],
+            ["Creative Arts and Sports Points", "creative_arts_sports"],
+            ["Pre-Technical Studies Points", "pre_technical_studies"],
+            ["Aggregate Points", "aggregate_points"],
+            ["Aggregate Rubrics", "aggregate_rubric"]
+        ];
+
+        report.innerHTML = `
+            <h1>Digital Results Management System</h1>
+            <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} - ${escapePrintText(term)}</h2>
+            <p>Points, aggregate, and rubrics are shown exactly as uploaded by the school.</p>
+            <p>Printed on ${escapePrintText(new Date().toLocaleDateString())}</p>
+            ${learners.map((learner) => {
+                const learnerResults = resultMap.get(learner.id) || [];
+                const rows = learnerResults.length
+                    ? learnerResults.map((result) => `
+                        <tr>
+                            <td>Assessment ${escapePrintText(result.assessment_period)}</td>
+                            ${subjectColumns.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
+                        </tr>
+                    `).join("")
+                    : `<tr><td colspan="${subjectColumns.length + 1}">No assessment results uploaded</td></tr>`;
+
+                return `
+                    <section class="print-learner">
+                        <h3>${escapePrintText(learner.assessment_number)} - ${escapePrintText(learner.learner_name)}</h3>
+                        <p>Class: ${escapePrintText(learner.class || "")}</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Assessment</th>
+                                    ${subjectColumns.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </section>
+                `;
+            }).join("")}
+        `;
+
+        status.textContent = `${results?.length || 0} assessment result${results?.length === 1 ? "" : "s"} ready to print.`;
+        window.print();
     }
 
 
