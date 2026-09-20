@@ -101,6 +101,10 @@ Do not invite school administrators as Supabase organization or project members.
 
 The application hides school management for school administrators, but database RLS policies are the security boundary. Verify that `schools` INSERT, UPDATE, and DELETE policies are owner-only, and that `result_uploads` SELECT is restricted to the uploader or the project owner. Do not use a public `result_uploads` SELECT policy in production if upload metadata should remain private; the public learner portal uses the RPC and does not need direct upload-record access.
 
+## Printing grade results
+
+After running the `assessment_period` migration in **Learner search setup**, the dashboard's **Print Grade Results** panel can print a selected school's grade and term. Each learner is listed in assessment-number order, and the printout includes every uploaded assessment for that learner in the selected term. Learners without uploaded results remain listed with a notice.
+
 Before assigning an administrator to a school, create that person's account in Supabase Dashboard under **Authentication > Users** with the same email and password you give them. The school form only stores the email-to-school assignment; passwords are handled by Supabase Auth and are never stored in this application. An authenticated account cannot open the dashboard until its email is assigned to at least one school.
 
 ## Spreadsheet upload format
@@ -125,8 +129,11 @@ Before importing termly results, add the term column and unique constraint:
 
 ```sql
 alter table public.results add column if not exists term text;
+alter table public.results add column if not exists assessment_period smallint;
+update public.results set assessment_period = 1 where assessment_period is null;
 alter table public.results drop constraint if exists results_learner_id_key;
-alter table public.results add constraint results_learner_id_term_key unique (learner_id, term);
+alter table public.results drop constraint if exists results_learner_id_term_key;
+alter table public.results add constraint results_learner_id_term_assessment_key unique (learner_id, term, assessment_period);
 ```
 
 The public portal searches learner data through a database function named `search_learner_result`. That function must exist in Supabase and must be executable by the anonymous role. For multi-school support, the lookup must also be filtered by the selected school:
@@ -163,6 +170,7 @@ as $$
       l.grade,
       l.class,
       r.term,
+      r.assessment_period,
       r.mathematics,
       r.english,
       r.kiswahili,
