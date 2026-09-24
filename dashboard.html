@@ -7,7 +7,7 @@
     <title>DRMS - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="supabase.js"></script>
+    <script src="supabase.js"></script>
 
     <style>
         * {
@@ -243,15 +243,16 @@
             min-height: 20px;
             color: #374151;
         }
-            #uploadSchool {
-                width: 100%;
-                min-height: 42px;
-                margin-bottom: 15px;
-                padding: 10px 12px;
-                border: 1px solid #d1d5db;
-                border-radius: 8px;
-                font-size: 14px;
-            }
+
+        #uploadSchool {
+            width: 100%;
+            min-height: 42px;
+            margin-bottom: 15px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
 
         .uploads-list {
             list-style: none;
@@ -401,49 +402,124 @@
             color: #666;
         }
 
+        /* ========== IMPROVED PRINT STYLES ========== */
         .print-report {
             display: none;
         }
 
-        .print-report h1,
+        .print-report h1 {
+            font-size: 18pt;
+            margin: 0 0 6px 0;
+            text-align: center;
+        }
+
         .print-report h2 {
-            margin-bottom: 10px;
+            font-size: 13pt;
+            margin: 0 0 4px 0;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        .print-report .print-meta {
+            font-size: 9pt;
+            text-align: center;
+            margin-bottom: 16px;
+            color: #333;
         }
 
         .print-learner {
-            margin: 24px 0;
+            margin: 0 0 18px 0;
+            page-break-inside: avoid;
             break-inside: avoid;
         }
 
         .print-learner h3 {
-            margin-bottom: 8px;
+            font-size: 11pt;
+            margin: 0 0 2px 0;
+        }
+
+        .print-learner .learner-class {
+            font-size: 9pt;
+            margin: 0 0 6px 0;
+            color: #444;
         }
 
         .print-learner table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            table-layout: fixed;
+            font-size: 7.5pt;
         }
 
         .print-learner th,
         .print-learner td {
-            border: 1px solid #9ca3af;
-            padding: 6px;
-            text-align: left;
+            border: 1px solid #555;
+            padding: 3px 4px;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .print-learner th {
-            background: #e5e7eb;
+            background: #e5e7eb !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            font-weight: bold;
+            font-size: 7pt;
+        }
+
+        .print-learner td:first-child,
+        .print-learner th:first-child {
+            text-align: left;
+            width: 9%;
+        }
+
+        .print-learner th:nth-last-child(2),
+        .print-learner td:nth-last-child(2),
+        .print-learner th:last-child,
+        .print-learner td:last-child {
+            width: 8%;
         }
 
         @media print {
-            body > *:not(#printReport) {
-                display: none !important;
+            @page {
+                size: A4 landscape;
+                margin: 10mm 8mm;
             }
 
-            .print-report {
-                display: block;
-                padding: 20px;
+            html, body {
+                width: 100%;
+                height: auto;
+                margin: 0;
+                padding: 0;
+                background: white !important;
+                color: black !important;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            body * {
+                visibility: hidden;
+            }
+
+            #printReport,
+            #printReport * {
+                visibility: visible;
+            }
+
+            #printReport {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            .print-learner {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
         }
 
@@ -1159,9 +1235,11 @@
 
         report.innerHTML = `
             <h1>Digital Results Management System</h1>
-            <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} - ${escapePrintText(term)}</h2>
-            <p>Points, aggregate, and rubrics are shown exactly as uploaded by the school.</p>
-            <p>Printed on ${escapePrintText(new Date().toLocaleDateString())}</p>
+            <h2>${escapePrintText(schoolName)} — ${escapePrintText(grade)} — ${escapePrintText(term)}</h2>
+            <div class="print-meta">
+                Points, aggregate, and rubrics are shown exactly as uploaded by the school.<br>
+                Printed on ${escapePrintText(new Date().toLocaleDateString())}
+            </div>
             ${learners.map((learner) => {
                 const learnerResults = resultMap.get(learner.id) || [];
                 const rows = learnerResults.length
@@ -1175,8 +1253,8 @@
 
                 return `
                     <section class="print-learner">
-                        <h3>${escapePrintText(learner.assessment_number)} - ${escapePrintText(learner.learner_name)}</h3>
-                        <p>Class: ${escapePrintText(learner.class || "")}</p>
+                        <h3>${escapePrintText(learner.assessment_number)} — ${escapePrintText(learner.learner_name)}</h3>
+                        <p class="learner-class">Class: ${escapePrintText(learner.class || "—")}</p>
                         <table>
                             <thead>
                                 <tr>
