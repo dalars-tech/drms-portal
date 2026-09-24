@@ -3,72 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>DRMS - Digital Results Management System</title>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="supabase.js"></script>
-
     <style>
         * {
             box-sizing: border-box;
         }
-
         html, body {
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
         }
-
         body {
             margin: 0;
             font-family: Arial, sans-serif;
             background: #f4f7fb;
             color: #222;
         }
-
         header {
             background: #2563eb;
             color: white;
             padding: 25px 15px;
             text-align: center;
         }
-
         header h1 {
             margin: 0;
             font-size: 30px;
         }
-
         header p {
             margin: 8px 0 0;
         }
-
         .container {
             width: 92%;
             max-width: 980px;
             margin: 35px auto;
         }
-
         .portal-intro {
             text-align: center;
             margin-bottom: 25px;
             color: #475569;
         }
-
         .portal-intro h2 {
             margin-bottom: 10px;
             font-size: clamp(24px, 4vw, 34px);
         }
-
         .portal-grid {
             display: grid;
             grid-template-columns: 1.2fr 0.8fr;
             gap: 25px;
             align-items: start;
         }
-
         .card {
             background: white;
             padding: 30px;
@@ -76,18 +63,15 @@
             border-radius: 14px;
             box-shadow: 0 4px 18px rgba(0,0,0,0.08);
         }
-
         h2 {
             margin-top: 0;
             text-align: center;
         }
-
         .description {
             text-align: center;
             color: #666;
             margin-bottom: 25px;
         }
-
         .mini-link {
             display: inline-block;
             margin-top: 14px;
@@ -95,17 +79,14 @@
             text-decoration: none;
             font-weight: bold;
         }
-
         .mini-link:hover {
             text-decoration: underline;
         }
-
         label {
             display: block;
             font-weight: bold;
             margin-bottom: 8px;
         }
-
         input,
         select {
             width: 100%;
@@ -117,22 +98,18 @@
             background: white;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-
         input:focus,
         select:focus {
             outline: none;
             border-color: #2563eb;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
-
         .password-field {
             position: relative;
         }
-
         .password-field input {
             padding-right: 92px;
         }
-
         .password-toggle {
             position: absolute;
             top: 0;
@@ -144,7 +121,6 @@
             font-size: 14px;
             font-weight: bold;
         }
-
         .password-toggle svg {
             display: block;
             width: 20px;
@@ -155,12 +131,10 @@
             stroke-linejoin: round;
             stroke-width: 2;
         }
-
         .password-toggle:hover {
             background: transparent;
             color: #1d4ed8;
         }
-
         .password-reset-link {
             width: auto;
             margin-top: 14px;
@@ -169,13 +143,11 @@
             color: #2563eb;
             font-size: 14px;
         }
-
         .password-reset-link:hover {
             background: transparent;
             color: #1d4ed8;
             text-decoration: underline;
         }
-
         button {
             width: 100%;
             padding: 14px;
@@ -186,29 +158,23 @@
             font-size: 16px;
             cursor: pointer;
         }
-
         button:hover {
             background: #1d4ed8;
         }
-
         .admin-button {
             background: #111827;
         }
-
         .admin-button:hover {
             background: #000;
         }
-
         .message {
             margin-top: 15px;
             text-align: center;
             font-weight: bold;
         }
-
         .hidden {
             display: none;
         }
-
         .result-row {
             display: flex;
             justify-content: space-between;
@@ -217,13 +183,11 @@
             padding: 11px 0;
             border-bottom: 1px solid #eee;
         }
-
         .result-row strong {
             color: #333;
             flex-shrink: 0;
             line-height: 1.4;
         }
-
         .result-row span {
             flex: 1 1 auto;
             min-width: 0;
@@ -231,7 +195,6 @@
             text-align: right;
             line-height: 1.4;
         }
-
         .download-button {
             display: inline-block;
             padding: 10px 14px;
@@ -241,146 +204,104 @@
             text-decoration: none;
             font-weight: bold;
         }
-
-        @media (max-width: 700px) {
-            html, body {
-                width: 100%;
-                max-width: 100vw;
-            }
-
-            .container {
-                width: min(90vw, 100%);
-                margin: 24px auto;
-            }
-
-            .portal-grid {
-                grid-template-columns: 1fr;
-                gap: 18px;
-            }
-
-            .card {
-                padding: 20px 16px;
-                margin-bottom: 18px;
-                border-radius: 12px;
-            }
-
-            header {
-                padding: 20px 12px;
-            }
-
-            header h1 {
-                font-size: clamp(26px, 7vw, 32px);
-            }
-
-            .result-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .result-row strong {
-                flex: 0 0 46%;
-                max-width: 46%;
-            }
-
-            .result-row span {
-                flex: 1 1 46%;
-                margin-left: auto;
-                text-align: right;
-                max-width: 46%;
-            }
-
-            .aggregate .result-row {
-                align-items: flex-start;
-            }
-
-            #resultFileRow {
-                flex-wrap: wrap;
-                align-items: center;
-            }
-
-            #resultFileRow strong {
-                flex-basis: 100%;
-                max-width: 100%;
-            }
-
-            .password-field input {
-                padding-right: 74px;
-            }
-
-            .password-toggle {
-                padding: 12px 8px;
-            }
-
-            .download-button {
-                width: 100%;
-                text-align: center;
-            }
-        }
-
         .download-button:hover {
             background: #15803d;
         }
-
         .aggregate {
             margin-top: 20px;
             padding: 18px;
             background: #eef4ff;
             border-radius: 10px;
         }
-
         .logout {
             background: #dc2626;
             margin-top: 15px;
         }
-
         footer {
             text-align: center;
             padding: 25px;
             color: #777;
         }
+        @media (max-width: 700px) {
+            .container {
+                width: min(90vw, 100%);
+                margin: 24px auto;
+            }
+            .portal-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+            .card {
+                padding: 20px 16px;
+                margin-bottom: 18px;
+                border-radius: 12px;
+            }
+            header {
+                padding: 20px 12px;
+            }
+            header h1 {
+                font-size: clamp(26px, 7vw, 32px);
+            }
+            .result-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .result-row strong {
+                flex: 0 0 46%;
+                max-width: 46%;
+            }
+            .result-row span {
+                flex: 1 1 46%;
+                margin-left: auto;
+                text-align: right;
+                max-width: 46%;
+            }
+            .aggregate .result-row {
+                align-items: flex-start;
+            }
+            #resultFileRow {
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            #resultFileRow strong {
+                flex-basis: 100%;
+                max-width: 100%;
+            }
+            .password-field input {
+                padding-right: 74px;
+            }
+            .password-toggle {
+                padding: 12px 8px;
+            }
+            .download-button {
+                width: 100%;
+                text-align: center;
+            }
+        }
     </style>
 </head>
-
 <body>
-
 <header>
     <h1>DRMS</h1>
     <p>Digital Results Management System</p>
 </header>
-
-
 <div class="container">
-
     <div class="portal-intro">
         <h2>School Results Portal</h2>
         <p>Parents/Guardians/Sponsors can check a learner’s performance quickly and securely.</p>
     </div>
-
     <div class="portal-grid">
-
         <!-- PARENT PORTAL -->
-
         <div class="card">
-
             <h2>Check Learner Results</h2>
-
             <p class="description">
                 Enter the learner's Assessment Number to view results.
             </p>
-
-            <label for="assessmentNumber">
-                Assessment Number
-            </label>
-
-            <input
-                type="text"
-                id="assessmentNumber"
-                placeholder="Enter Assessment Number"
-            >
+            <label for="assessmentNumber">Assessment Number</label>
+            <input type="text" id="assessmentNumber" placeholder="Enter Assessment Number">
 
             <label for="term">Term</label>
-
             <select id="term">
                 <option value="">Select term</option>
                 <option value="Term 1">I</option>
@@ -388,45 +309,21 @@
                 <option value="Term 3">III</option>
             </select>
 
-            <button onclick="searchResults()">
-                Search Results
-            </button>
-
+            <button onclick="searchResults()">Search Results</button>
             <div id="searchMessage" class="message"></div>
-
         </div>
 
-
         <!-- ADMIN LOGIN -->
-
         <div class="card">
-
             <h2>Administrator</h2>
+            <p class="description">Authorized administrators only.</p>
 
-            <p class="description">
-                Authorized administrators only.
-            </p>
-
-            <input
-                type="email"
-                id="adminEmail"
-                placeholder="Administrator Email"
-            >
+            <input type="email" id="adminEmail" placeholder="Administrator Email">
 
             <div class="password-field">
-                <input
-                    type="password"
-                    id="adminPassword"
-                    placeholder="Password"
-                >
-                <button
-                    type="button"
-                    class="password-toggle"
-                    id="passwordToggle"
-                    onclick="togglePassword()"
-                    aria-label="Show password"
-                    title="Show password"
-                >
+                <input type="password" id="adminPassword" placeholder="Password">
+                <button type="button" class="password-toggle" id="passwordToggle"
+                        onclick="togglePassword()" aria-label="Show password" title="Show password">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
                         <circle cx="12" cy="12" r="2.5"></circle>
@@ -434,47 +331,33 @@
                 </button>
             </div>
 
-            <button
-                class="admin-button"
-                onclick="adminLogin()"
-            >
-                Administrator Sign In
-            </button>
-
+            <button class="admin-button" onclick="adminLogin()">Administrator Sign In</button>
             <div id="loginMessage" class="message"></div>
 
-            <button type="button" class="mini-link password-reset-link" onclick="requestPasswordReset('adminEmail', 'loginMessage')">
+            <button type="button" class="mini-link password-reset-link"
+                    onclick="requestPasswordReset('adminEmail', 'loginMessage')">
                 Forgot password?
             </button>
-
             <a class="mini-link" href="Admin.html">Open Admin page</a>
-
         </div>
-
     </div>
 
-
     <!-- RESULTS -->
-
     <div id="resultsCard" class="card hidden">
-
         <h2>Learner's Results</h2>
 
         <div class="result-row">
             <strong>Assessment Number</strong>
             <span id="resultAssessment"></span>
         </div>
-
         <div class="result-row">
             <strong>Learner's Name</strong>
             <span id="resultName"></span>
         </div>
-
         <div class="result-row">
             <strong>Grade</strong>
             <span id="resultGrade"></span>
         </div>
-
         <div class="result-row">
             <strong>Term</strong>
             <span id="resultTerm"></span>
@@ -482,57 +365,21 @@
 
         <br>
 
-        <div class="result-row">
-            <strong>Mathematics</strong>
-            <span id="mathematics"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>English</strong>
-            <span id="english"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Kiswahili</strong>
-            <span id="kiswahili"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Integrated Science</strong>
-            <span id="integratedScience"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Social Studies</strong>
-            <span id="socialStudies"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>CRE/IRE</strong>
-            <span id="creIre"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Agriculture</strong>
-            <span id="agriculture"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Creative Arts and Sports</strong>
-            <span id="creativeArtsSports"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Pre-Technical Studies</strong>
-            <span id="preTechnical"></span>
-        </div>
+        <div class="result-row"><strong>Mathematics</strong><span id="mathematics"></span></div>
+        <div class="result-row"><strong>English</strong><span id="english"></span></div>
+        <div class="result-row"><strong>Kiswahili</strong><span id="kiswahili"></span></div>
+        <div class="result-row"><strong>Integrated Science</strong><span id="integratedScience"></span></div>
+        <div class="result-row"><strong>Social Studies</strong><span id="socialStudies"></span></div>
+        <div class="result-row"><strong>CRE/IRE</strong><span id="creIre"></span></div>
+        <div class="result-row"><strong>Agriculture</strong><span id="agriculture"></span></div>
+        <div class="result-row"><strong>Creative Arts and Sports</strong><span id="creativeArtsSports"></span></div>
+        <div class="result-row"><strong>Pre-Technical Studies</strong><span id="preTechnical"></span></div>
 
         <div class="aggregate">
             <div class="result-row">
                 <strong>Aggregate Points</strong>
                 <span id="aggregatePoints"></span>
             </div>
-
             <div class="result-row">
                 <strong>Rubrics</strong>
                 <span id="aggregateRubrics"></span>
@@ -541,25 +388,19 @@
 
         <div class="result-row" id="resultFileRow" style="display: none;">
             <strong>Download Learner Results</strong>
-            <a id="resultFileLink" class="download-button" href="#" download>Download File</a>
+            <a id="resultFileLink" class="download-button" href="#" download>Download PDF</a>
         </div>
-
     </div>
-
 </div>
 
 <footer>
     © 2026 Digital Results Management System
 </footer>
 
-
 <script>
-
 function messageForDownload(text) {
     const message = document.getElementById("searchMessage");
-    if (message) {
-        message.textContent = text;
-    }
+    if (message) message.textContent = text;
 }
 
 function romanNumeral(value) {
@@ -568,50 +409,33 @@ function romanNumeral(value) {
         [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
         [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]
     ];
-
     const number = Number.parseInt(value, 10);
-    if (!Number.isFinite(number) || number < 1) {
-        return String(value ?? "");
-    }
-
+    if (!Number.isFinite(number) || number < 1) return String(value ?? "");
     let result = "";
     let remaining = number;
-
     for (const [intValue, numeral] of numerals) {
         while (remaining >= intValue) {
             result += numeral;
             remaining -= intValue;
         }
     }
-
     return result;
 }
 
 function formatGradeDisplay(value) {
     const text = String(value ?? "").trim();
     if (!text) return "";
-
     const match = text.match(/grade\s*([a-z0-9]+)\b/i);
-    if (match) {
-        return match[1];
-    }
-
+    if (match) return match[1];
     return text.replace(/^grade\s*/i, "");
 }
 
 function formatTermDisplay(value) {
     const text = String(value ?? "").trim();
     if (!text) return "";
-
-    if (/^[ivxlcdm]+$/i.test(text)) {
-        return text.toUpperCase();
-    }
-
+    if (/^[ivxlcdm]+$/i.test(text)) return text.toUpperCase();
     const match = text.match(/\bterm\s*([0-9]+)\b/i) || text.match(/\b([0-9]+)\b/);
-    if (match) {
-        return romanNumeral(match[1]);
-    }
-
+    if (match) return romanNumeral(match[1]);
     return text.replace(/^term\s*/i, "");
 }
 
@@ -620,8 +444,8 @@ let learnerDownloadUrl = null;
 function createLearnerDownload(data, selectedTerm) {
     const fileRow = document.getElementById("resultFileRow");
     const fileLink = document.getElementById("resultFileLink");
-    const learnerName = data.learner_name || "learner";
-    const assessmentNumber = data.assessment_number || "result";
+    const learnerName = data.learner_name || "Learner";
+    const assessmentNumber = data.assessment_number || "Result";
 
     if (!window.jspdf?.jsPDF) {
         fileRow.style.display = "none";
@@ -630,78 +454,143 @@ function createLearnerDownload(data, selectedTerm) {
     }
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const left = 20;
-    const right = pageWidth - 20;
-    let y = 22;
+    const left = 18;
+    const right = pageWidth - 18;
+    const contentWidth = right - left;
+    let y = 0;
 
+    // Header bar
     pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 35, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(20);
-    pdf.setFont(undefined, "bold");
-    pdf.text("DRMS", left, 16);
-    pdf.setFontSize(11);
-    pdf.setFont(undefined, "normal");
-    pdf.text("Learner Results Report", left, 25);
+    pdf.rect(0, 0, pageWidth, 32, "F");
 
-    y = 48;
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(18);
+    pdf.setFont(undefined, "bold");
+    pdf.text("DRMS", left, 14);
+
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, "normal");
+    pdf.text("Digital Results Management System", left, 22);
+
+    pdf.setFontSize(9);
+    pdf.text("Learner Results Report", right, 14, { align: "right" });
+    pdf.text(new Date().toLocaleDateString(), right, 22, { align: "right" });
+
+    y = 44;
+
+    // Learner name
     pdf.setTextColor(17, 24, 39);
-    pdf.setFontSize(15);
+    pdf.setFontSize(16);
     pdf.setFont(undefined, "bold");
     pdf.text(learnerName, left, y);
-    y += 9;
+    y += 8;
 
+    // Meta info
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, "normal");
+    pdf.setTextColor(55, 65, 81);
+    pdf.text(`Assessment No: ${assessmentNumber}`, left, y);
+    y += 6;
+    pdf.text(`Grade: ${formatGradeDisplay(data.grade || "")}   |   Term: ${formatTermDisplay(data.term || selectedTerm)}`, left, y);
+    y += 12;
+
+    // Divider line
+    pdf.setDrawColor(37, 99, 235);
+    pdf.setLineWidth(0.6);
+    pdf.line(left, y, right, y);
+    y += 10;
+
+    // Subject rows
     const rows = [
-        ["Assessment Number", assessmentNumber],
-        ["Grade", formatGradeDisplay(data.grade || "")],
-        ["Term", formatTermDisplay(data.term || selectedTerm)],
         ["Mathematics", data.mathematics ?? ""],
         ["English", data.english ?? ""],
         ["Kiswahili", data.kiswahili ?? ""],
         ["Integrated Science", data.integrated_science ?? ""],
         ["Social Studies", data.social_studies ?? ""],
-        ["CRE/IRE", data.cre_ire ?? ""],
+        ["CRE / IRE", data.cre_ire ?? ""],
         ["Agriculture", data.agriculture ?? ""],
-        ["Creative Arts and Sports", data.creative_arts_sports ?? ""],
-        ["Pre-Technical Studies", data.pre_technical_studies ?? ""],
-        ["Aggregate Points", data.aggregate_points ?? ""],
-        ["Rubrics", data.aggregate_rubrics ?? ""]
+        ["Creative Arts & Sports", data.creative_arts_sports ?? ""],
+        ["Pre-Technical Studies", data.pre_technical_studies ?? ""]
     ];
 
     pdf.setFontSize(10);
+
     rows.forEach(([label, value], index) => {
-        if (y > pageHeight - 25) {
+        if (y > pageHeight - 40) {
             pdf.addPage();
-            y = 22;
+            y = 20;
         }
 
+        // Alternating background
         if (index % 2 === 0) {
             pdf.setFillColor(239, 246, 255);
-            pdf.rect(left - 4, y - 6, right - left + 8, 11, "F");
+            pdf.rect(left - 2, y - 5.5, contentWidth + 4, 10, "F");
         }
 
         pdf.setTextColor(55, 65, 81);
         pdf.setFont(undefined, "bold");
         pdf.text(label, left, y);
+
         pdf.setTextColor(17, 24, 39);
         pdf.setFont(undefined, "normal");
-        pdf.text(String(value || "-"), right, y, { align: "right" });
-        y += 11;
+        pdf.text(String(value || "—"), right, y, { align: "right" });
+
+        y += 10;
     });
 
-    pdf.setTextColor(107, 114, 128);
+    y += 6;
+
+    // Aggregate box
+    if (y > pageHeight - 50) {
+        pdf.addPage();
+        y = 20;
+    }
+
+    pdf.setFillColor(238, 244, 255);
+    pdf.setDrawColor(37, 99, 235);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(left - 2, y - 4, contentWidth + 4, 32, 2, 2, "FD");
+
+    pdf.setTextColor(17, 24, 39);
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, "bold");
+    pdf.text("Aggregate Points", left + 2, y + 5);
+    pdf.setFont(undefined, "normal");
+    pdf.text(String(data.aggregate_points ?? "—"), right - 2, y + 5, { align: "right" });
+
+    pdf.setFont(undefined, "bold");
+    pdf.text("Rubrics", left + 2, y + 16);
+
+    // Handle long rubrics text
+    const rubricsText = String(data.aggregate_rubrics ?? "—");
+    pdf.setFont(undefined, "normal");
     pdf.setFontSize(9);
-    pdf.text("Generated by Digital Results Management System", left, pageHeight - 12);
+    const splitRubrics = pdf.splitTextToSize(rubricsText, contentWidth - 10);
+    pdf.text(splitRubrics, left + 2, y + 23);
+
+    // Footer
+    pdf.setTextColor(107, 114, 128);
+    pdf.setFontSize(8);
+    pdf.setFont(undefined, "normal");
+    pdf.text("Generated by Digital Results Management System", left, pageHeight - 10);
+    pdf.text("Page 1", right, pageHeight - 10, { align: "right" });
+
+    // Create download
+    if (learnerDownloadUrl) {
+        URL.revokeObjectURL(learnerDownloadUrl);
+    }
+
     const pdfBlob = pdf.output("blob");
     learnerDownloadUrl = URL.createObjectURL(pdfBlob);
 
     fileLink.href = learnerDownloadUrl;
     fileLink.download = `${assessmentNumber}-${learnerName}`
         .replace(/[^a-z0-9._-]+/gi, "-")
-        .replace(/-+/g, "-") + ".pdf";
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") + ".pdf";
     fileLink.textContent = "Download PDF";
     fileRow.style.display = "flex";
 }
@@ -711,19 +600,20 @@ function clearLearnerDownload() {
         URL.revokeObjectURL(learnerDownloadUrl);
         learnerDownloadUrl = null;
     }
-
     const fileRow = document.getElementById("resultFileRow");
     const fileLink = document.getElementById("resultFileLink");
-    fileRow.style.display = "none";
-    fileLink.removeAttribute("href");
-    fileLink.removeAttribute("download");
+    if (fileRow) fileRow.style.display = "none";
+    if (fileLink) {
+        fileLink.removeAttribute("href");
+        fileLink.removeAttribute("download");
+        fileLink.textContent = "Download PDF";
+    }
 }
 
 function togglePassword() {
     const password = document.getElementById("adminPassword");
     const toggle = document.getElementById("passwordToggle");
     const isHidden = password.type === "password";
-
     password.type = isHidden ? "text" : "password";
     const label = isHidden ? "Hide password" : "Show password";
     toggle.setAttribute("aria-label", label);
@@ -739,9 +629,7 @@ async function callSearchLearnerResult(assessmentNumber, selectedTerm, selectedS
 
     let response = await supabaseClient.rpc("search_learner_result", payload);
 
-    if (!response.error) {
-        return response;
-    }
+    if (!response.error) return response;
 
     const message = response.error?.message || "";
     const functionShapeMismatch = /search_school_id|school_id|42883|function .*search_learner_result.*does not exist|does not exist/i.test(message);
@@ -752,7 +640,6 @@ async function callSearchLearnerResult(assessmentNumber, selectedTerm, selectedS
             search_term: selectedTerm
         });
     }
-
     return response;
 }
 
@@ -772,7 +659,6 @@ function spreadsheetValue(row, names) {
             return String(value).trim();
         }
     }
-
     return "";
 }
 
@@ -789,7 +675,6 @@ function calculateAggregatePoints(row) {
         ["pretechnicalstudies", "pretechnical"]
     ];
     const values = subjects.map((names) => Number.parseFloat(spreadsheetValue(row, names)));
-
     return values.every((value) => Number.isFinite(value))
         ? String(values.reduce((total, value) => total + value, 0))
         : "";
@@ -804,15 +689,8 @@ function canonicalAssessmentNumber(value) {
 }
 
 function canonicalTerm(value) {
-    const normalized = String(value ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "");
-
-    if (/^\d+$/.test(normalized)) {
-        return `term${normalized}`;
-    }
-
+    const normalized = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "");
+    if (/^\d+$/.test(normalized)) return `term${normalized}`;
     return normalized.replace(/^term/, "term");
 }
 
@@ -822,10 +700,7 @@ function spreadsheetRows(sheet) {
         const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
         return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
     }));
-
-    if (headerIndex < 0) {
-        return [];
-    }
+    if (headerIndex < 0) return [];
 
     const headers = matrix[headerIndex].map((header) =>
         String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -841,7 +716,6 @@ function fileMetadata(fileName) {
     const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
     const classMatch = name.match(/\b(?:class|stream)\s*([a-z0-9-]+)\b/i);
     const termMatch = name.match(/\bterm\s*([1-3])\b/i);
-
     return {
         grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
         class: classMatch ? classMatch[1] : "",
@@ -859,9 +733,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
         .select("file_name, file_type, storage_path, school_id")
         .order("uploaded_at", { ascending: false });
 
-    if (error) {
-        throw error;
-    }
+    if (error) throw error;
 
     const normalizedAssessmentNumber = canonicalAssessmentNumber(assessmentNumber);
     const spreadsheetUploads = (uploads || []).filter((upload) => {
@@ -877,14 +749,10 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
             .from("results")
             .createSignedUrl(upload.storage_path, 3600);
 
-        if (urlError) {
-            continue;
-        }
+        if (urlError) continue;
 
         const response = await fetch(signedUrl.signedUrl);
-        if (!response.ok) {
-            continue;
-        }
+        if (!response.ok) continue;
 
         const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -893,14 +761,9 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
         for (const originalRow of rows) {
             const row = normalizeSpreadsheetRow(originalRow);
             const rowAssessmentNumber = spreadsheetValue(row, [
-                "assessmentnumber",
-                "assessmentno",
-                "assessment",
-                "admno",
-                "admissionnumber",
-                "indexnumber"
+                "assessmentnumber", "assessmentno", "assessment",
+                "admno", "admissionnumber", "indexnumber"
             ]);
-
             const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]);
             const uploadTerm = fileMetadata(upload.file_name).term;
             const effectiveTerm = rowTerm || uploadTerm;
@@ -931,190 +794,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
             }
         }
     }
-
     return null;
-}
-
-async function loadResultDownload(assessmentNumber) {
-    const row = document.getElementById("resultFileRow");
-    const link = document.getElementById("resultFileLink");
-
-    if (!row || !link) {
-        return;
-    }
-
-    row.style.display = "none";
-    link.removeAttribute("href");
-    link.textContent = "Download";
-
-    const candidates = [
-        "assessment_number",
-        "assessmentNumber",
-        "assessment_no"
-    ];
-
-    for (const column of candidates) {
-        const { data, error } = await supabaseClient
-            .from("result_uploads")
-            .select("storage_path, file_name")
-            .eq(column, assessmentNumber)
-            .limit(1);
-
-        if (!error && data && data.length) {
-            const file = data[0];
-            if (!file.storage_path) {
-                continue;
-            }
-
-            const { data: signedUrl, error: urlError } = await supabaseClient
-                .storage
-                .from("results")
-                .createSignedUrl(file.storage_path, 3600);
-
-            if (!urlError && signedUrl?.signedUrl) {
-                row.style.display = "flex";
-                link.href = signedUrl.signedUrl;
-                link.textContent = file.file_name || "Download uploaded file";
-                return;
-            }
-        }
-
-        if (error && /does not exist|column .* does not exist|not found/i.test(error.message)) {
-            continue;
-        }
-
-        if (error) {
-            messageForDownload("The result was found, but its uploaded file cannot be read. Check the result_uploads SELECT policy.");
-            return;
-        }
-    }
-
-    const { data: fallbackData, error: fallbackError } = await supabaseClient
-        .from("result_uploads")
-        .select("storage_path, file_name")
-        .ilike("file_name", `%${assessmentNumber}%`)
-        .limit(1);
-
-    if (!fallbackError && fallbackData && fallbackData.length) {
-        const file = fallbackData[0];
-        if (file.storage_path) {
-            const { data: signedUrl, error: urlError } = await supabaseClient
-                .storage
-                .from("results")
-                .createSignedUrl(file.storage_path, 3600);
-
-            if (!urlError && signedUrl?.signedUrl) {
-                row.style.display = "flex";
-                link.href = signedUrl.signedUrl;
-                link.textContent = file.file_name || "Download uploaded file";
-                return;
-            }
-
-            if (urlError) {
-                messageForDownload("The result was found, but its uploaded file cannot be downloaded. Check the storage SELECT policy.");
-                return;
-            }
-        }
-    }
-}
-
-async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPeriod) {
-    const selectedSchoolId = null;
-    let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, assessmentPeriod, selectedSchoolId);
-
-    if (data) {
-        data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
-        data.aggregate_points = data.aggregate_points ?? data.aggregatePoints ?? data.total_points;
-        data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
-    }
-
-    const requiredResultFields = ["grade", "social_studies", "aggregate_points", "aggregate_rubrics"];
-    const hasIncompleteData = !data || requiredResultFields.some((field) =>
-        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-    );
-
-    if (error || hasIncompleteData) {
-        const uploadedResult = await findUploadedSpreadsheetResult(
-            assessmentNumber,
-            selectedTerm,
-            assessmentPeriod,
-            selectedSchoolId
-        );
-
-        if (uploadedResult?.data) {
-            data = data
-                ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
-                    field,
-                    data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-                        ? value
-                        : data[field]
-                ]))
-                : uploadedResult.data;
-        }
-    }
-
-    if (error && !data) {
-        throw error;
-    }
-
-    return data;
-}
-
-function addResultRow(container, label, value) {
-    const row = document.createElement("div");
-    row.className = "result-row";
-    const labelElement = document.createElement("strong");
-    labelElement.textContent = label;
-    const valueElement = document.createElement("span");
-    valueElement.textContent = value ?? "";
-    row.append(labelElement, valueElement);
-    container.appendChild(row);
-}
-
-function renderResultBlock(data, selectedTerm, assessmentPeriod, resultsList) {
-    const block = document.createElement("section");
-    block.className = "assessment-result";
-
-    const heading = document.createElement("h3");
-    heading.textContent = `Assessment ${data.assessment_period || assessmentPeriod}`;
-    block.appendChild(heading);
-
-    addResultRow(block, "Assessment Number", data.assessment_number || "");
-    addResultRow(block, "Learner's Name", data.learner_name || "");
-    addResultRow(block, "Grade", formatGradeDisplay(data.grade || ""));
-    addResultRow(block, "Term", formatTermDisplay(data.term || selectedTerm));
-
-    const subjects = [
-        ["Mathematics", "mathematics"],
-        ["English", "english"],
-        ["Kiswahili", "kiswahili"],
-        ["Integrated Science", "integrated_science"],
-        ["Social Studies", "social_studies"],
-        ["CRE/IRE", "cre_ire"],
-        ["Agriculture", "agriculture"],
-        ["Creative Arts and Sports", "creative_arts_sports"],
-        ["Pre-Technical Studies", "pre_technical_studies"]
-    ];
-    subjects.forEach(([label, field]) => addResultRow(block, label, data[field] ?? ""));
-
-    const aggregate = document.createElement("div");
-    aggregate.className = "aggregate";
-    addResultRow(aggregate, "Aggregate Points", data.aggregate_points ?? "");
-    addResultRow(aggregate, "Rubrics", data.aggregate_rubrics ?? "");
-    block.appendChild(aggregate);
-
-    const fileRow = document.createElement("div");
-    fileRow.className = "result-row";
-    const fileLabel = document.createElement("strong");
-    fileLabel.textContent = "Download Learner Results";
-    const fileLink = document.createElement("a");
-    fileLink.className = "download-button";
-    fileLink.textContent = "Download PDF";
-    fileLink.download = "results.pdf";
-    fileRow.append(fileLabel, fileLink);
-    block.appendChild(fileRow);
-    resultsList.appendChild(block);
-    createLearnerDownload(data, selectedTerm, assessmentPeriod, fileRow, fileLink);
 }
 
 async function searchResults() {
@@ -1177,6 +857,7 @@ async function searchResults() {
     }
 
     message.textContent = "";
+
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
     document.getElementById("resultName").textContent = data.learner_name || "";
     document.getElementById("resultGrade").textContent = formatGradeDisplay(data.grade || "");
@@ -1192,46 +873,29 @@ async function searchResults() {
     document.getElementById("preTechnical").textContent = data.pre_technical_studies ?? "";
     document.getElementById("aggregatePoints").textContent = data.aggregate_points ?? "";
     document.getElementById("aggregateRubrics").textContent = data.aggregate_rubrics ?? "";
+
     createLearnerDownload(data, selectedTerm);
     resultsCard.classList.remove("hidden");
 }
 
-
 async function adminLogin() {
-
-    const email =
-        document.getElementById("adminEmail").value.trim();
-
-    const password =
-        document.getElementById("adminPassword").value;
-
-    const message =
-        document.getElementById("loginMessage");
-
+    const email = document.getElementById("adminEmail").value.trim();
+    const password = document.getElementById("adminPassword").value;
+    const message = document.getElementById("loginMessage");
 
     if (!email || !password) {
-
-        message.textContent =
-            "Enter your email and password.";
-
+        message.textContent = "Enter your email and password.";
         return;
     }
-
 
     message.textContent = "Signing in...";
 
-
     const { error } = await signInWithRateLimit(email, password);
 
-
     if (error) {
-
-        message.textContent =
-            "Login failed: " + error.message;
-
+        message.textContent = "Login failed: " + error.message;
         return;
     }
-
 
     window.location.href = "dashboard.html";
 }
@@ -1246,6 +910,7 @@ async function requestPasswordReset(emailId, messageId) {
     }
 
     message.textContent = "Sending password reset email...";
+
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password.html`
     });
@@ -1254,11 +919,6 @@ async function requestPasswordReset(emailId, messageId) {
         ? `Could not send reset email: ${error.message}`
         : "Check your email for a password reset link.";
 }
-
-window.addEventListener("DOMContentLoaded", () => {
-});
-
 </script>
-
 </body>
 </html>
