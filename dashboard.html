@@ -889,11 +889,34 @@
             ["creativeartssports", "creativearts"],
             ["pretechnicalstudies", "pretechnical"]
         ];
-        const values = subjects.map((names) => Number.parseFloat(getSpreadsheetValue(row, names)));
+        const values = subjects
+            .map((names) => Number.parseFloat(String(getSpreadsheetValue(row, names) ?? "").replace(/,/g, "")))
+            .filter(Number.isFinite);
 
-        return values.every((value) => Number.isFinite(value))
+        return values.length
             ? String(values.reduce((total, value) => total + value, 0))
             : null;
+    }
+
+
+    function calculateAggregateRubric(points) {
+        const score = Number.parseFloat(String(points ?? "").replace(/,/g, ""));
+        if (!Number.isFinite(score) || score < 0 || score > 72) {
+            return null;
+        }
+
+        const rubricBands = [
+            [9, "Below expectation2 (BE2)"],
+            [18, "Below expectation1 (BE1)"],
+            [27, "Approaching expectation2 (AE2)"],
+            [36, "Approaching expectation1 (AE1)"],
+            [45, "Meeting expectation2 (ME2)"],
+            [54, "Meeting expectation1 (ME1)"],
+            [63, "Exceeding expectation2 (EE2)"],
+            [72, "Exceeding expectation1 (EE1)"]
+        ];
+
+        return rubricBands.find(([maximum]) => score <= maximum)?.[1] || null;
     }
 
 
@@ -999,6 +1022,7 @@
                 pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
                 aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
                 aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                    || calculateAggregateRubric(getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
             };
         }).filter(Boolean);
 
@@ -1253,8 +1277,10 @@
                     agriculture: getSpreadsheetValue(row, ["agriculture", "agric"]),
                     creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
                     pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
-                    aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]),
+                    aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"])
+                        || calculateAggregatePoints(row),
                     aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                        || calculateAggregateRubric(getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
                 });
             }
         }
@@ -1338,6 +1364,13 @@
         const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
         const resultMap = new Map();
         (results || []).forEach((result) => {
+            if (result.aggregate_points === null || result.aggregate_points === undefined || String(result.aggregate_points).trim() === "") {
+                result.aggregate_points = calculateAggregatePoints(normalizeSpreadsheetRow(result));
+            }
+            if (result.aggregate_rubric === null || result.aggregate_rubric === undefined || String(result.aggregate_rubric).trim() === "") {
+                result.aggregate_rubric = calculateAggregateRubric(result.aggregate_points);
+            }
+
             if (!resultMap.has(result.learner_id)) {
                 resultMap.set(result.learner_id, []);
             }
@@ -1377,8 +1410,7 @@
                         <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} Results Slip</h2>
                         <div class="print-meta">
                             <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
-                            <span>Class: ${escapePrintText(learner.class || "")}</span>
-                            <span>Term: <strong>${escapePrintText(term)}</strong></span>
+                            <span>Term: <strong>${escapePrintText(term)}, ${new Date().getFullYear()}</strong></span>
                         </div>
                         <table class="print-table">
                             <thead>
