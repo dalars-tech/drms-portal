@@ -123,6 +123,8 @@ add column if not exists school_id uuid references public.schools(id);
 
 Column names may use spaces or capitalization, such as `Assessment Number` or `Learner Name`. PDF files are stored for viewing and downloading, but their contents are not automatically imported into searchable learner records.
 
+If `aggregate_points` (AGG) is blank, the importer adds the available numeric subject points. If `aggregate_rubric` (RUB) is blank, it is assigned from AGG using these inclusive bands: 0-9 `Below expectation2 (BE2)`, 10-18 `Below expectation1 (BE1)`, 19-27 `Approaching expectation2 (AE2)`, 28-36 `Approaching expectation1 (AE1)`, 37-45 `Meeting expectation2 (ME2)`, 46-54 `Meeting expectation1 (ME1)`, 55-63 `Exceeding expectation2 (EE2)`, and 64-72 `Exceeding expectation1 (EE1)`. Existing nonblank AGG and RUB values are preserved. Scores outside 0-72 do not receive an automatic rubric.
+
 ## Learner search setup
 
 Before importing termly results, add the term column and unique constraint:
