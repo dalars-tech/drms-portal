@@ -6,6 +6,19 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
+function passwordResetRedirectUrl() {
+    const localHosts = ["localhost", "127.0.0.1", "::1", "[::1]"];
+    if (window.location.protocol === "file:" || localHosts.includes(window.location.hostname)) {
+        return null;
+    }
+
+    const isAdminSubdirectory = /\/admin\/$/i.test(window.location.pathname)
+        || /\/admin\/[^/]*$/i.test(window.location.pathname);
+    const resetPage = isAdminSubdirectory ? "../reset-password.html" : "reset-password.html";
+
+    return new URL(resetPage, window.location.href).toString();
+}
+
 const LOGIN_LIMIT = 5;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_LOCKOUT_MS = 60 * 1000;
