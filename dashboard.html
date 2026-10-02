@@ -411,39 +411,108 @@
         }
 
         .print-learner {
-            margin: 24px 0;
-            break-inside: avoid;
+            break-after: page;
+            page-break-after: always;
         }
 
-        .print-learner h3 {
-            margin-bottom: 8px;
+        .print-learner:last-child {
+            break-after: auto;
+            page-break-after: auto;
         }
 
-        .print-learner table {
+        .print-learner h1 {
+            margin: 0 0 4px;
+            font-size: 16pt;
+        }
+
+        .print-learner h2 {
+            margin: 0 0 10px;
+            font-size: 10pt;
+        }
+
+        .print-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .print-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            table-layout: fixed;
         }
 
-        .print-learner th,
-        .print-learner td {
+        .print-table th,
+        .print-table td {
             border: 1px solid #9ca3af;
-            padding: 6px;
+            padding: 3px;
             text-align: left;
+            vertical-align: top;
         }
 
-        .print-learner th {
+        .print-table th {
             background: #e5e7eb;
         }
 
         @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+
             body > *:not(#printReport) {
                 display: none !important;
             }
 
             .print-report {
                 display: block;
-                padding: 20px;
+                padding: 0;
+                font-size: 6pt;
+                line-height: 1.1;
+            }
+
+            .print-report h1 {
+                margin: 0 0 4px;
+                font-size: 16pt;
+            }
+
+            .print-report h2 {
+                margin: 0 0 10px;
+                font-size: 10pt;
+            }
+
+            .print-report p {
+                display: none;
+            }
+
+            .print-learner {
+                break-after: page;
+                page-break-after: always;
+            }
+
+            .print-learner:last-child {
+                break-after: auto;
+                page-break-after: auto;
+            }
+
+            .print-meta {
+                margin-bottom: 10px;
+            }
+
+            .print-table th,
+            .print-table td {
+                padding: 4px;
+                overflow-wrap: anywhere;
+                font-size: 7pt;
+            }
+
+            .print-table th {
+                font-size: 7pt;
+            }
+
+            .print-values {
+                line-height: 1.1;
             }
         }
 
@@ -1096,6 +1165,109 @@
     }
 
 
+    function normalizeTerm(value) {
+        const normalized = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "");
+        return /^\d+$/.test(normalized) ? `term${normalized}` : normalized;
+    }
+
+
+    async function loadUploadedGradeResults(schoolId, term, grade) {
+        const { data: uploads, error } = await supabaseClient
+            .from("result_uploads")
+            .select("file_name, file_type, storage_path, term, grade, assessment_period")
+            .eq("school_id", schoolId)
+            .order("uploaded_at", { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        const learnersByAssessment = new Map();
+        const results = [];
+
+        for (const upload of uploads || []) {
+            const isSpreadsheet = /\.(xlsx?|xls)$/i.test(upload.file_name || "")
+                || /spreadsheet|excel/i.test(upload.file_type || "");
+            const uploadGrade = upload.grade || fileMetadata(upload.file_name).grade;
+            const uploadTerm = upload.term || fileMetadata(upload.file_name).term;
+
+            if (!isSpreadsheet
+                || normalizeGrade(uploadGrade) !== normalizeGrade(grade)
+                || (uploadTerm && normalizeTerm(uploadTerm) !== normalizeTerm(term))) {
+                continue;
+            }
+
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(upload.storage_path, 3600);
+
+            if (urlError) {
+                continue;
+            }
+
+            const response = await fetch(signedUrl.signedUrl);
+            if (!response.ok) {
+                continue;
+            }
+
+            const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+            for (const originalRow of spreadsheetRows(sheet)) {
+                const row = normalizeSpreadsheetRow(originalRow);
+                const assessmentNumber = getSpreadsheetValue(row, [
+                    "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"
+                ]);
+                const rowGrade = getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"])
+                    || uploadGrade;
+                const rowTerm = getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"])
+                    || uploadTerm;
+
+                if (!assessmentNumber
+                    || normalizeGrade(rowGrade) !== normalizeGrade(grade)
+                    || (rowTerm && normalizeTerm(rowTerm) !== normalizeTerm(term))) {
+                    continue;
+                }
+
+                const learnerKey = assessmentNumber.trim().toLowerCase();
+                if (!learnersByAssessment.has(learnerKey)) {
+                    learnersByAssessment.set(learnerKey, {
+                        id: learnerKey,
+                        assessment_number: assessmentNumber,
+                        learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
+                        grade: rowGrade,
+                        class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"])
+                    });
+                }
+
+                results.push({
+                    learner_id: learnerKey,
+                    assessment_period: upload.assessment_period,
+                    mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
+                    english: getSpreadsheetValue(row, ["english", "eng"]),
+                    kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
+                    integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
+                    social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"]),
+                    cre_ire: getSpreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
+                    agriculture: getSpreadsheetValue(row, ["agriculture", "agric"]),
+                    creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
+                    pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
+                    aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]),
+                    aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                });
+            }
+        }
+
+        return {
+            learners: [...learnersByAssessment.values()].sort((first, second) =>
+                String(first.assessment_number).localeCompare(String(second.assessment_number), undefined, { numeric: true })
+            ),
+            results
+        };
+    }
+
+
     async function printGradeResults() {
         const schoolId = document.getElementById("printSchool").value;
         const term = document.getElementById("printTerm").value;
@@ -1121,29 +1293,46 @@
             return;
         }
 
-        const learners = (schoolLearners || []).filter((learner) =>
+        let learners = (schoolLearners || []).filter((learner) =>
             normalizeGrade(learner.grade) === normalizeGrade(grade)
         );
+        let results;
 
         if (!learners?.length) {
-            status.textContent = "No learners were found for the selected school and grade.";
-            report.innerHTML = "";
-            return;
+            try {
+                const uploadedResults = await loadUploadedGradeResults(schoolId, term, grade);
+                learners = uploadedResults.learners;
+                results = uploadedResults.results;
+            } catch (fallbackError) {
+                status.textContent = `Could not read uploaded spreadsheets: ${fallbackError.message}`;
+                report.innerHTML = "";
+                return;
+            }
+
+            if (!learners.length) {
+                status.textContent = "No learners or matching Excel uploads were found for the selected school, term, and grade.";
+                report.innerHTML = "";
+                return;
+            }
         }
 
-        const learnerIds = learners.map((learner) => learner.id);
-        const { data: results, error: resultError } = await supabaseClient
-            .from("results")
-            .select("learner_id, assessment_period, mathematics, english, kiswahili, integrated_science, social_studies, cre_ire, agriculture, creative_arts_sports, pre_technical_studies, aggregate_points, aggregate_rubric")
-            .in("learner_id", learnerIds)
-            .eq("term", term)
-            .order("assessment_period", { ascending: true });
+        if (!results) {
+            const learnerIds = learners.map((learner) => learner.id);
+            const { data: savedResults, error: resultError } = await supabaseClient
+                .from("results")
+                .select("learner_id, assessment_period, mathematics, english, kiswahili, integrated_science, social_studies, cre_ire, agriculture, creative_arts_sports, pre_technical_studies, aggregate_points, aggregate_rubric")
+                .in("learner_id", learnerIds)
+                .eq("term", term)
+                .order("assessment_period", { ascending: true });
 
-        if (resultError) {
-            status.textContent = resultError.message.includes("assessment_period")
-                ? "Run the assessment results migration from README.md before printing."
-                : `Could not load results: ${resultError.message}`;
-            return;
+            if (resultError) {
+                status.textContent = resultError.message.includes("assessment_period")
+                    ? "Run the assessment results migration from README.md before printing."
+                    : `Could not load results: ${resultError.message}`;
+                return;
+            }
+
+            results = savedResults;
         }
 
         const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
@@ -1155,55 +1344,58 @@
             resultMap.get(result.learner_id).push(result);
         });
 
-        const subjectColumns = [
-            ["Mathematics Points", "mathematics"],
-            ["English Points", "english"],
-            ["Kiswahili Points", "kiswahili"],
-            ["Integrated Science Points", "integrated_science"],
-            ["Social Studies Points", "social_studies"],
-            ["CRE/IRE Points", "cre_ire"],
-            ["Agriculture Points", "agriculture"],
-            ["Creative Arts and Sports Points", "creative_arts_sports"],
-            ["Pre-Technical Studies Points", "pre_technical_studies"],
+        const assessmentFields = [
+            ["Mathematics", "mathematics"],
+            ["English", "english"],
+            ["Kiswahili", "kiswahili"],
+            ["Integrated Science", "integrated_science"],
+            ["Social Studies", "social_studies"],
+            ["CRE/IRE", "cre_ire"],
+            ["Agriculture", "agriculture"],
+            ["Creative Arts/Sports", "creative_arts_sports"],
+            ["Pre-Technical", "pre_technical_studies"],
             ["Aggregate Points", "aggregate_points"],
-            ["Aggregate Rubrics", "aggregate_rubric"]
+            ["Rubrics", "aggregate_rubric"]
         ];
 
         report.innerHTML = `
-            <h1>Digital Results Management System</h1>
-            <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} - ${escapePrintText(term)}</h2>
-            <p>Points, aggregate, and rubrics are shown exactly as uploaded by the school.</p>
-            <p>Printed on ${escapePrintText(new Date().toLocaleDateString())}</p>
             ${learners.map((learner) => {
-                const learnerResults = resultMap.get(learner.id) || [];
-                const rows = learnerResults.length
+                const learnerResults = [...(resultMap.get(learner.id) || [])]
+                    .sort((first, second) => Number(first.assessment_period) - Number(second.assessment_period));
+                const resultRows = learnerResults.length
                     ? learnerResults.map((result) => `
                         <tr>
-                            <td>Assessment ${escapePrintText(result.assessment_period)}</td>
-                            ${subjectColumns.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
+                            <th>Assessment ${escapePrintText(result.assessment_period)}</th>
+                            ${assessmentFields.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
                         </tr>
                     `).join("")
-                    : `<tr><td colspan="${subjectColumns.length + 1}">No assessment results uploaded</td></tr>`;
+                    : `<tr><td colspan="${assessmentFields.length + 1}">No assessments uploaded for this term.</td></tr>`;
 
                 return `
                     <section class="print-learner">
-                        <h3>${escapePrintText(learner.assessment_number)} - ${escapePrintText(learner.learner_name)}</h3>
-                        <p>Class: ${escapePrintText(learner.class || "")}</p>
-                        <table>
+                        <h1>${escapePrintText(learner.learner_name)}</h1>
+                        <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} Results Slip</h2>
+                        <div class="print-meta">
+                            <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
+                            <span>Class: ${escapePrintText(learner.class || "")}</span>
+                            <span>Term: <strong>${escapePrintText(term)}</strong></span>
+                        </div>
+                        <table class="print-table">
                             <thead>
                                 <tr>
                                     <th>Assessment</th>
-                                    ${subjectColumns.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
+                                    ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
                                 </tr>
                             </thead>
-                            <tbody>${rows}</tbody>
+                            <tbody>${resultRows}</tbody>
                         </table>
                     </section>
                 `;
             }).join("")}
         `;
 
-        status.textContent = `${results?.length || 0} assessment result${results?.length === 1 ? "" : "s"} ready to print.`;
+        report.style.zoom = "";
+        status.textContent = `${learners.length} learner results slips ready to print for ${term}.`;
         window.print();
     }
 
