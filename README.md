@@ -1,216 +1,2007 @@
-# drms-portal
-Digital Results Management System-Results Portal
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-## Supabase Storage setup
+    <title>DRMS - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="supabase.js"></script>
 
-The administrator upload uses a private storage bucket named `results`. Create it in the Supabase dashboard under **Storage**, using the exact name `results`, then run the policies below in the Supabase SQL Editor. The application stores files under each uploader's user ID.
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-For the public learner portal to create signed download URLs, also add a `SELECT` policy that permits access to the stored result files. A simple policy for this project is:
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
 
-```sql
-create policy "Authenticated users can upload result files"
-on storage.objects for insert
-to authenticated
-with check (
-	bucket_id = 'results'
-	and (storage.foldername(name))[1] = (select auth.uid()::text)
-);
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
 
-create policy "Anyone can read result files"
-on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'results');
+        header h1 {
+            font-size: 24px;
+        }
 
-drop policy if exists "Authenticated users can create upload records" on public.result_uploads;
+        header p {
+            margin-top: 5px;
+            opacity: 0.9;
+        }
 
-create policy "Authenticated users can create upload records"
-on public.result_uploads for insert
-to authenticated
-with check (
-	uploaded_by = (select auth.uid())
-	and exists (
-		select 1
-		from public.schools
-		where schools.id = school_id
-		and (
-			schools.created_by = (select auth.uid())
-			or lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-		)
-	)
-);
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
 
-create policy "Anyone can read upload records"
-on public.result_uploads for select
-to anon, authenticated
-using (true);
+        .welcome {
+            margin-bottom: 25px;
+        }
 
-drop policy if exists "Authenticated users can delete their upload records" on public.result_uploads;
+        .account-role {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 13px;
+            font-weight: bold;
+        }
 
-create policy "Authenticated users can delete their upload records"
-on public.result_uploads for delete
-to authenticated
-using (
-  uploaded_by = (select auth.uid())
-  or lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-);
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
 
-drop policy if exists "Upload owners and project owner can delete result files" on storage.objects;
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.07);
+        }
 
-create policy "Upload owners and project owner can delete result files"
-on storage.objects for delete
-to authenticated
-using (
-  bucket_id = 'results'
-  and (
-    (storage.foldername(name))[1] = (select auth.uid()::text)
-    or lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  )
-);
-```
+        .card h2 {
+            margin-bottom: 10px;
+        }
 
-The bucket must be created before running these policies. If policies with these names already exist, delete or rename the existing policies first. The browser's publishable Supabase key cannot create buckets or bypass RLS automatically.
+        .card p {
+            color: #666;
+            margin-bottom: 20px;
+        }
 
-## School upload organization
+        button {
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
 
-Add upload-level term, grade, and assessment metadata so files can be organized as School -> Term -> Grade -> Assessment 1, 2, or 3:
+        button:hover {
+            background: #1d4ed8;
+        }
 
-```sql
-alter table public.result_uploads
-add column if not exists term text;
+        .logout {
+            margin-top: 30px;
+            background: #dc2626;
+        }
 
-alter table public.result_uploads
-add column if not exists grade text;
+        .logout:hover {
+            background: #b91c1c;
+        }
 
-alter table public.result_uploads
-add column if not exists assessment_period smallint;
-```
+        .school-manager {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 20;
+        }
 
-Run this migration to connect each uploaded file to the school selected by the administrator:
+        .school-manager[hidden] {
+            display: none;
+        }
 
-```sql
-alter table public.result_uploads
-add column if not exists school_id uuid references public.schools(id);
+        .school-panel {
+            width: min(700px, 100%);
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+        }
 
-alter table public.schools
-add column if not exists administrator_email text;
-```
+        .school-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
 
-The owner account is `bert36766@gmail.com`. Add each school administrator's Supabase Auth email in the school form. Administrators can then select only their assigned school, upload results, and view only files they uploaded. The owner can view all uploads and manage schools. Existing uploads without a `school_id` appear as `Unassigned`.
+        .school-form {
+            display: grid;
+            grid-template-columns: 1fr 180px auto;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
 
-Do not invite school administrators as Supabase organization or project members. Create them as Supabase Auth users only, then assign their exact Auth email to a school. They should receive only the portal URL and their login details. Never share the project's service-role key.
+        .school-form input,
+        .school-form button {
+            width: 100%;
+            min-height: 46px;
+        }
 
-The application hides school management for school administrators, but database RLS policies are the security boundary. Verify that `schools` INSERT, UPDATE, and DELETE policies are owner-only, and that `result_uploads` SELECT is restricted to the uploader or the project owner. Do not use a public `result_uploads` SELECT policy in production if upload metadata should remain private; the public learner portal uses the RPC and does not need direct upload-record access.
+        .school-form input[type="email"] {
+            min-width: 0;
+        }
 
-## Printing grade results
+        .school-status {
+            min-height: 20px;
+            margin-bottom: 12px;
+            color: #374151;
+            font-size: 14px;
+        }
 
-After running the `assessment_period` migration in **Learner search setup**, the dashboard's **Print Grade Results** panel can print a selected school's grade and term. Each learner is listed in assessment-number order, and the printout includes every uploaded assessment for that learner in the selected term. Learners without uploaded results remain listed with a notice.
+        .schools-list {
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
 
-Before assigning an administrator to a school, create that person's account in Supabase Dashboard under **Authentication > Users** with the same email and password you give them. The school form only stores the email-to-school assignment; passwords are handled by Supabase Auth and are never stored in this application. An authenticated account cannot open the dashboard until its email is assigned to at least one school.
+        .schools-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+        }
 
-## Spreadsheet upload format
+        .schools-list .school-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
-Excel uploads are imported into the `learners` and `results` tables so the public portal can search them by assessment number and term. The first worksheet must contain one learner per row and an `assessment_number` column. The term selected in the dashboard is used automatically; an optional `term` column can override it for individual rows. The importer also recognizes `learner_name`, `grade`, `class`, `mathematics`, `english`, `kiswahili`, `integrated_science`, `social_studies`, `cre_ire`, `agriculture`, `creative_arts_sports`, `pre_technical_studies`, `aggregate_points`, and `aggregate_rubric`.
+        .schools-empty {
+            color: #666;
+            padding: 12px 0;
+        }
 
-The importer assigns the selected school's `school_id` to both the learner and result records. Ensure both tables contain this column before importing:
+        .remove-school {
+            background: #dc2626;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
 
-```sql
-alter table public.learners
-add column if not exists school_id uuid references public.schools(id);
+        .remove-school:hover {
+            background: #b91c1c;
+        }
 
-alter table public.results
-add column if not exists school_id uuid references public.schools(id);
-```
+        .close-school {
+            background: #e5e7eb;
+            color: #111827;
+            padding: 9px 12px;
+            font-size: 14px;
+        }
 
-Column names may use spaces or capitalization, such as `Assessment Number` or `Learner Name`. PDF files are stored for viewing and downloading, but their contents are not automatically imported into searchable learner records.
+        .close-school:hover {
+            background: #d1d5db;
+        }
 
-If `aggregate_points` (AGG) is blank, the importer adds the available numeric subject points. If `aggregate_rubric` (RUB) is blank, it is assigned from AGG using these inclusive bands: 0-9 `Below expectation2 (BE2)`, 10-18 `Below expectation1 (BE1)`, 19-27 `Approaching expectation2 (AE2)`, 28-36 `Approaching expectation1 (AE1)`, 37-45 `Meeting expectation2 (ME2)`, 46-54 `Meeting expectation1 (ME1)`, 55-63 `Exceeding expectation2 (EE2)`, and 64-72 `Exceeding expectation1 (EE1)`. Existing nonblank AGG and RUB values are preserved. Scores outside 0-72 do not receive an automatic rubric.
+        .school-toolbar {
+            margin-bottom: 14px;
+        }
 
-## Learner search setup
+        .school-search {
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
 
-Before importing termly results, add the term column and unique constraint:
+        .school-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-```sql
-alter table public.results add column if not exists term text;
-alter table public.results add column if not exists assessment_period smallint;
-update public.results set assessment_period = 1 where assessment_period is null;
-alter table public.results drop constraint if exists results_learner_id_key;
-alter table public.results drop constraint if exists results_learner_id_term_key;
-alter table public.results add constraint results_learner_id_term_assessment_key unique (learner_id, term, assessment_period);
-```
+        .edit-school {
+            background: #0f766e;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
 
-The public portal searches learner data through a database function named `search_learner_result`. That function must exist in Supabase and must be executable by the anonymous role. For multi-school support, the lookup must also be filtered by the selected school:
+        .edit-school:hover {
+            background: #115e59;
+        }
 
-```sql
-alter table public.learners
-  add column if not exists school_id uuid references public.schools(id);
+        .upload-status,
+        .uploads-list {
+            margin-top: 15px;
+        }
 
-alter table public.results
-  add column if not exists school_id uuid references public.schools(id);
+        .upload-status {
+            min-height: 20px;
+            color: #374151;
+        }
+            #uploadSchool {
+                width: 100%;
+                min-height: 42px;
+                margin-bottom: 15px;
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                font-size: 14px;
+            }
 
-create index if not exists learners_school_assessment_idx
-  on public.learners (school_id, assessment_number);
+        .uploads-list {
+            list-style: none;
+        }
 
-create index if not exists results_school_term_idx
-  on public.results (school_id, term);
+        .uploads-list > li {
+            border-bottom: 1px solid #e5e7eb;
+        }
 
-create or replace function public.search_learner_result(
-  search_assessment_number text,
-  search_term text,
-  search_school_id uuid
-)
-returns jsonb
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select to_jsonb(result_row)
-  from (
-    select
-      l.assessment_number,
-      l.learner_name,
-      l.grade,
-      l.class,
-      r.term,
-      r.assessment_period,
-      r.mathematics,
-      r.english,
-      r.kiswahili,
-      r.integrated_science,
-      r.social_studies,
-      r.cre_ire,
-      r.agriculture,
-      r.creative_arts_sports,
-      r.pre_technical_studies,
-      r.aggregate_points,
-      r.aggregate_rubric as aggregate_rubrics
-    from public.learners l
-    join public.results r on r.learner_id = l.id
-    where l.school_id = search_school_id
-      and l.assessment_number = search_assessment_number
-      and lower(r.term) = lower(search_term)
-    limit 1
-  ) as result_row;
-$$;
+        .school-upload-group {
+            padding: 0;
+        }
 
-grant execute on function public.search_learner_result(text, text, uuid) to anon;
-```
+        .school-upload-group details {
+            width: 100%;
+        }
 
-If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
+        .school-upload-group summary {
+            padding: 12px 0;
+            color: #1e3a8a;
+            cursor: pointer;
+            font-weight: bold;
+            list-style-position: inside;
+        }
 
-## Backups and recovery
+        .school-upload-group summary:hover {
+            color: #1d4ed8;
+        }
 
-Backups are configured in the Supabase project, not in the browser application. In the Supabase dashboard:
+        .school-upload-files {
+            list-style: none;
+            padding: 0 0 8px 24px;
+        }
 
-1. Review **Project Settings > Database > Backups** and enable the available automatic backup plan.
-2. Keep important exports of the `schools`, `learners`, `results`, and `result_uploads` tables, plus Storage files, in a secure location separate from the project.
-3. Test restoring a backup in a separate Supabase project before relying on it.
-4. Record the restore procedure and keep the project owner account protected with MFA.
+        .school-upload-file {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-top: 1px solid #f1f5f9;
+        }
 
-## Deployment and security
+        .uploads-list a {
+            color: #2563eb;
+            font-weight: bold;
+            text-decoration: none;
+        }
 
-Keep this repository private and deploy only the public site files through a trusted HTTPS host. The Supabase publishable key may appear in browser code, but the service-role key, database passwords, and SMTP credentials must never be committed or placed in HTML or JavaScript. Local environment files are excluded by `.gitignore`.
+        .uploads-list a:hover {
+            text-decoration: underline;
+        }
 
-Configure Supabase **Authentication > URL Configuration** with the deployed HTTPS website as the **Site URL**, and add the exact deployed `reset-password.html` address under **Redirect URLs** (for example, `https://your-domain.example/reset-password.html`). Request password-reset emails from the published website, not `localhost`; localhost links cannot open on a phone. After correcting these settings, request a new reset email because links already sent retain their original redirect address. Do not add untrusted domains to the redirect allow list.
+        .upload-actions {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
 
-The login pages include a client-side failed-attempt delay for a better user experience. This can be bypassed by a modified browser, so keep Supabase Auth rate limits and any hosting/WAF rate limiting enabled; server-side controls are the actual protection.
+        .upload-actions button {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #2563eb;
+            font: inherit;
+            font-weight: bold;
+        }
+
+        .upload-actions button:hover {
+            background: transparent;
+            text-decoration: underline;
+        }
+
+        .upload-actions .download-link {
+            color: #374151;
+        }
+
+        .delete-upload {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #dc2626;
+            font: inherit;
+            font-weight: bold;
+        }
+
+        .delete-upload:hover {
+            background: transparent;
+            color: #b91c1c;
+            text-decoration: underline;
+        }
+
+        .upload-actions .delete-upload {
+            color: #dc2626;
+        }
+
+        .upload-actions .delete-upload:hover {
+            color: #b91c1c;
+        }
+
+        .preview-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .preview-modal[hidden] {
+            display: none;
+        }
+
+        .preview-panel {
+            width: min(1100px, 100%);
+            height: min(85vh, 800px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+        }
+
+        .preview-close {
+            background: #e5e7eb;
+            color: #111827;
+            padding: 8px 12px;
+        }
+
+        .preview-frame {
+            width: 100%;
+            flex: 1;
+            border: 0;
+        }
+
+        .uploads-empty {
+            color: #666;
+        }
+
+        .print-report {
+            display: none;
+        }
+
+        .print-report h1,
+        .print-report h2 {
+            margin-bottom: 10px;
+        }
+
+        .print-learner {
+            break-after: page;
+            page-break-after: always;
+        }
+
+        .print-learner:last-child {
+            break-after: auto;
+            page-break-after: auto;
+        }
+
+        .print-learner h1 {
+            margin: 0 0 4px;
+            font-size: 16pt;
+        }
+
+        .print-learner h2 {
+            margin: 0 0 10px;
+            font-size: 10pt;
+        }
+
+        .print-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #9ca3af;
+            padding: 3px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .print-table th {
+            background: #e5e7eb;
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+
+            body > *:not(#printReport) {
+                display: none !important;
+            }
+
+            .print-report {
+                display: block;
+                padding: 0;
+                font-size: 6pt;
+                line-height: 1.1;
+            }
+
+            .print-report h1 {
+                margin: 0 0 4px;
+                font-size: 16pt;
+            }
+
+            .print-report h2 {
+                margin: 0 0 10px;
+                font-size: 10pt;
+            }
+
+            .print-report p {
+                display: none;
+            }
+
+            .print-learner {
+                break-after: page;
+                page-break-after: always;
+            }
+
+            .print-learner:last-child {
+                break-after: auto;
+                page-break-after: auto;
+            }
+
+            .print-meta {
+                margin-bottom: 10px;
+            }
+
+            .print-table th,
+            .print-table td {
+                padding: 4px;
+                overflow-wrap: anywhere;
+                font-size: 7pt;
+            }
+
+            .print-table th {
+                font-size: 7pt;
+            }
+
+            .print-values {
+                line-height: 1.1;
+            }
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 500px) {
+            .uploads-list li {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>DRMS</h1>
+        <p>Digital Results Management System</p>
+    </header>
+
+    <div class="container">
+
+        <div class="welcome">
+            <h2>Administrator Dashboard</h2>
+            <p>Welcome, Owner</p>
+            <span id="accountRole" class="account-role">Role: checking...</span>
+            <span id="assignedSchool" class="account-role">School: checking...</span>
+        </div>
+
+        <div class="cards">
+
+            <div class="card">
+                <h2>📤 Upload Results</h2>
+
+                <p>
+                    Upload learner results using Excel or PDF.
+                </p>
+
+                <label for="uploadSchool">School</label>
+                <select id="uploadSchool" required>
+                    <option value="">Select school</option>
+                </select>
+
+                <label for="uploadTerm">Term</label>
+                <select id="uploadTerm" required>
+                    <option value="">Select term</option>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+
+                <label for="uploadGrade">Grade</label>
+                <select id="uploadGrade" required>
+                    <option value="">Select grade</option>
+                    <option value="PP1">PP1</option>
+                    <option value="PP2">PP2</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                </select>
+
+                <label for="uploadAssessment">Assessment</label>
+                <select id="uploadAssessment" required>
+                    <option value="">Select assessment</option>
+                    <option value="1">Assessment 1</option>
+                    <option value="2">Assessment 2</option>
+                    <option value="3">Assessment 3</option>
+                </select>
+
+                <button onclick="uploadResults()">
+                    Upload Results
+                </button>
+
+                <input
+                    id="resultsFile"
+                    type="file"
+                    accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    hidden
+                    onchange="handleResultsFile(this)"
+                >
+
+                <div id="uploadStatus" class="upload-status" aria-live="polite"></div>
+            </div>
+
+
+            <div class="card">
+                <h2>📁 Uploaded Results</h2>
+
+                <p>
+                    View files that have been uploaded.
+                </p>
+
+                <button onclick="viewUploads(true)">
+                    View Uploads
+                </button>
+
+                <ul id="uploadsList" class="uploads-list"></ul>
+            </div>
+
+
+            <div class="card">
+                <h2>🖨️ Print Grade Results</h2>
+
+                <p>
+                    Print every learner's assessments for a selected school, term, and grade.
+                </p>
+
+                <label for="printSchool">School</label>
+                <select id="printSchool" required>
+                    <option value="">Select school</option>
+                </select>
+
+                <label for="printTerm">Term</label>
+                <select id="printTerm" required>
+                    <option value="">Select term</option>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+
+                <label for="printGrade">Grade</label>
+                <select id="printGrade" required>
+                    <option value="">Select grade</option>
+                    <option value="PP1">PP1</option>
+                    <option value="PP2">PP2</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                </select>
+
+                <button type="button" onclick="printGradeResults()">
+                    Print Results
+                </button>
+                <div id="printStatus" class="upload-status" aria-live="polite"></div>
+            </div>
+
+
+            <div class="card" id="schoolManagementCard">
+                <h2>🏫 Schools</h2>
+
+                <p>
+                    Manage schools and administrators.
+                </p>
+
+                <button onclick="manageSchools()">
+                    Manage Schools
+                </button>
+            </div>
+
+        </div>
+
+        <button class="logout" onclick="logout()">
+            Logout
+        </button>
+
+    </div>
+
+    <div id="schoolManager" class="school-manager" hidden>
+        <div class="school-panel">
+            <div class="school-header">
+                <h3>School Management</h3>
+                <button type="button" class="close-school" onclick="closeSchools()">Close</button>
+            </div>
+
+            <form class="school-form" onsubmit="event.preventDefault(); saveSchool();">
+                <input id="schoolName" type="text" placeholder="School name" required>
+                <input id="schoolAdmin" type="text" placeholder="Administrator name">
+                <input id="schoolAdminEmail" type="email" placeholder="Administrator email" required>
+                <button id="schoolSubmitButton" type="submit">Add School</button>
+            </form>
+
+            <div class="school-toolbar">
+                <input id="schoolSearch" class="school-search" type="search" placeholder="Search schools...">
+            </div>
+
+            <div id="schoolStatus" class="school-status" aria-live="polite"></div>
+            <ul id="schoolsList" class="schools-list"></ul>
+        </div>
+    </div>
+
+    <div id="previewModal" class="preview-modal" hidden>
+        <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+            <div class="preview-header">
+                <h3 id="previewTitle">Document preview</h3>
+                <button type="button" class="preview-close" onclick="closePreview()">Close</button>
+            </div>
+            <iframe id="previewFrame" class="preview-frame" title="Document preview"></iframe>
+        </div>
+    </div>
+
+    <div id="printReport" class="print-report"></div>
+
+
+    <script>
+
+     const PORTAL_OWNER_EMAIL = "bert36766@gmail.com";
+
+    async function checkLogin() {
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "Admin.html";
+            return;
+        }
+
+        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+        let assignedSchools = [];
+
+        if (!isOwner) {
+            const { data, error: assignmentError } = await supabaseClient
+                .from("schools")
+                .select("id, school_name")
+                .eq("administrator_email", session.user.email?.toLowerCase())
+                .limit(1);
+            assignedSchools = data || [];
+
+            if (assignmentError || !assignedSchools?.length) {
+                await supabaseClient.auth.signOut();
+                alert(assignmentError
+                    ? "Your administrator account could not be checked. Contact the project owner."
+                    : "Your account is not assigned to a school yet. Contact the project owner.");
+                window.location.href = "Admin.html";
+                return;
+            }
+        }
+
+        const { data: profile } =
+            await supabaseClient
+                .from("admin_profiles")
+                .select("full_name, role")
+                .eq("id", session.user.id)
+                .single();
+
+        const displayName = profile?.full_name || "Administrator";
+        const roleLabel = isOwner ? "Project Owner" : "School Administrator";
+
+        document.querySelector(".welcome p").textContent =
+            "Welcome, " + displayName;
+        document.getElementById("accountRole").textContent =
+            "Role: " + roleLabel;
+        document.getElementById("assignedSchool").textContent = isOwner
+            ? "School: All managed schools"
+            : "School: " + (assignedSchools[0].school_name || "Assigned school");
+
+        if (!isOwner) {
+            document.getElementById("schoolManagementCard").hidden = true;
+        }
+
+        await loadUploadSchools(isOwner);
+        await viewUploads(false, isOwner);
+    }
+
+
+    async function logout() {
+
+        await supabaseClient.auth.signOut();
+
+        window.location.href = "index.html";
+    }
+
+
+    function uploadResults() {
+        const school = document.getElementById("uploadSchool");
+        const status = document.getElementById("uploadStatus");
+
+        if (!school.value || !document.getElementById("uploadTerm").value
+            || !document.getElementById("uploadGrade").value.trim()
+            || !document.getElementById("uploadAssessment").value) {
+            status.textContent = "Select a school, term, grade, and assessment before uploading results.";
+            return;
+        }
+
+        document.getElementById("resultsFile").click();
+    }
+
+
+    function schoolLabel(school) {
+        return school.school_name;
+    }
+
+
+    async function loadUploadSchools(isOwner = false) {
+        const select = document.getElementById("uploadSchool");
+        const printSelect = document.getElementById("printSchool");
+
+        if (!select && !printSelect) {
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            return;
+        }
+
+        let schoolQuery = supabaseClient
+            .from("schools")
+            .select("id, school_name")
+            .order("school_name", { ascending: true });
+
+        if (!isOwner) {
+            schoolQuery = schoolQuery.eq("administrator_email", session.user.email);
+        }
+
+        const { data: schools, error } = await schoolQuery;
+
+        if (error) {
+            [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+                schoolSelect.innerHTML = "<option value=\"\">Could not load schools</option>";
+            });
+            return;
+        }
+
+        [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+            schoolSelect.innerHTML = "<option value=\"\">Select school</option>";
+            (schools || []).forEach((school) => {
+                const option = document.createElement("option");
+                option.value = school.id;
+                option.textContent = schoolLabel(school);
+                schoolSelect.appendChild(option);
+            });
+        });
+    }
+
+
+    function getSpreadsheetValue(row, names) {
+        for (const name of names) {
+            const value = row[name];
+            if (value !== undefined && value !== null && String(value).trim() !== "") {
+                return String(value).trim();
+            }
+        }
+
+        return null;
+    }
+
+
+    function calculateAggregatePoints(row) {
+        const subjects = [
+            ["mathematics", "math"],
+            ["english"],
+            ["kiswahili"],
+            ["integratedscience", "integratedsciences"],
+            ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"],
+            ["creire", "cre"],
+            ["agriculture"],
+            ["creativeartssports", "creativearts"],
+            ["pretechnicalstudies", "pretechnical"]
+        ];
+        const values = subjects
+            .map((names) => Number.parseFloat(String(getSpreadsheetValue(row, names) ?? "").replace(/,/g, "")))
+            .filter(Number.isFinite);
+
+        return values.length
+            ? String(values.reduce((total, value) => total + value, 0))
+            : null;
+    }
+
+
+    function calculateAggregateRubric(points) {
+        const score = Number.parseFloat(String(points ?? "").replace(/,/g, ""));
+        if (!Number.isFinite(score) || score < 0 || score > 72) {
+            return null;
+        }
+
+        const rubricBands = [
+            [9, "Below expectation2 (BE2)"],
+            [18, "Below expectation1 (BE1)"],
+            [27, "Approaching expectation2 (AE2)"],
+            [36, "Approaching expectation1 (AE1)"],
+            [45, "Meeting expectation2 (ME2)"],
+            [54, "Meeting expectation1 (ME1)"],
+            [63, "Exceeding expectation2 (EE2)"],
+            [72, "Exceeding expectation1 (EE1)"]
+        ];
+
+        return rubricBands.find(([maximum]) => score <= maximum)?.[1] || null;
+    }
+
+
+    function normalizeSpreadsheetRow(row) {
+        return Object.fromEntries(
+            Object.entries(row).map(([key, value]) => [
+                key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+                value
+            ])
+        );
+    }
+
+
+    function spreadsheetRows(sheet) {
+        const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+        const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+            const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
+        }));
+
+        if (headerIndex < 0) {
+            return [];
+        }
+
+        const headers = matrix[headerIndex].map((header) =>
+            String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
+        );
+
+        return matrix.slice(headerIndex + 1).map((values) =>
+            Object.fromEntries(headers.map((header, index) => [header, values[index]]))
+        );
+    }
+
+
+    function fileMetadata(fileName) {
+        const name = String(fileName || "");
+        const gradeMatch = name.match(/\bgrade\s*([0-9]+|[a-z]+)\b/i);
+        const classMatch = name.match(/\b(?:class|stream)\s*([a-z0-9-]+)\b/i);
+
+        return {
+            grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
+            class: classMatch ? classMatch[1] : ""
+        };
+    }
+
+
+    async function importSpreadsheetResults(file, schoolId, selectedTerm, assessmentPeriod, selectedGrade) {
+        if (typeof XLSX === "undefined") {
+            throw new Error("The spreadsheet reader could not be loaded. Check your internet connection and try again.");
+        }
+
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = spreadsheetRows(firstSheet).map(normalizeSpreadsheetRow);
+
+        const learners = rows.map((row) => ({
+            assessment_number: getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
+            learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
+            grade: getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || selectedGrade || fileMetadata(file.name).grade,
+            class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(file.name).class,
+            school_id: schoolId
+        })).filter((learner) => learner.assessment_number);
+
+        if (!learners.length) {
+            throw new Error("No assessment number was found. Add an assessment_number column to the first worksheet.");
+        }
+
+        const { data: savedLearners, error: learnerError } = await supabaseClient
+            .from("learners")
+            .upsert(learners, { onConflict: "assessment_number" })
+            .select("id, assessment_number");
+
+        if (learnerError) {
+            throw learnerError;
+        }
+
+        const learnerIds = new Map(savedLearners.map((learner) => [
+            String(learner.assessment_number),
+            learner.id
+        ]));
+
+        const results = rows.map((row) => {
+            const assessmentNumber = getSpreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]);
+            const learnerId = learnerIds.get(assessmentNumber);
+
+            if (!learnerId) {
+                return null;
+            }
+
+            return {
+                learner_id: learnerId,
+                school_id: schoolId,
+                term: getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]) || selectedTerm,
+                assessment_period: assessmentPeriod,
+                mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
+                english: getSpreadsheetValue(row, ["english", "eng"]),
+                kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
+                integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
+                social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
+                cre_ire: getSpreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
+                agriculture: getSpreadsheetValue(row, ["agriculture", "agric"]),
+                creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
+                pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
+                aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
+                aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                    || calculateAggregateRubric(getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
+            };
+        }).filter(Boolean);
+
+        const { error: resultError } = await supabaseClient
+            .from("results")
+            .upsert(results, { onConflict: "learner_id,term,assessment_period" });
+
+        if (resultError) {
+            throw resultError;
+        }
+
+        return learners.length;
+    }
+
+
+    async function handleResultsFile(input) {
+        const file = input.files[0];
+        const status = document.getElementById("uploadStatus");
+        const schoolId = document.getElementById("uploadSchool").value;
+        const term = document.getElementById("uploadTerm").value;
+        const grade = document.getElementById("uploadGrade").value.trim();
+        const assessmentPeriod = Number(document.getElementById("uploadAssessment").value);
+        const uploadButton = document.querySelector("button[onclick=\"uploadResults()\"]");
+
+        if (!file) {
+            return;
+        }
+
+        if (!schoolId) {
+            status.textContent = "Select a school before uploading results.";
+            input.value = "";
+            return;
+        }
+
+        const allowedExtensions = ["xlsx", "xls", "pdf"];
+        const extension = file.name.split(".").pop().toLowerCase();
+
+        if (!allowedExtensions.includes(extension)) {
+            status.textContent = "Please choose an Excel or PDF file.";
+            input.value = "";
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            status.textContent = "The file must be smaller than 10 MB.";
+            input.value = "";
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "Admin.html";
+            return;
+        }
+
+        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+        let schoolQuery = supabaseClient
+            .from("schools")
+            .select("id")
+            .eq("id", schoolId);
+
+        if (!isOwner) {
+            schoolQuery = schoolQuery.eq("administrator_email", session.user.email?.toLowerCase());
+        }
+
+        const { data: assignedSchool, error: schoolError } = await schoolQuery.maybeSingle();
+
+        if (schoolError || !assignedSchool) {
+            status.textContent = schoolError
+                ? "The selected school could not be verified. Try again."
+                : "You can only upload results for your assigned school.";
+            input.value = "";
+            return;
+        }
+
+        uploadButton.disabled = true;
+        status.textContent = "Uploading...";
+
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const safeGrade = grade.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const safeTerm = term.toLowerCase().replace(/\s+/g, "-");
+        const filePath = `${session.user.id}/${schoolId}/${safeTerm}/${safeGrade}/assessment-${assessmentPeriod}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+
+        const { error: uploadError } = await supabaseClient
+            .storage
+            .from("results")
+            .upload(filePath, file, {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: file.type || "application/octet-stream"
+            });
+
+        if (uploadError) {
+            const uploadMessage = uploadError.message.toLowerCase();
+            status.textContent = uploadMessage.includes("bucket not found")
+                ? "Upload failed: the Supabase storage bucket \"results\" does not exist. Create it in Supabase Storage, then try again."
+                : uploadMessage.includes("row-level security")
+                    ? "Upload failed: Supabase Storage is blocking this upload. Add the storage INSERT policy from README.md, then try again."
+                    : `Upload failed: ${uploadError.message}`;
+            uploadButton.disabled = false;
+            input.value = "";
+            return;
+        }
+
+        const { error: recordError } = await supabaseClient
+            .from("result_uploads")
+            .insert({
+                file_name: file.name,
+                storage_path: filePath,
+                file_type: file.type,
+                school_id: schoolId,
+                uploaded_by: session.user.id,
+                term,
+                grade,
+                assessment_period: assessmentPeriod
+            });
+
+        if (recordError) {
+            await supabaseClient.storage.from("results").remove([filePath]);
+            status.textContent = `Upload details could not be saved: ${recordError.message}`;
+            uploadButton.disabled = false;
+            input.value = "";
+            return;
+        }
+
+        status.textContent = "File uploaded. Indexing learner results...";
+
+        if (extension === "xlsx" || extension === "xls") {
+            try {
+                const importedCount = await importSpreadsheetResults(file, schoolId, term, assessmentPeriod, grade);
+                status.textContent = `${importedCount} learner results uploaded and indexed successfully.`;
+            } catch (importError) {
+                status.textContent = `File uploaded, but assessment search indexing failed: ${importError.message}`;
+            }
+        } else {
+            status.textContent = "PDF uploaded successfully. PDF contents must be entered in the learner tables before assessment search can find them.";
+        }
+
+        uploadButton.disabled = false;
+        input.value = "";
+        await viewUploads();
+    }
+
+
+    function escapePrintText(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+
+    function normalizeGrade(value) {
+        return String(value ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/^grade\s*/, "")
+            .replace(/\s+/g, " ");
+    }
+
+
+    function normalizeTerm(value) {
+        const normalized = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "");
+        return /^\d+$/.test(normalized) ? `term${normalized}` : normalized;
+    }
+
+
+    async function loadUploadedGradeResults(schoolId, term, grade) {
+        const { data: uploads, error } = await supabaseClient
+            .from("result_uploads")
+            .select("file_name, file_type, storage_path, term, grade, assessment_period")
+            .eq("school_id", schoolId)
+            .order("uploaded_at", { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        const learnersByAssessment = new Map();
+        const results = [];
+
+        for (const upload of uploads || []) {
+            const isSpreadsheet = /\.(xlsx?|xls)$/i.test(upload.file_name || "")
+                || /spreadsheet|excel/i.test(upload.file_type || "");
+            const uploadGrade = upload.grade || fileMetadata(upload.file_name).grade;
+            const uploadTerm = upload.term || fileMetadata(upload.file_name).term;
+
+            if (!isSpreadsheet
+                || normalizeGrade(uploadGrade) !== normalizeGrade(grade)
+                || (uploadTerm && normalizeTerm(uploadTerm) !== normalizeTerm(term))) {
+                continue;
+            }
+
+            const { data: signedUrl, error: urlError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(upload.storage_path, 3600);
+
+            if (urlError) {
+                continue;
+            }
+
+            const response = await fetch(signedUrl.signedUrl);
+            if (!response.ok) {
+                continue;
+            }
+
+            const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+            for (const originalRow of spreadsheetRows(sheet)) {
+                const row = normalizeSpreadsheetRow(originalRow);
+                const assessmentNumber = getSpreadsheetValue(row, [
+                    "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"
+                ]);
+                const rowGrade = getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"])
+                    || uploadGrade;
+                const rowTerm = getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"])
+                    || uploadTerm;
+
+                if (!assessmentNumber
+                    || normalizeGrade(rowGrade) !== normalizeGrade(grade)
+                    || (rowTerm && normalizeTerm(rowTerm) !== normalizeTerm(term))) {
+                    continue;
+                }
+
+                const learnerKey = assessmentNumber.trim().toLowerCase();
+                if (!learnersByAssessment.has(learnerKey)) {
+                    learnersByAssessment.set(learnerKey, {
+                        id: learnerKey,
+                        assessment_number: assessmentNumber,
+                        learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
+                        grade: rowGrade,
+                        class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"])
+                    });
+                }
+
+                results.push({
+                    learner_id: learnerKey,
+                    assessment_period: upload.assessment_period,
+                    mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
+                    english: getSpreadsheetValue(row, ["english", "eng"]),
+                    kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
+                    integrated_science: getSpreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
+                    social_studies: getSpreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"]),
+                    cre_ire: getSpreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
+                    agriculture: getSpreadsheetValue(row, ["agriculture", "agric"]),
+                    creative_arts_sports: getSpreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
+                    pre_technical_studies: getSpreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
+                    aggregate_points: getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"])
+                        || calculateAggregatePoints(row),
+                    aggregate_rubric: getSpreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                        || calculateAggregateRubric(getSpreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
+                });
+            }
+        }
+
+        return {
+            learners: [...learnersByAssessment.values()].sort((first, second) =>
+                String(first.assessment_number).localeCompare(String(second.assessment_number), undefined, { numeric: true })
+            ),
+            results
+        };
+    }
+
+
+    async function printGradeResults() {
+        const schoolId = document.getElementById("printSchool").value;
+        const term = document.getElementById("printTerm").value;
+        const grade = document.getElementById("printGrade").value;
+        const status = document.getElementById("printStatus");
+        const report = document.getElementById("printReport");
+
+        if (!schoolId || !term || !grade) {
+            status.textContent = "Select a school, term, and grade before printing.";
+            return;
+        }
+
+        status.textContent = "Preparing printable results...";
+
+        const { data: schoolLearners, error: learnerError } = await supabaseClient
+            .from("learners")
+            .select("id, assessment_number, learner_name, grade, class")
+            .eq("school_id", schoolId)
+            .order("assessment_number", { ascending: true });
+
+        if (learnerError) {
+            status.textContent = `Could not load learners: ${learnerError.message}`;
+            return;
+        }
+
+        let learners = (schoolLearners || []).filter((learner) =>
+            normalizeGrade(learner.grade) === normalizeGrade(grade)
+        );
+        let results;
+
+        if (!learners?.length) {
+            try {
+                const uploadedResults = await loadUploadedGradeResults(schoolId, term, grade);
+                learners = uploadedResults.learners;
+                results = uploadedResults.results;
+            } catch (fallbackError) {
+                status.textContent = `Could not read uploaded spreadsheets: ${fallbackError.message}`;
+                report.innerHTML = "";
+                return;
+            }
+
+            if (!learners.length) {
+                status.textContent = "No learners or matching Excel uploads were found for the selected school, term, and grade.";
+                report.innerHTML = "";
+                return;
+            }
+        }
+
+        if (!results) {
+            const learnerIds = learners.map((learner) => learner.id);
+            const { data: savedResults, error: resultError } = await supabaseClient
+                .from("results")
+                .select("learner_id, assessment_period, mathematics, english, kiswahili, integrated_science, social_studies, cre_ire, agriculture, creative_arts_sports, pre_technical_studies, aggregate_points, aggregate_rubric")
+                .in("learner_id", learnerIds)
+                .eq("term", term)
+                .order("assessment_period", { ascending: true });
+
+            if (resultError) {
+                status.textContent = resultError.message.includes("assessment_period")
+                    ? "Run the assessment results migration from README.md before printing."
+                    : `Could not load results: ${resultError.message}`;
+                return;
+            }
+
+            results = savedResults;
+        }
+
+        const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
+        const resultMap = new Map();
+        (results || []).forEach((result) => {
+            if (result.aggregate_points === null || result.aggregate_points === undefined || String(result.aggregate_points).trim() === "") {
+                result.aggregate_points = calculateAggregatePoints(normalizeSpreadsheetRow(result));
+            }
+            if (result.aggregate_rubric === null || result.aggregate_rubric === undefined || String(result.aggregate_rubric).trim() === "") {
+                result.aggregate_rubric = calculateAggregateRubric(result.aggregate_points);
+            }
+
+            if (!resultMap.has(result.learner_id)) {
+                resultMap.set(result.learner_id, []);
+            }
+            resultMap.get(result.learner_id).push(result);
+        });
+
+        const assessmentFields = [
+            ["Mathematics", "mathematics"],
+            ["English", "english"],
+            ["Kiswahili", "kiswahili"],
+            ["Integrated Science", "integrated_science"],
+            ["Social Studies", "social_studies"],
+            ["CRE/IRE", "cre_ire"],
+            ["Agriculture", "agriculture"],
+            ["Creative Arts/Sports", "creative_arts_sports"],
+            ["Pre-Technical", "pre_technical_studies"],
+            ["Aggregate Points", "aggregate_points"],
+            ["Rubrics", "aggregate_rubric"]
+        ];
+
+        report.innerHTML = `
+            ${learners.map((learner) => {
+                const learnerResults = [...(resultMap.get(learner.id) || [])]
+                    .sort((first, second) => Number(first.assessment_period) - Number(second.assessment_period));
+                const resultRows = learnerResults.length
+                    ? learnerResults.map((result) => `
+                        <tr>
+                            <th>Assessment ${escapePrintText(result.assessment_period)}</th>
+                            ${assessmentFields.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
+                        </tr>
+                    `).join("")
+                    : `<tr><td colspan="${assessmentFields.length + 1}">No assessments uploaded for this term.</td></tr>`;
+
+                return `
+                    <section class="print-learner">
+                        <h1>${escapePrintText(learner.learner_name)}</h1>
+                        <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} Results Slip</h2>
+                        <div class="print-meta">
+                            <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
+                            <span>Term: <strong>${escapePrintText(term)}, ${new Date().getFullYear()}</strong></span>
+                        </div>
+                        <table class="print-table">
+                            <thead>
+                                <tr>
+                                    <th>Assessment</th>
+                                    ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
+                                </tr>
+                            </thead>
+                            <tbody>${resultRows}</tbody>
+                        </table>
+                    </section>
+                `;
+            }).join("")}
+        `;
+
+        report.style.zoom = "";
+        status.textContent = `${learners.length} learner results slips ready to print for ${term}.`;
+        window.print();
+    }
+
+
+    function openPreview(fileName, fileType, signedUrl) {
+        const modal = document.getElementById("previewModal");
+        const frame = document.getElementById("previewFrame");
+        const title = document.getElementById("previewTitle");
+        const isExcel = fileType === "application/vnd.ms-excel"
+            || fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            || /\.(xlsx?|xls)$/i.test(fileName);
+
+        title.textContent = fileName;
+        frame.src = isExcel
+            ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`
+            : signedUrl;
+        modal.hidden = false;
+    }
+
+
+    function closePreview() {
+        document.getElementById("previewFrame").src = "about:blank";
+        document.getElementById("previewModal").hidden = true;
+    }
+
+
+    async function deleteUpload(upload, item) {
+        if (!confirm(`Delete "${upload.file_name}"? This cannot be undone.`)) {
+            return;
+        }
+
+        const deleteButton = item.querySelector(".delete-upload");
+        deleteButton.disabled = true;
+        deleteButton.textContent = "Deleting...";
+
+        const { error: recordError } = await supabaseClient
+            .from("result_uploads")
+            .delete()
+            .eq("uploaded_by", upload.uploaded_by)
+            .eq("storage_path", upload.storage_path);
+
+        if (recordError) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete";
+            document.getElementById("uploadStatus").textContent = `Could not delete upload record: ${recordError.message}. Add the result_uploads DELETE policy from README.md.`;
+            return;
+        }
+
+        const { error: storageError } = await supabaseClient
+            .storage
+            .from("results")
+            .remove([upload.storage_path]);
+
+        if (storageError) {
+            item.remove();
+            document.getElementById("uploadStatus").textContent = `Upload record deleted, but the stored file could not be removed: ${storageError.message}`;
+            return;
+        }
+
+        item.remove();
+        const fileList = item.parentElement;
+        if (fileList && !fileList.querySelector(".school-upload-file")) {
+            fileList.closest(".school-upload-group")?.remove();
+        }
+
+        document.getElementById("uploadStatus").textContent = "Upload deleted successfully.";
+        if (!document.querySelector("#uploadsList .school-upload-file")) {
+            document.getElementById("uploadsList").innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
+        }
+    }
+
+
+    async function viewUploads(openFirstUpload = false, isOwner = null) {
+        const list = document.getElementById("uploadsList");
+        list.innerHTML = "<li>Loading uploads...</li>";
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "Admin.html";
+            return;
+        }
+
+        isOwner = isOwner ?? session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
+
+        let schoolQuery = supabaseClient
+            .from("schools")
+            .select("id, school_name")
+            .order("school_name", { ascending: true });
+
+        if (!isOwner) {
+            schoolQuery = schoolQuery.eq("administrator_email", session.user.email);
+        }
+
+        const { data: schools, error: schoolsError } = await schoolQuery;
+
+        if (schoolsError) {
+            list.innerHTML = `<li class="uploads-empty">Could not load schools: ${schoolsError.message}. Run the school migration from README.md in Supabase.</li>`;
+            return;
+        }
+
+        const schoolsById = new Map((schools || []).map((school) => [school.id, school]));
+
+        let uploadQuery = supabaseClient
+            .from("result_uploads")
+            .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id, term, grade, assessment_period")
+            .order("uploaded_at", { ascending: false });
+
+        if (!isOwner) {
+            uploadQuery = uploadQuery.eq("uploaded_by", session.user.id);
+        }
+
+        let { data: uploads, error } = await uploadQuery;
+
+        if (error && /assessment_period|term|grade|schema cache|does not exist/i.test(error.message)) {
+            let legacyUploadQuery = supabaseClient
+                .from("result_uploads")
+                .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
+                .order("uploaded_at", { ascending: false });
+
+            if (!isOwner) {
+                legacyUploadQuery = legacyUploadQuery.eq("uploaded_by", session.user.id);
+            }
+
+            const legacyResult = await legacyUploadQuery;
+            uploads = legacyResult.data;
+            error = legacyResult.error;
+        }
+
+        if (error) {
+            list.innerHTML = `<li class="uploads-empty">Could not load uploads: ${error.message}</li>`;
+            return;
+        }
+
+        list.innerHTML = "";
+
+        if (!uploads.length) {
+            list.innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
+            return;
+        }
+
+        let firstPreview = null;
+
+        const uploadsBySchool = new Map();
+
+        for (const upload of uploads) {
+            const school = schoolsById.get(upload.school_id);
+            const schoolKey = upload.school_id || "unassigned";
+            const schoolName = school?.school_name || "Unassigned";
+
+            if (!uploadsBySchool.has(schoolKey)) {
+                uploadsBySchool.set(schoolKey, { name: schoolName, terms: new Map() });
+            }
+
+            const schoolGroup = uploadsBySchool.get(schoolKey);
+            const termName = upload.term || "Term not set";
+            if (!schoolGroup.terms.has(termName)) {
+                schoolGroup.terms.set(termName, new Map());
+            }
+
+            const gradeName = upload.grade || "Grade not set";
+            const termGroup = schoolGroup.terms.get(termName);
+            if (!termGroup.has(gradeName)) {
+                termGroup.set(gradeName, []);
+            }
+
+            termGroup.get(gradeName).push(upload);
+        }
+
+        for (const schoolGroup of uploadsBySchool.values()) {
+            const groupItem = document.createElement("li");
+            groupItem.className = "school-upload-group";
+
+            const details = document.createElement("details");
+            const summary = document.createElement("summary");
+            const schoolUploadCount = [...schoolGroup.terms.values()]
+                .reduce((count, gradeGroups) => count + [...gradeGroups.values()]
+                    .reduce((gradeCount, files) => gradeCount + files.length, 0), 0);
+            summary.textContent = `${schoolGroup.name} (${schoolUploadCount} file${schoolUploadCount === 1 ? "" : "s"})`;
+            details.appendChild(summary);
+
+            const fileList = document.createElement("ul");
+            fileList.className = "school-upload-files";
+
+            for (const [termName, gradeGroups] of schoolGroup.terms) {
+                const termItem = document.createElement("li");
+                termItem.className = "school-upload-group";
+                const termDetails = document.createElement("details");
+                const termSummary = document.createElement("summary");
+                termSummary.textContent = termName;
+                termDetails.appendChild(termSummary);
+                const gradeList = document.createElement("ul");
+                gradeList.className = "school-upload-files";
+
+                for (const [gradeName, gradeUploads] of gradeGroups) {
+                    const gradeItem = document.createElement("li");
+                    gradeItem.className = "school-upload-group";
+                    const gradeDetails = document.createElement("details");
+                    const gradeSummary = document.createElement("summary");
+                    gradeSummary.textContent = gradeName;
+                    gradeDetails.appendChild(gradeSummary);
+                    const assessmentList = document.createElement("ul");
+                    assessmentList.className = "school-upload-files";
+
+                    for (const upload of gradeUploads.sort((first, second) =>
+                        (first.assessment_period || 99) - (second.assessment_period || 99))) {
+            const { data: viewUrl, error: viewError } = await supabaseClient
+                .storage
+                .from("results")
+                .createSignedUrl(upload.storage_path, 3600, { download: false });
+
+            const item = document.createElement("li");
+            item.className = "school-upload-file";
+            const name = document.createElement("span");
+            name.textContent = upload.assessment_period
+                ? `Assessment ${upload.assessment_period}: ${upload.file_name}`
+                : upload.file_name;
+            item.appendChild(name);
+
+            if (!viewError) {
+                if (!firstPreview) {
+                    firstPreview = {
+                        fileName: upload.file_name,
+                        fileType: upload.file_type,
+                        signedUrl: viewUrl.signedUrl
+                    };
+                }
+
+                const actions = document.createElement("span");
+                actions.className = "upload-actions";
+
+                const viewLink = document.createElement("button");
+                viewLink.type = "button";
+                viewLink.textContent = "View";
+                viewLink.addEventListener("click", () => {
+                    openPreview(upload.file_name, upload.file_type, viewUrl.signedUrl);
+                });
+                actions.appendChild(viewLink);
+
+                const { data: downloadUrl, error: downloadError } = await supabaseClient
+                    .storage
+                    .from("results")
+                    .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
+
+                if (!downloadError) {
+                    const downloadLink = document.createElement("a");
+                    downloadLink.className = "download-link";
+                    downloadLink.href = downloadUrl.signedUrl;
+                    downloadLink.textContent = "Download";
+                    actions.appendChild(downloadLink);
+                }
+
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "delete-upload";
+                deleteButton.textContent = "Delete";
+                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                actions.appendChild(deleteButton);
+
+                item.appendChild(actions);
+            } else {
+                const unavailable = document.createElement("small");
+                unavailable.textContent = `View unavailable: ${viewError.message}`;
+                item.appendChild(unavailable);
+
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "delete-upload";
+                deleteButton.textContent = "Delete";
+                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                item.appendChild(deleteButton);
+            }
+
+                        assessmentList.appendChild(item);
+                    }
+
+                    gradeDetails.appendChild(assessmentList);
+                    gradeItem.appendChild(gradeDetails);
+                    gradeList.appendChild(gradeItem);
+                }
+
+                termDetails.appendChild(gradeList);
+                termItem.appendChild(termDetails);
+                fileList.appendChild(termItem);
+            }
+
+            details.appendChild(fileList);
+            groupItem.appendChild(details);
+            list.appendChild(groupItem);
+        }
+
+        if (openFirstUpload && firstPreview) {
+            openPreview(firstPreview.fileName, firstPreview.fileType, firstPreview.signedUrl);
+        }
+    }
+
+
+    let editingSchoolId = null;
+
+    function resetSchoolForm() {
+        const nameInput = document.getElementById("schoolName");
+        const adminInput = document.getElementById("schoolAdmin");
+        const adminEmailInput = document.getElementById("schoolAdminEmail");
+        const submitButton = document.getElementById("schoolSubmitButton");
+
+        editingSchoolId = null;
+
+        if (nameInput) {
+            nameInput.value = "";
+        }
+
+        if (adminInput) {
+            adminInput.value = "";
+        }
+
+        if (adminEmailInput) {
+            adminEmailInput.value = "";
+        }
+
+        if (submitButton) {
+            submitButton.textContent = "Add School";
+        }
+    }
+
+    async function renderSchools(searchTerm = "") {
+        const list = document.getElementById("schoolsList");
+        const status = document.getElementById("schoolStatus");
+
+        if (!list) {
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "Admin.html";
+            return;
+        }
+
+        list.innerHTML = "<li class='schools-empty'>Loading schools...</li>";
+
+        const { data: schools, error } = await supabaseClient
+            .from("schools")
+            .select("id, school_name, administrator_name, administrator_email, created_at")
+            .eq("created_by", session.user.id)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            list.innerHTML = "";
+            if (status) {
+                status.textContent = `Could not load schools: ${error.message}`;
+            }
+            return;
+        }
+
+        if (status) {
+            status.textContent = "";
+        }
+
+        const normalizedTerm = (searchTerm || "").trim().toLowerCase();
+        const filteredSchools = normalizedTerm
+            ? schools.filter((school) => {
+                const schoolName = (school.school_name || "").toLowerCase();
+                const adminName = (school.administrator_name || "").toLowerCase();
+                return schoolName.includes(normalizedTerm) || adminName.includes(normalizedTerm);
+            })
+            : schools;
+
+        if (!filteredSchools || !filteredSchools.length) {
+            list.innerHTML = "<li class='schools-empty'>No schools added yet.</li>";
+            return;
+        }
+
+        list.innerHTML = "";
+
+        filteredSchools.forEach((school) => {
+            const item = document.createElement("li");
+
+            const meta = document.createElement("div");
+            meta.className = "school-meta";
+
+            const name = document.createElement("strong");
+            name.textContent = school.school_name;
+
+            const admin = document.createElement("span");
+            admin.textContent = school.administrator_name || "No administrator assigned";
+
+            meta.appendChild(name);
+            meta.appendChild(admin);
+
+            const actions = document.createElement("div");
+            actions.className = "school-actions";
+
+            const editButton = document.createElement("button");
+            editButton.type = "button";
+            editButton.className = "edit-school";
+            editButton.textContent = "Edit";
+            editButton.addEventListener("click", () => {
+                const nameInput = document.getElementById("schoolName");
+                const adminInput = document.getElementById("schoolAdmin");
+                const adminEmailInput = document.getElementById("schoolAdminEmail");
+                const submitButton = document.getElementById("schoolSubmitButton");
+
+                editingSchoolId = school.id;
+
+                if (nameInput) {
+                    nameInput.value = school.school_name || "";
+                }
+
+                if (adminInput) {
+                    adminInput.value = school.administrator_name || "";
+                }
+
+                if (adminEmailInput) {
+                    adminEmailInput.value = school.administrator_email || "";
+                }
+
+                if (submitButton) {
+                    submitButton.textContent = "Update School";
+                }
+            });
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-school";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", async () => {
+                const {
+                    data: { session: currentSession }
+                } = await supabaseClient.auth.getSession();
+
+                if (!currentSession) {
+                    window.location.href = "Admin.html";
+                    return;
+                }
+
+                const { error: deleteError } = await supabaseClient
+                    .from("schools")
+                    .delete()
+                    .eq("id", school.id)
+                    .eq("created_by", currentSession.user.id);
+
+                if (deleteError) {
+                    if (status) {
+                        status.textContent = `Could not remove school: ${deleteError.message}`;
+                    }
+                    return;
+                }
+
+                if (editingSchoolId === school.id) {
+                    resetSchoolForm();
+                }
+
+                renderSchools(document.getElementById("schoolSearch")?.value || "");
+            });
+
+            actions.appendChild(editButton);
+            actions.appendChild(removeButton);
+
+            item.appendChild(meta);
+            item.appendChild(actions);
+            list.appendChild(item);
+        });
+    }
+
+    async function saveSchool() {
+        const nameInput = document.getElementById("schoolName");
+        const adminInput = document.getElementById("schoolAdmin");
+        const adminEmailInput = document.getElementById("schoolAdminEmail");
+        const status = document.getElementById("schoolStatus");
+
+        if (!nameInput || !adminInput || !adminEmailInput) {
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const admin = adminInput.value.trim();
+        const adminEmail = adminEmailInput.value.trim().toLowerCase();
+
+        if (!name) {
+            if (status) {
+                status.textContent = "School name is required.";
+            }
+            return;
+        }
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            window.location.href = "Admin.html";
+            return;
+        }
+
+        if (editingSchoolId) {
+            const { error } = await supabaseClient
+                .from("schools")
+                .update({
+                    school_name: name,
+                    administrator_name: admin || null,
+                    administrator_email: adminEmail || null
+                })
+                .eq("id", editingSchoolId)
+                .eq("created_by", session.user.id);
+
+            if (error) {
+                if (status) {
+                    status.textContent = `Could not update school: ${error.message}`;
+                }
+                return;
+            }
+        } else {
+            const { error } = await supabaseClient
+                .from("schools")
+                .insert({
+                    school_name: name,
+                    administrator_name: admin || null,
+                    administrator_email: adminEmail || null,
+                    created_by: session.user.id
+                });
+
+            if (error) {
+                if (status) {
+                    status.textContent = `Could not save school: ${error.message}`;
+                }
+                return;
+            }
+        }
+
+        resetSchoolForm();
+        if (status) {
+            status.textContent = "";
+        }
+        renderSchools(document.getElementById("schoolSearch")?.value || "");
+    }
+
+    function closeSchools() {
+        const manager = document.getElementById("schoolManager");
+        if (manager) {
+            manager.hidden = true;
+        }
+        resetSchoolForm();
+    }
+
+    function manageSchools() {
+        const manager = document.getElementById("schoolManager");
+        if (!manager) {
+            return;
+        }
+
+        manager.hidden = !manager.hidden;
+        if (!manager.hidden) {
+            renderSchools(document.getElementById("schoolSearch")?.value || "");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const searchInput = document.getElementById("schoolSearch");
+        if (searchInput) {
+            searchInput.addEventListener("input", (event) => {
+                renderSchools(event.target.value);
+            });
+        }
+    });
+
+
+    checkLogin();
+
+</script>
+
+</body>
+</html>
