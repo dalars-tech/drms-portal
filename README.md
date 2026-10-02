@@ -211,6 +211,6 @@ Backups are configured in the Supabase project, not in the browser application. 
 
 Keep this repository private and deploy only the public site files through a trusted HTTPS host. The Supabase publishable key may appear in browser code, but the service-role key, database passwords, and SMTP credentials must never be committed or placed in HTML or JavaScript. Local environment files are excluded by `.gitignore`.
 
-Configure Supabase **Authentication > URL Configuration** with the real site URL and the exact password-reset redirect URL, for example `https://your-domain.example/reset-password.html`. Do not add untrusted domains to the redirect allow list.
+Configure Supabase **Authentication > URL Configuration** with the deployed HTTPS website as the **Site URL**, and add the exact deployed `reset-password.html` address under **Redirect URLs** (for example, `https://your-domain.example/reset-password.html`). Request password-reset emails from the published website, not `localhost`; localhost links cannot open on a phone. After correcting these settings, request a new reset email because links already sent retain their original redirect address. Do not add untrusted domains to the redirect allow list.
 
 The login pages include a client-side failed-attempt delay for a better user experience. This can be bypassed by a modified browser, so keep Supabase Auth rate limits and any hosting/WAF rate limiting enabled; server-side controls are the actual protection.
