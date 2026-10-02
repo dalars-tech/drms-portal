@@ -788,11 +788,50 @@ function calculateAggregatePoints(row) {
         ["creativeartssports", "creativearts"],
         ["pretechnicalstudies", "pretechnical"]
     ];
-    const values = subjects.map((names) => Number.parseFloat(spreadsheetValue(row, names)));
+    const values = subjects
+        .map((names) => Number.parseFloat(spreadsheetValue(row, names).replace(/,/g, "")))
+        .filter(Number.isFinite);
 
-    return values.every((value) => Number.isFinite(value))
+    return values.length
         ? String(values.reduce((total, value) => total + value, 0))
         : "";
+}
+
+function calculateAggregateRubric(points) {
+    const score = Number.parseFloat(String(points ?? "").replace(/,/g, ""));
+    if (!Number.isFinite(score) || score < 0 || score > 72) {
+        return "";
+    }
+
+    const rubricBands = [
+        [9, "Below expectation2 (BE2)"],
+        [18, "Below expectation1 (BE1)"],
+        [27, "Approaching expectation2 (AE2)"],
+        [36, "Approaching expectation1 (AE1)"],
+        [45, "Meeting expectation2 (ME2)"],
+        [54, "Meeting expectation1 (ME1)"],
+        [63, "Exceeding expectation2 (EE2)"],
+        [72, "Exceeding expectation1 (EE1)"]
+    ];
+
+    return rubricBands.find(([maximum]) => score <= maximum)?.[1] || "";
+}
+
+function fillAggregateFields(data) {
+    if (!data) {
+        return data;
+    }
+
+    if (data.aggregate_points === null || data.aggregate_points === undefined || String(data.aggregate_points).trim() === "") {
+        data.aggregate_points = calculateAggregatePoints(normalizeSpreadsheetRow(data));
+    }
+
+    const uploadedRubric = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
+    data.aggregate_rubrics = uploadedRubric !== null && uploadedRubric !== undefined && String(uploadedRubric).trim() !== ""
+        ? uploadedRubric
+        : calculateAggregateRubric(data.aggregate_points);
+
+    return data;
 }
 
 function canonicalAssessmentNumber(value) {
@@ -925,6 +964,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
                         pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
                         aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
                         aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
+                            || calculateAggregateRubric(spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
                     },
                     upload
                 };
@@ -1057,7 +1097,7 @@ async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPe
         throw error;
     }
 
-    return data;
+    return fillAggregateFields(data);
 }
 
 function addResultRow(container, label, value) {
@@ -1176,6 +1216,7 @@ async function searchResults() {
         return;
     }
 
+    data = fillAggregateFields(data);
     message.textContent = "";
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
     document.getElementById("resultName").textContent = data.learner_name || "";
