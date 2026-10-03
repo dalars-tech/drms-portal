@@ -238,6 +238,17 @@
             border: 1px solid #dbe2ea;
         }
 
+        .uploaded-sheet-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .uploaded-sheet-meta p {
+            margin: 0;
+        }
+
         .uploaded-sheet-table {
             width: max-content;
             min-width: 100%;
@@ -567,6 +578,10 @@
         </div>
 
         <section id="uploadedSheetView" hidden aria-label="Uploaded spreadsheet results">
+            <div class="uploaded-sheet-meta">
+                <p><strong>Grade:</strong> <span id="uploadedSheetGrade"></span></p>
+                <p><strong>Assessment:</strong> <span id="uploadedSheetAssessment"></span></p>
+            </div>
             <div class="uploaded-sheet-scroll">
                 <table class="uploaded-sheet-table">
                     <thead><tr id="uploadedSheetHeaders"></tr></thead>
@@ -935,7 +950,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
 
     const { data: uploads, error } = await supabaseClient
         .from("result_uploads")
-        .select("file_name, file_type, storage_path, school_id, term, assessment_period")
+        .select("file_name, file_type, storage_path, school_id, term, grade, assessment_period")
         .order("uploaded_at", { ascending: false });
 
     if (error) {
@@ -1003,7 +1018,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
                         term: effectiveTerm || selectedTerm,
                         assessment_period: upload.assessment_period,
                         rawColumns: originalRow.columns,
-                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(upload.file_name).grade,
+                        grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || upload.grade || fileMetadata(upload.file_name).grade,
                         class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
                         mathematics: spreadsheetValue(row, ["mathematics", "math", "maths", "mathematicsmarks", "mathmarks"]),
                         english: spreadsheetValue(row, ["english", "eng", "englishmarks", "engmarks"]),
@@ -1042,7 +1057,7 @@ function mergeUploadedResult(indexedResult, uploadedResult) {
     return mergedResult;
 }
 
-function renderUploadedSheetRow(columns) {
+function renderUploadedSheetRow(columns, grade, assessmentPeriod) {
     const headers = document.getElementById("uploadedSheetHeaders");
     const values = document.getElementById("uploadedSheetValues");
 
@@ -1061,6 +1076,8 @@ function renderUploadedSheetRow(columns) {
         values.appendChild(value);
     });
 
+    document.getElementById("uploadedSheetGrade").textContent = formatGradeDisplay(grade);
+    document.getElementById("uploadedSheetAssessment").textContent = assessmentPeriod ?? "";
     document.getElementById("mappedResultView").hidden = true;
     document.getElementById("uploadedSheetView").hidden = false;
 }
@@ -1298,7 +1315,7 @@ async function searchResults() {
 
     data = fillAggregateFields(data);
     if (Array.isArray(data.rawColumns) && data.rawColumns.length) {
-        renderUploadedSheetRow(data.rawColumns);
+        renderUploadedSheetRow(data.rawColumns, data.grade, data.assessment_period);
     }
     message.textContent = "";
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
