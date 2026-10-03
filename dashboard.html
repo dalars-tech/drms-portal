@@ -60,7 +60,11 @@
 
         .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-areas:
+                "upload print schools"
+                "uploads uploads uploads";
+            align-items: start;
             gap: 20px;
         }
 
@@ -258,8 +262,20 @@
         }
 
         .uploads-card {
-            grid-column: 1 / -1;
+            grid-area: uploads;
             min-width: 0;
+        }
+
+        .upload-card {
+            grid-area: upload;
+        }
+
+        .print-card {
+            grid-area: print;
+        }
+
+        #schoolManagementCard {
+            grid-area: schools;
         }
 
         .uploads-card select {
@@ -586,6 +602,30 @@
             opacity: 0.7;
         }
 
+        @media (max-width: 900px) {
+            .cards {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-areas:
+                    "upload schools"
+                    "print uploads";
+            }
+        }
+
+        @media (max-width: 600px) {
+            .cards {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "upload"
+                    "schools"
+                    "print"
+                    "uploads";
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
         @media (max-width: 500px) {
             .uploads-list li {
                 align-items: flex-start;
@@ -613,7 +653,7 @@
 
         <div class="cards">
 
-            <div class="card">
+            <div class="card upload-card">
                 <h2>📤 Upload Results</h2>
 
                 <p>
@@ -698,7 +738,7 @@
             </div>
 
 
-            <div class="card">
+            <div class="card print-card">
                 <h2>🖨️ Print Grade Results</h2>
 
                 <p>
