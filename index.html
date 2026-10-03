@@ -234,7 +234,7 @@
 
         .uploaded-sheet-scroll {
             max-width: 100%;
-            overflow-x: auto;
+            overflow-x: hidden;
             border: 1px solid #dbe2ea;
         }
 
@@ -250,8 +250,8 @@
         }
 
         .uploaded-sheet-table {
-            width: max-content;
-            min-width: 100%;
+            width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             font-size: 14px;
         }
@@ -261,7 +261,9 @@
             padding: 10px 12px;
             border: 1px solid #dbe2ea;
             text-align: left;
-            white-space: nowrap;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            vertical-align: top;
         }
 
         .uploaded-sheet-table th {
