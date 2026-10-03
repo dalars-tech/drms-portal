@@ -262,6 +262,21 @@
             min-width: 0;
         }
 
+        .uploads-card select {
+            width: 100%;
+            min-height: 42px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .uploads-list {
+            max-height: min(55vh, 420px);
+            overflow-y: auto;
+        }
+
         .uploads-list > li {
             border-bottom: 1px solid #e5e7eb;
         }
@@ -631,14 +646,21 @@
                 <h2>📁 Uploaded Results</h2>
 
                 <p>
-                    View files that have been uploaded.
+                    Select a school to view its uploaded files.
                 </p>
 
-                <button onclick="viewUploads(true)">
+                <label for="uploadedResultsSchool">School</label>
+                <select id="uploadedResultsSchool" required>
+                    <option value="">Select school</option>
+                </select>
+
+                <button type="button" onclick="viewUploads()">
                     View Uploads
                 </button>
 
-                <ul id="uploadsList" class="uploads-list"></ul>
+                <ul id="uploadsList" class="uploads-list">
+                    <li class="uploads-empty">Select a school, then choose View Uploads.</li>
+                </ul>
             </div>
 
 
@@ -803,7 +825,6 @@
         }
 
         await loadUploadSchools(isOwner);
-        await viewUploads(false, isOwner);
     }
 
 
@@ -838,8 +859,9 @@
     async function loadUploadSchools(isOwner = false) {
         const select = document.getElementById("uploadSchool");
         const printSelect = document.getElementById("printSchool");
+        const uploadsSelect = document.getElementById("uploadedResultsSchool");
 
-        if (!select && !printSelect) {
+        if (!select && !printSelect && !uploadsSelect) {
             return;
         }
 
@@ -863,13 +885,13 @@
         const { data: schools, error } = await schoolQuery;
 
         if (error) {
-            [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+            [select, printSelect, uploadsSelect].filter(Boolean).forEach((schoolSelect) => {
                 schoolSelect.innerHTML = "<option value=\"\">Could not load schools</option>";
             });
             return;
         }
 
-        [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
+        [select, printSelect, uploadsSelect].filter(Boolean).forEach((schoolSelect) => {
             schoolSelect.innerHTML = "<option value=\"\">Select school</option>";
             (schools || []).forEach((school) => {
                 const option = document.createElement("option");
@@ -1182,6 +1204,7 @@
 
         uploadButton.disabled = false;
         input.value = "";
+        document.getElementById("uploadedResultsSchool").value = schoolId;
         await viewUploads();
     }
 
@@ -1516,8 +1539,15 @@
     }
 
 
-    async function viewUploads(openFirstUpload = false, isOwner = null) {
+    async function viewUploads() {
         const list = document.getElementById("uploadsList");
+        const schoolId = document.getElementById("uploadedResultsSchool").value;
+
+        if (!schoolId) {
+            list.innerHTML = "<li class=\"uploads-empty\">Select a school, then choose View Uploads.</li>";
+            return;
+        }
+
         list.innerHTML = "<li>Loading uploads...</li>";
 
         const {
@@ -1529,15 +1559,14 @@
             return;
         }
 
-        isOwner = isOwner ?? session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
-
         let schoolQuery = supabaseClient
             .from("schools")
             .select("id, school_name")
+            .eq("id", schoolId)
             .order("school_name", { ascending: true });
 
-        if (!isOwner) {
-            schoolQuery = schoolQuery.eq("administrator_email", session.user.email);
+        if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
+            schoolQuery = schoolQuery.eq("administrator_email", session.user.email?.toLowerCase());
         }
 
         const { data: schools, error: schoolsError } = await schoolQuery;
@@ -1552,9 +1581,10 @@
         let uploadQuery = supabaseClient
             .from("result_uploads")
             .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id, term, grade, assessment_period")
+            .eq("school_id", schoolId)
             .order("uploaded_at", { ascending: false });
 
-        if (!isOwner) {
+        if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
             uploadQuery = uploadQuery.eq("uploaded_by", session.user.id);
         }
 
@@ -1564,9 +1594,10 @@
             let legacyUploadQuery = supabaseClient
                 .from("result_uploads")
                 .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
+                .eq("school_id", schoolId)
                 .order("uploaded_at", { ascending: false });
 
-            if (!isOwner) {
+            if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
                 legacyUploadQuery = legacyUploadQuery.eq("uploaded_by", session.user.id);
             }
 
@@ -1586,8 +1617,6 @@
             list.innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
             return;
         }
-
-        let firstPreview = null;
 
         const uploadsBySchool = new Map();
 
@@ -1666,14 +1695,6 @@
             item.appendChild(name);
 
             if (!viewError) {
-                if (!firstPreview) {
-                    firstPreview = {
-                        fileName: upload.file_name,
-                        fileType: upload.file_type,
-                        signedUrl: viewUrl.signedUrl
-                    };
-                }
-
                 const actions = document.createElement("span");
                 actions.className = "upload-actions";
 
@@ -1735,11 +1756,7 @@
             details.appendChild(fileList);
             groupItem.appendChild(details);
             list.appendChild(groupItem);
-        }
-
-        if (openFirstUpload && firstPreview) {
-            openPreview(firstPreview.fileName, firstPreview.fileType, firstPreview.signedUrl);
-        }
+            }
     }
 
 
