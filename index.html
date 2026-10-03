@@ -888,14 +888,14 @@ function fileMetadata(fileName) {
     };
 }
 
-async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, selectedSchoolId) {
+async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, selectedSchoolId, selectedAssessmentPeriod = null) {
     if (typeof XLSX === "undefined") {
         throw new Error("The spreadsheet reader could not be loaded.");
     }
 
     const { data: uploads, error } = await supabaseClient
         .from("result_uploads")
-        .select("file_name, file_type, storage_path, school_id")
+        .select("file_name, file_type, storage_path, school_id, term, assessment_period")
         .order("uploaded_at", { ascending: false });
 
     if (error) {
@@ -907,7 +907,12 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
         const matchesSchool = !selectedSchoolId || upload.school_id === selectedSchoolId;
         const isSpreadsheet = /\.(xlsx?|xls)$/i.test(upload.file_name || "")
             || /spreadsheet|excel/i.test(upload.file_type || "");
-        return matchesSchool && isSpreadsheet;
+        const matchesAssessment = selectedAssessmentPeriod === null
+            || selectedAssessmentPeriod === undefined
+            || upload.assessment_period === null
+            || upload.assessment_period === undefined
+            || Number(upload.assessment_period) === Number(selectedAssessmentPeriod);
+        return matchesSchool && isSpreadsheet && matchesAssessment;
     });
 
     for (const upload of spreadsheetUploads) {
@@ -941,16 +946,22 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
             ]);
 
             const rowTerm = spreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]);
-            const uploadTerm = fileMetadata(upload.file_name).term;
+            const uploadTerm = upload.term || fileMetadata(upload.file_name).term;
             const effectiveTerm = rowTerm || uploadTerm;
 
             if (canonicalAssessmentNumber(rowAssessmentNumber) === normalizedAssessmentNumber
-                && (!effectiveTerm || canonicalTerm(effectiveTerm) === canonicalTerm(selectedTerm))) {
+                && (!effectiveTerm || canonicalTerm(effectiveTerm) === canonicalTerm(selectedTerm))
+                && (selectedAssessmentPeriod === null
+                    || selectedAssessmentPeriod === undefined
+                    || upload.assessment_period === null
+                    || upload.assessment_period === undefined
+                    || Number(upload.assessment_period) === Number(selectedAssessmentPeriod))) {
                 return {
                     data: {
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
                         learner_name: spreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
                         term: effectiveTerm || selectedTerm,
+                        assessment_period: upload.assessment_period,
                         grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(upload.file_name).grade,
                         class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
                         mathematics: spreadsheetValue(row, ["mathematics", "math", "maths"]),
@@ -973,6 +984,21 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
     }
 
     return null;
+}
+
+function mergeUploadedResult(indexedResult, uploadedResult) {
+    if (!indexedResult) {
+        return uploadedResult;
+    }
+
+    const mergedResult = { ...indexedResult };
+    Object.entries(uploadedResult || {}).forEach(([field, value]) => {
+        if (value !== null && value !== undefined && String(value).trim() !== "") {
+            mergedResult[field] = value;
+        }
+    });
+
+    return mergedResult;
 }
 
 async function loadResultDownload(assessmentNumber) {
@@ -1060,7 +1086,7 @@ async function loadResultDownload(assessmentNumber) {
 
 async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPeriod) {
     const selectedSchoolId = null;
-    let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, assessmentPeriod, selectedSchoolId);
+    let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId);
 
     if (data) {
         data.social_studies = data.social_studies ?? data.socialStudies ?? data.social_studies_points;
@@ -1068,41 +1094,19 @@ async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPe
         data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
     }
 
-    const requiredResultFields = [
-        "grade",
-        "mathematics",
-        "english",
-        "kiswahili",
-        "integrated_science",
-        "social_studies",
-        "cre_ire",
-        "agriculture",
-        "creative_arts_sports",
-        "pre_technical_studies",
-        "aggregate_points",
-        "aggregate_rubrics"
-    ];
-    const hasIncompleteData = !data || requiredResultFields.some((field) =>
-        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-    );
-
-    if (error || hasIncompleteData) {
+    try {
         const uploadedResult = await findUploadedSpreadsheetResult(
             assessmentNumber,
             selectedTerm,
-            assessmentPeriod,
-            selectedSchoolId
+            selectedSchoolId,
+            data?.assessment_period ?? assessmentPeriod
         );
-
         if (uploadedResult?.data) {
-            data = data
-                ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
-                    field,
-                    data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-                        ? value
-                        : data[field]
-                ]))
-                : uploadedResult.data;
+            data = mergeUploadedResult(data, uploadedResult.data);
+        }
+    } catch (fallbackError) {
+        if (!data) {
+            throw fallbackError;
         }
     }
 
@@ -1195,38 +1199,18 @@ async function searchResults() {
         data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
     }
 
-    const requiredResultFields = [
-        "grade",
-        "mathematics",
-        "english",
-        "kiswahili",
-        "integrated_science",
-        "social_studies",
-        "cre_ire",
-        "agriculture",
-        "creative_arts_sports",
-        "pre_technical_studies",
-        "aggregate_points",
-        "aggregate_rubrics"
-    ];
-    const hasIncompleteData = !data || requiredResultFields.some((field) =>
-        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-    );
-
-    if (error || hasIncompleteData) {
-        try {
-            const uploadedResult = await findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, selectedSchoolId);
-            if (uploadedResult?.data) {
-                data = data
-                    ? Object.fromEntries(Object.entries(uploadedResult.data).map(([field, value]) => [
-                        field,
-                        data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
-                            ? value
-                            : data[field]
-                    ]))
-                    : uploadedResult.data;
-            }
-        } catch (fallbackError) {
+    try {
+        const uploadedResult = await findUploadedSpreadsheetResult(
+            assessmentNumber,
+            selectedTerm,
+            selectedSchoolId,
+            data?.assessment_period
+        );
+        if (uploadedResult?.data) {
+            data = mergeUploadedResult(data, uploadedResult.data);
+        }
+    } catch (fallbackError) {
+        if (!data) {
             console.error(error || fallbackError);
             message.textContent = error?.code === "42883"
                 ? "Search setup is incomplete, and uploaded files could not be searched. Check the result_uploads and storage SELECT policies."
