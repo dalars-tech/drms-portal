@@ -281,6 +281,40 @@
             border-bottom: 1px solid #e5e7eb;
         }
 
+        .school-name-heading {
+            padding: 12px 0;
+            color: #111827;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .grade-upload-row {
+            padding: 0;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .grade-upload-row > details > summary {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            color: #1e3a8a;
+            cursor: pointer;
+            font-weight: bold;
+            list-style-position: inside;
+        }
+
+        .grade-empty {
+            color: #6b7280;
+            font-weight: normal;
+        }
+
+        .upload-term-heading {
+            padding: 10px 0 4px;
+            color: #374151;
+            font-weight: bold;
+        }
+
         .school-upload-group {
             padding: 0;
         }
@@ -1523,19 +1557,12 @@
         if (storageError) {
             item.remove();
             document.getElementById("uploadStatus").textContent = `Upload record deleted, but the stored file could not be removed: ${storageError.message}`;
+            await viewUploads();
             return;
         }
 
-        item.remove();
-        const fileList = item.parentElement;
-        if (fileList && !fileList.querySelector(".school-upload-file")) {
-            fileList.closest(".school-upload-group")?.remove();
-        }
-
         document.getElementById("uploadStatus").textContent = "Upload deleted successfully.";
-        if (!document.querySelector("#uploadsList .school-upload-file")) {
-            document.getElementById("uploadsList").innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
-        }
+        await viewUploads();
     }
 
 
@@ -1576,7 +1603,12 @@
             return;
         }
 
-        const schoolsById = new Map((schools || []).map((school) => [school.id, school]));
+        const selectedSchool = (schools || []).find((school) => school.id === schoolId);
+
+        if (!selectedSchool) {
+            list.innerHTML = "<li class=\"uploads-empty\">School not found or you do not have access to it.</li>";
+            return;
+        }
 
         let uploadQuery = supabaseClient
             .from("result_uploads")
@@ -1612,151 +1644,142 @@
         }
 
         list.innerHTML = "";
+        const gradeLabels = ["PP1", "PP2", ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
+        const gradeKey = (value) => {
+            const normalized = String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (normalized === "pp1" || normalized === "pp2") {
+                return normalized;
+            }
 
-        if (!uploads.length) {
-            list.innerHTML = "<li class=\"uploads-empty\">No uploaded results yet.</li>";
-            return;
+            const number = normalized.match(/^(?:grade|grd|g)?0*(\d+)$/)?.[1];
+            return number ? `grade${Number(number)}` : normalized;
+        };
+        const uploadsByGrade = new Map(gradeLabels.map((grade) => [gradeKey(grade), []]));
+        const otherUploads = [];
+
+        for (const upload of uploads || []) {
+            const key = gradeKey(upload.grade);
+            const gradeUploads = uploadsByGrade.get(key);
+            (gradeUploads || otherUploads).push(upload);
         }
 
-        const uploadsBySchool = new Map();
+        const schoolHeading = document.createElement("li");
+        schoolHeading.className = "school-name-heading";
+        schoolHeading.textContent = selectedSchool.school_name;
+        list.appendChild(schoolHeading);
 
-        for (const upload of uploads) {
-            const school = schoolsById.get(upload.school_id);
-            const schoolKey = upload.school_id || "unassigned";
-            const schoolName = school?.school_name || "Unassigned";
+        for (const gradeName of [...gradeLabels, ...(otherUploads.length ? ["Other / Grade not set"] : [])]) {
+            const gradeUploads = gradeName === "Other / Grade not set"
+                ? otherUploads
+                : uploadsByGrade.get(gradeKey(gradeName));
+            const gradeItem = document.createElement("li");
+            gradeItem.className = "grade-upload-row";
 
-            if (!uploadsBySchool.has(schoolKey)) {
-                uploadsBySchool.set(schoolKey, { name: schoolName, terms: new Map() });
+            if (!gradeUploads.length) {
+                const emptyRow = document.createElement("div");
+                emptyRow.className = "school-upload-file";
+                const name = document.createElement("strong");
+                name.textContent = gradeName;
+                const empty = document.createElement("span");
+                empty.className = "grade-empty";
+                empty.textContent = "Empty";
+                emptyRow.append(name, empty);
+                gradeItem.appendChild(emptyRow);
+                list.appendChild(gradeItem);
+                continue;
             }
-
-            const schoolGroup = uploadsBySchool.get(schoolKey);
-            const termName = upload.term || "Term not set";
-            if (!schoolGroup.terms.has(termName)) {
-                schoolGroup.terms.set(termName, new Map());
-            }
-
-            const gradeName = upload.grade || "Grade not set";
-            const termGroup = schoolGroup.terms.get(termName);
-            if (!termGroup.has(gradeName)) {
-                termGroup.set(gradeName, []);
-            }
-
-            termGroup.get(gradeName).push(upload);
-        }
-
-        for (const schoolGroup of uploadsBySchool.values()) {
-            const groupItem = document.createElement("li");
-            groupItem.className = "school-upload-group";
 
             const details = document.createElement("details");
             const summary = document.createElement("summary");
-            const schoolUploadCount = [...schoolGroup.terms.values()]
-                .reduce((count, gradeGroups) => count + [...gradeGroups.values()]
-                    .reduce((gradeCount, files) => gradeCount + files.length, 0), 0);
-            summary.textContent = `${schoolGroup.name} (${schoolUploadCount} file${schoolUploadCount === 1 ? "" : "s"})`;
+            summary.textContent = `${gradeName} (${gradeUploads.length} file${gradeUploads.length === 1 ? "" : "s"})`;
             details.appendChild(summary);
 
-            const fileList = document.createElement("ul");
-            fileList.className = "school-upload-files";
-
-            for (const [termName, gradeGroups] of schoolGroup.terms) {
-                const termItem = document.createElement("li");
-                termItem.className = "school-upload-group";
-                const termDetails = document.createElement("details");
-                const termSummary = document.createElement("summary");
-                termSummary.textContent = termName;
-                termDetails.appendChild(termSummary);
-                const gradeList = document.createElement("ul");
-                gradeList.className = "school-upload-files";
-
-                for (const [gradeName, gradeUploads] of gradeGroups) {
-                    const gradeItem = document.createElement("li");
-                    gradeItem.className = "school-upload-group";
-                    const gradeDetails = document.createElement("details");
-                    const gradeSummary = document.createElement("summary");
-                    gradeSummary.textContent = gradeName;
-                    gradeDetails.appendChild(gradeSummary);
-                    const assessmentList = document.createElement("ul");
-                    assessmentList.className = "school-upload-files";
-
-                    for (const upload of gradeUploads.sort((first, second) =>
-                        (first.assessment_period || 99) - (second.assessment_period || 99))) {
-            const { data: viewUrl, error: viewError } = await supabaseClient
-                .storage
-                .from("results")
-                .createSignedUrl(upload.storage_path, 3600, { download: false });
-
-            const item = document.createElement("li");
-            item.className = "school-upload-file";
-            const name = document.createElement("span");
-            name.textContent = upload.assessment_period
-                ? `Assessment ${upload.assessment_period}: ${upload.file_name}`
-                : upload.file_name;
-            item.appendChild(name);
-
-            if (!viewError) {
-                const actions = document.createElement("span");
-                actions.className = "upload-actions";
-
-                const viewLink = document.createElement("button");
-                viewLink.type = "button";
-                viewLink.textContent = "View";
-                viewLink.addEventListener("click", () => {
-                    openPreview(upload.file_name, upload.file_type, viewUrl.signedUrl);
-                });
-                actions.appendChild(viewLink);
-
-                const { data: downloadUrl, error: downloadError } = await supabaseClient
-                    .storage
-                    .from("results")
-                    .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
-
-                if (!downloadError) {
-                    const downloadLink = document.createElement("a");
-                    downloadLink.className = "download-link";
-                    downloadLink.href = downloadUrl.signedUrl;
-                    downloadLink.textContent = "Download";
-                    actions.appendChild(downloadLink);
+            const termGroups = new Map();
+            for (const upload of gradeUploads) {
+                const termName = upload.term || "Term not set";
+                if (!termGroups.has(termName)) {
+                    termGroups.set(termName, []);
                 }
-
-                const deleteButton = document.createElement("button");
-                deleteButton.type = "button";
-                deleteButton.className = "delete-upload";
-                deleteButton.textContent = "Delete";
-                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
-                actions.appendChild(deleteButton);
-
-                item.appendChild(actions);
-            } else {
-                const unavailable = document.createElement("small");
-                unavailable.textContent = `View unavailable: ${viewError.message}`;
-                item.appendChild(unavailable);
-
-                const deleteButton = document.createElement("button");
-                deleteButton.type = "button";
-                deleteButton.className = "delete-upload";
-                deleteButton.textContent = "Delete";
-                deleteButton.addEventListener("click", () => deleteUpload(upload, item));
-                item.appendChild(deleteButton);
+                termGroups.get(termName).push(upload);
             }
 
-                        assessmentList.appendChild(item);
+            const termList = document.createElement("ul");
+            termList.className = "school-upload-files";
+
+            for (const [termName, termUploads] of termGroups) {
+                const termHeading = document.createElement("li");
+                termHeading.className = "upload-term-heading";
+                termHeading.textContent = termName;
+                termList.appendChild(termHeading);
+
+                for (const upload of termUploads.sort((first, second) =>
+                    (first.assessment_period || 99) - (second.assessment_period || 99))) {
+                    const { data: viewUrl, error: viewError } = await supabaseClient
+                        .storage
+                        .from("results")
+                        .createSignedUrl(upload.storage_path, 3600, { download: false });
+
+                    const item = document.createElement("li");
+                    item.className = "school-upload-file";
+                    const name = document.createElement("span");
+                    name.textContent = upload.assessment_period
+                        ? `Assessment ${upload.assessment_period}: ${upload.file_name}`
+                        : upload.file_name;
+                    item.appendChild(name);
+
+                    if (!viewError) {
+                        const actions = document.createElement("span");
+                        actions.className = "upload-actions";
+
+                        const viewLink = document.createElement("button");
+                        viewLink.type = "button";
+                        viewLink.textContent = "View";
+                        viewLink.addEventListener("click", () => {
+                            openPreview(upload.file_name, upload.file_type, viewUrl.signedUrl);
+                        });
+                        actions.appendChild(viewLink);
+
+                        const { data: downloadUrl, error: downloadError } = await supabaseClient
+                            .storage
+                            .from("results")
+                            .createSignedUrl(upload.storage_path, 3600, { download: upload.file_name });
+
+                        if (!downloadError) {
+                            const downloadLink = document.createElement("a");
+                            downloadLink.className = "download-link";
+                            downloadLink.href = downloadUrl.signedUrl;
+                            downloadLink.textContent = "Download";
+                            actions.appendChild(downloadLink);
+                        }
+
+                        const deleteButton = document.createElement("button");
+                        deleteButton.type = "button";
+                        deleteButton.className = "delete-upload";
+                        deleteButton.textContent = "Delete";
+                        deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                        actions.appendChild(deleteButton);
+                        item.appendChild(actions);
+                    } else {
+                        const unavailable = document.createElement("small");
+                        unavailable.textContent = `View unavailable: ${viewError.message}`;
+                        item.appendChild(unavailable);
+
+                        const deleteButton = document.createElement("button");
+                        deleteButton.type = "button";
+                        deleteButton.className = "delete-upload";
+                        deleteButton.textContent = "Delete";
+                        deleteButton.addEventListener("click", () => deleteUpload(upload, item));
+                        item.appendChild(deleteButton);
                     }
 
-                    gradeDetails.appendChild(assessmentList);
-                    gradeItem.appendChild(gradeDetails);
-                    gradeList.appendChild(gradeItem);
+                    termList.appendChild(item);
                 }
-
-                termDetails.appendChild(gradeList);
-                termItem.appendChild(termDetails);
-                fileList.appendChild(termItem);
             }
 
-            details.appendChild(fileList);
-            groupItem.appendChild(details);
-            list.appendChild(groupItem);
-            }
+            details.appendChild(termList);
+            gradeItem.appendChild(details);
+            list.appendChild(gradeItem);
+        }
     }
 
 
