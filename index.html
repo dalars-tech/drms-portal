@@ -1068,7 +1068,20 @@ async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPe
         data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
     }
 
-    const requiredResultFields = ["grade", "social_studies", "aggregate_points", "aggregate_rubrics"];
+    const requiredResultFields = [
+        "grade",
+        "mathematics",
+        "english",
+        "kiswahili",
+        "integrated_science",
+        "social_studies",
+        "cre_ire",
+        "agriculture",
+        "creative_arts_sports",
+        "pre_technical_studies",
+        "aggregate_points",
+        "aggregate_rubrics"
+    ];
     const hasIncompleteData = !data || requiredResultFields.some((field) =>
         data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
     );
@@ -1182,7 +1195,20 @@ async function searchResults() {
         data.aggregate_rubrics = data.aggregate_rubrics ?? data.aggregate_rubric ?? data.aggregateRubric;
     }
 
-    const requiredResultFields = ["grade", "social_studies", "aggregate_points", "aggregate_rubrics"];
+    const requiredResultFields = [
+        "grade",
+        "mathematics",
+        "english",
+        "kiswahili",
+        "integrated_science",
+        "social_studies",
+        "cre_ire",
+        "agriculture",
+        "creative_arts_sports",
+        "pre_technical_studies",
+        "aggregate_points",
+        "aggregate_rubrics"
+    ];
     const hasIncompleteData = !data || requiredResultFields.some((field) =>
         data[field] === null || data[field] === undefined || String(data[field]).trim() === ""
     );
@@ -1286,10 +1312,14 @@ async function requestPasswordReset(emailId, messageId) {
         return;
     }
 
+    const redirectTo = passwordResetRedirectUrl();
+    if (!redirectTo) {
+        message.textContent = "Open the published website to request a reset link. Localhost links will not work on your phone.";
+        return;
+    }
+
     message.textContent = "Sending password reset email...";
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password.html`
-    });
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
 
     message.textContent = error
         ? `Could not send reset email: ${error.message}`
