@@ -232,6 +232,31 @@
             line-height: 1.4;
         }
 
+        .uploaded-sheet-scroll {
+            max-width: 100%;
+            overflow-x: auto;
+            border: 1px solid #dbe2ea;
+        }
+
+        .uploaded-sheet-table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .uploaded-sheet-table th,
+        .uploaded-sheet-table td {
+            padding: 10px 12px;
+            border: 1px solid #dbe2ea;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .uploaded-sheet-table th {
+            background: #eef4ff;
+        }
+
         .download-button {
             display: inline-block;
             padding: 10px 14px;
@@ -460,6 +485,7 @@
 
         <h2>Learner's Results</h2>
 
+        <div id="mappedResultView">
         <div class="result-row">
             <strong>Assessment Number</strong>
             <span id="resultAssessment"></span>
@@ -538,6 +564,16 @@
                 <span id="aggregateRubrics"></span>
             </div>
         </div>
+        </div>
+
+        <section id="uploadedSheetView" hidden aria-label="Uploaded spreadsheet results">
+            <div class="uploaded-sheet-scroll">
+                <table class="uploaded-sheet-table">
+                    <thead><tr id="uploadedSheetHeaders"></tr></thead>
+                    <tbody><tr id="uploadedSheetValues"></tr></tbody>
+                </table>
+            </div>
+        </section>
 
         <div class="result-row" id="resultFileRow" style="display: none;">
             <strong>Download Learner Results</strong>
@@ -778,15 +814,15 @@ function spreadsheetValue(row, names) {
 
 function calculateAggregatePoints(row) {
     const subjects = [
-        ["mathematics", "math"],
-        ["english"],
-        ["kiswahili"],
-        ["integratedscience", "integratedsciences"],
-        ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "ss"],
-        ["creire", "cre"],
-        ["agriculture"],
-        ["creativeartssports", "creativearts"],
-        ["pretechnicalstudies", "pretechnical"]
+        ["mathematics", "math", "mathematicsmarks", "mathmarks"],
+        ["english", "eng", "englishmarks", "engmarks"],
+        ["kiswahili", "swahili", "kiswahilimarks", "swahilimarks"],
+        ["integratedscience", "integratedsciences", "integratedsciencemarks", "sciencemarks", "science"],
+        ["socialstudies", "socialstudiespoints", "socialstudiesmarks", "socialstudiesandreligiouseducation", "socialscience", "sst", "sstmarks", "ss"],
+        ["creire", "cre", "ire", "cremarks", "iremarks", "religiouseducation"],
+        ["agriculture", "agric", "agriculturemarks", "agricmarks"],
+        ["creativeartssports", "creativearts", "creativeartssportsmarks", "creativeartsmarks", "sports"],
+        ["pretechnicalstudies", "pretechnical", "pretechnicalstudiesmarks", "pretechnicalmarks", "technicalstudies"]
     ];
     const values = subjects
         .map((names) => Number.parseFloat(spreadsheetValue(row, names).replace(/,/g, "")))
@@ -856,7 +892,7 @@ function canonicalTerm(value) {
 }
 
 function spreadsheetRows(sheet) {
-    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
     const headerIndex = matrix.findIndex((row) => row.some((cell) => {
         const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
         return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
@@ -870,9 +906,13 @@ function spreadsheetRows(sheet) {
         String(header ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
     );
 
-    return matrix.slice(headerIndex + 1).map((values) =>
-        Object.fromEntries(headers.map((header, index) => [header, values[index]]))
-    );
+    return matrix.slice(headerIndex + 1).map((values) => ({
+        columns: matrix[headerIndex].map((header, index) => ({
+            header: String(header ?? "").trim(),
+            value: values[index]
+        })),
+        data: Object.fromEntries(headers.map((header, index) => [header, values[index]]))
+    }));
 }
 
 function fileMetadata(fileName) {
@@ -935,7 +975,7 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
         const rows = spreadsheetRows(sheet);
 
         for (const originalRow of rows) {
-            const row = normalizeSpreadsheetRow(originalRow);
+            const row = originalRow.data;
             const rowAssessmentNumber = spreadsheetValue(row, [
                 "assessmentnumber",
                 "assessmentno",
@@ -962,20 +1002,21 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
                         learner_name: spreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
                         term: effectiveTerm || selectedTerm,
                         assessment_period: upload.assessment_period,
+                        rawColumns: originalRow.columns,
                         grade: spreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]) || fileMetadata(upload.file_name).grade,
                         class: spreadsheetValue(row, ["class", "classname", "stream", "classstream"]) || fileMetadata(upload.file_name).class,
-                        mathematics: spreadsheetValue(row, ["mathematics", "math", "maths"]),
-                        english: spreadsheetValue(row, ["english", "eng"]),
-                        kiswahili: spreadsheetValue(row, ["kiswahili", "swahili"]),
-                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "science"]),
-                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesandreligiouseducation", "socialscience", "sst", "s.s.t", "ss"]),
-                        cre_ire: spreadsheetValue(row, ["creire", "cre", "ire", "religiouseducation"]),
-                        agriculture: spreadsheetValue(row, ["agriculture", "agric"]),
-                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartsanddesign", "sports"]),
-                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalskills", "technicalstudies"]),
-                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
-                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rubricpoints", "remarks", "comment"])
-                            || calculateAggregateRubric(spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
+                        mathematics: spreadsheetValue(row, ["mathematics", "math", "maths", "mathematicsmarks", "mathmarks"]),
+                        english: spreadsheetValue(row, ["english", "eng", "englishmarks", "engmarks"]),
+                        kiswahili: spreadsheetValue(row, ["kiswahili", "swahili", "kiswahilimarks", "swahilimarks"]),
+                        integrated_science: spreadsheetValue(row, ["integratedscience", "integratedsciences", "integratedscienceandtechnology", "integratedsciencemarks", "sciencemarks", "science"]),
+                        social_studies: spreadsheetValue(row, ["socialstudies", "socialstudiespoints", "socialstudiesmarks", "socialstudiesandreligiouseducation", "socialscience", "sst", "sstmarks", "s.s.t", "ss"]),
+                        cre_ire: spreadsheetValue(row, ["creire", "cre", "ire", "cremarks", "iremarks", "religiouseducation"]),
+                        agriculture: spreadsheetValue(row, ["agriculture", "agric", "agriculturemarks", "agricmarks"]),
+                        creative_arts_sports: spreadsheetValue(row, ["creativeartssports", "creativearts", "creativeartssportsmarks", "creativeartsmarks", "creativeartsanddesign", "sports"]),
+                        pre_technical_studies: spreadsheetValue(row, ["pretechnicalstudies", "pretechnical", "pretechnicalstudiesmarks", "pretechnicalmarks", "pretechnicalskills", "technicalstudies"]),
+                        aggregate_points: spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "agg", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row),
+                        aggregate_rubrics: spreadsheetValue(row, ["aggregaterubric", "aggregaterubrics", "aggregaterubricspoints", "rubric", "rubrics", "rub", "rubricpoints", "remarks", "comment"])
+                            || calculateAggregateRubric(spreadsheetValue(row, ["aggregatepoints", "aggregatepoint", "aggregate", "agg", "totalpoints", "total", "points", "totalmarks", "totalmark"]) || calculateAggregatePoints(row))
                     },
                     upload
                 };
@@ -999,6 +1040,34 @@ function mergeUploadedResult(indexedResult, uploadedResult) {
     });
 
     return mergedResult;
+}
+
+function renderUploadedSheetRow(columns) {
+    const headers = document.getElementById("uploadedSheetHeaders");
+    const values = document.getElementById("uploadedSheetValues");
+
+    headers.replaceChildren();
+    values.replaceChildren();
+
+    columns.forEach((column) => {
+        const header = document.createElement("th");
+        header.textContent = column.header;
+        headers.appendChild(header);
+
+        const value = document.createElement("td");
+        value.textContent = column.value === null || column.value === undefined
+            ? ""
+            : String(column.value);
+        values.appendChild(value);
+    });
+
+    document.getElementById("mappedResultView").hidden = true;
+    document.getElementById("uploadedSheetView").hidden = false;
+}
+
+function showMappedResultView() {
+    document.getElementById("mappedResultView").hidden = false;
+    document.getElementById("uploadedSheetView").hidden = true;
 }
 
 async function loadResultDownload(assessmentNumber) {
@@ -1182,6 +1251,7 @@ async function searchResults() {
     const resultsCard = document.getElementById("resultsCard");
 
     clearLearnerDownload();
+    showMappedResultView();
 
     if (!assessmentNumber || !selectedTerm) {
         message.textContent = "Please enter an Assessment Number and choose a term.";
@@ -1204,7 +1274,7 @@ async function searchResults() {
             assessmentNumber,
             selectedTerm,
             selectedSchoolId,
-            data?.assessment_period
+            null
         );
         if (uploadedResult?.data) {
             data = mergeUploadedResult(data, uploadedResult.data);
@@ -1227,6 +1297,9 @@ async function searchResults() {
     }
 
     data = fillAggregateFields(data);
+    if (Array.isArray(data.rawColumns) && data.rawColumns.length) {
+        renderUploadedSheetRow(data.rawColumns);
+    }
     message.textContent = "";
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
     document.getElementById("resultName").textContent = data.learner_name || "";
