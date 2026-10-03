@@ -282,11 +282,27 @@
         .uploads-card select {
             width: 100%;
             min-height: 42px;
-            margin-bottom: 12px;
             padding: 10px 12px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
             font-size: 14px;
+        }
+
+        .uploads-filters {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .uploads-filter {
+            min-width: 0;
+        }
+
+        .uploads-filter label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
         }
 
         .uploads-list {
@@ -626,6 +642,10 @@
             .card {
                 padding: 20px;
             }
+
+            .uploads-filters {
+                grid-template-columns: minmax(0, 1fr);
+            }
         }
 
         @media (max-width: 500px) {
@@ -722,13 +742,37 @@
                 <h2>📁 Uploaded Results</h2>
 
                 <p>
-                    Select a school to view its uploaded files.
+                    Select a school and grade to view uploaded files.
                 </p>
 
-                <label for="uploadedResultsSchool">School</label>
-                <select id="uploadedResultsSchool" required>
-                    <option value="">Select school</option>
-                </select>
+                <div class="uploads-filters">
+                    <div class="uploads-filter">
+                        <label for="uploadedResultsSchool">School</label>
+                        <select id="uploadedResultsSchool" required>
+                            <option value="">Select school</option>
+                        </select>
+                    </div>
+                    <div class="uploads-filter">
+                        <label for="uploadedResultsGrade">Grade</label>
+                        <select id="uploadedResultsGrade" required>
+                            <option value="">Select grade</option>
+                            <option value="PP1">PP1</option>
+                            <option value="PP2">PP2</option>
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </select>
+                    </div>
+                </div>
 
                 <button type="button" onclick="viewUploads()">
                     View Uploads
@@ -1281,6 +1325,7 @@
         uploadButton.disabled = false;
         input.value = "";
         document.getElementById("uploadedResultsSchool").value = schoolId;
+        document.getElementById("uploadedResultsGrade").value = grade;
         await viewUploads();
     }
 
@@ -1611,9 +1656,10 @@
     async function viewUploads() {
         const list = document.getElementById("uploadsList");
         const schoolId = document.getElementById("uploadedResultsSchool").value;
+        const gradeValue = document.getElementById("uploadedResultsGrade").value;
 
-        if (!schoolId) {
-            list.innerHTML = "<li class=\"uploads-empty\">Select a school, then choose View Uploads.</li>";
+        if (!schoolId || !gradeValue) {
+            list.innerHTML = "<li class=\"uploads-empty\">Select a school and grade, then choose View Uploads.</li>";
             return;
         }
 
@@ -1697,12 +1743,13 @@
             return number ? `grade${Number(number)}` : normalized;
         };
         const uploadsByGrade = new Map(gradeLabels.map((grade) => [gradeKey(grade), []]));
-        const otherUploads = [];
 
         for (const upload of uploads || []) {
-            const key = gradeKey(upload.grade);
+            const key = gradeKey(upload.grade || fileMetadata(upload.file_name).grade);
             const gradeUploads = uploadsByGrade.get(key);
-            (gradeUploads || otherUploads).push(upload);
+            if (gradeUploads) {
+                gradeUploads.push(upload);
+            }
         }
 
         const schoolHeading = document.createElement("li");
@@ -1710,10 +1757,8 @@
         schoolHeading.textContent = selectedSchool.school_name;
         list.appendChild(schoolHeading);
 
-        for (const gradeName of [...gradeLabels, ...(otherUploads.length ? ["Other / Grade not set"] : [])]) {
-            const gradeUploads = gradeName === "Other / Grade not set"
-                ? otherUploads
-                : uploadsByGrade.get(gradeKey(gradeName));
+        const gradeName = document.getElementById("uploadedResultsGrade").selectedOptions[0]?.textContent || gradeValue;
+        const gradeUploads = uploadsByGrade.get(gradeKey(gradeValue)) || [];
             const gradeItem = document.createElement("li");
             gradeItem.className = "grade-upload-row";
 
@@ -1728,8 +1773,7 @@
                 emptyRow.append(name, empty);
                 gradeItem.appendChild(emptyRow);
                 list.appendChild(gradeItem);
-                continue;
-            }
+            } else {
 
             const details = document.createElement("details");
             const summary = document.createElement("summary");
