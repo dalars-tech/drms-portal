@@ -257,6 +257,11 @@
             list-style: none;
         }
 
+        .uploads-card {
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+
         .uploads-list > li {
             border-bottom: 1px solid #e5e7eb;
         }
@@ -288,11 +293,19 @@
 
         .school-upload-file {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
             padding: 10px 0;
             border-top: 1px solid #f1f5f9;
+            min-width: 0;
+        }
+
+        .school-upload-file > span:first-child {
+            flex: 1 1 240px;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .uploads-list a {
@@ -307,8 +320,11 @@
 
         .upload-actions {
             display: flex;
+            flex-wrap: wrap;
+            align-items: center;
             gap: 12px;
-            flex-shrink: 0;
+            flex: 0 1 auto;
+            justify-content: flex-end;
         }
 
         .upload-actions button {
@@ -611,7 +627,7 @@
             </div>
 
 
-            <div class="card">
+            <div class="card uploads-card">
                 <h2>📁 Uploaded Results</h2>
 
                 <p>
@@ -1773,11 +1789,16 @@
 
         list.innerHTML = "<li class='schools-empty'>Loading schools...</li>";
 
-        const { data: schools, error } = await supabaseClient
+        let schoolsQuery = supabaseClient
             .from("schools")
             .select("id, school_name, administrator_name, administrator_email, created_at")
-            .eq("created_by", session.user.id)
             .order("created_at", { ascending: false });
+
+        if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
+            schoolsQuery = schoolsQuery.eq("created_by", session.user.id);
+        }
+
+        const { data: schools, error } = await schoolsQuery;
 
         if (error) {
             list.innerHTML = "";
@@ -1871,8 +1892,7 @@
                 const { error: deleteError } = await supabaseClient
                     .from("schools")
                     .delete()
-                    .eq("id", school.id)
-                    .eq("created_by", currentSession.user.id);
+                    .eq("id", school.id);
 
                 if (deleteError) {
                     if (status) {
@@ -1935,8 +1955,7 @@
                     administrator_name: admin || null,
                     administrator_email: adminEmail || null
                 })
-                .eq("id", editingSchoolId)
-                .eq("created_by", session.user.id);
+                .eq("id", editingSchoolId);
 
             if (error) {
                 if (status) {
