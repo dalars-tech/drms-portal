@@ -230,6 +230,7 @@ as $$
   select to_jsonb(result_row)
   from (
     select
+      s.school_name,
       l.assessment_number,
       l.learner_name,
       l.grade,
@@ -249,7 +250,8 @@ as $$
       r.aggregate_rubric as aggregate_rubrics
     from public.learners l
     join public.results r on r.learner_id = l.id
-    where l.school_id = search_school_id
+    left join public.schools s on s.id = l.school_id
+    where (search_school_id is null or l.school_id = search_school_id)
       and l.assessment_number = search_assessment_number
       and lower(r.term) = lower(search_term)
     limit 1
