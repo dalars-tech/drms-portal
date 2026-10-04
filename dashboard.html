@@ -701,42 +701,37 @@
         }
 
         .print-legend {
-            margin-top: 14px;
-            padding-top: 8px;
-            border-top: 2px solid #374151;
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1.5px solid #374151;
+            font-size: 6.5pt;
+            line-height: 1.4;
         }
 
         .print-legend-title {
             font-weight: bold;
-            font-size: 8pt;
-            margin-bottom: 6px;
+            font-size: 6.5pt;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            margin-right: 4px;
         }
 
-        .print-legend-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 7pt;
+        .print-legend-cols {
+            display: flex;
+            gap: 8px;
+            margin-top: 3px;
         }
 
-        .print-legend-table th,
-        .print-legend-table td {
+        .print-legend-col {
+            flex: 1;
             border: 1px solid #d1d5db;
-            padding: 2px 5px;
-            text-align: left;
+            padding: 3px 5px;
+            background: #f9fafb;
+            border-radius: 2px;
         }
 
-        .print-legend-table th {
-            background: #f3f4f6;
-            font-weight: bold;
-        }
-
-        .print-legend-table td:first-child {
-            font-weight: bold;
-            white-space: nowrap;
-            width: 140px;
+        .print-legend-col strong {
+            display: block;
+            margin-bottom: 2px;
         }
 
         @media print {
@@ -813,42 +808,37 @@
             }
 
             .print-legend {
-                margin-top: 8px;
-                padding-top: 5px;
-                border-top: 1.5px solid #374151;
+                margin-top: 6px;
+                padding-top: 4px;
+                border-top: 1px solid #374151;
+                font-size: 5pt;
+                line-height: 1.35;
             }
 
             .print-legend-title {
                 font-weight: bold;
-                font-size: 6pt;
-                margin-bottom: 4px;
+                font-size: 5pt;
                 text-transform: uppercase;
-                letter-spacing: 0.05em;
+                margin-right: 3px;
             }
 
-            .print-legend-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 4px;
-                font-size: 5.5pt;
+            .print-legend-cols {
+                display: flex;
+                gap: 5px;
+                margin-top: 2px;
             }
 
-            .print-legend-table th,
-            .print-legend-table td {
-                border: 1px solid #d1d5db;
-                padding: 1.5px 4px;
-                text-align: left;
+            .print-legend-col {
+                flex: 1;
+                border: 0.5px solid #d1d5db;
+                padding: 2px 4px;
+                background: #f9fafb;
             }
 
-            .print-legend-table th {
-                background: #f3f4f6;
-                font-weight: bold;
-            }
-
-            .print-legend-table td:first-child {
-                font-weight: bold;
-                white-space: nowrap;
-                width: 100px;
+            .print-legend-col strong {
+                display: block;
+                font-size: 5pt;
+                margin-bottom: 1px;
             }
 
             .print-values {
@@ -2156,42 +2146,28 @@
                         </table>`
                     }
                     <div class="print-legend">
-                        <div class="print-legend-title">KEY / LEGEND</div>
-                        <table class="print-legend-table">
-                            <thead>
-                                <tr><th colspan="2">Subject Abbreviations</th></tr>
-                                <tr><th>Abbreviation</th><th>Full Name</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>MATH / MATHS</td><td>Mathematics</td></tr>
-                                <tr><td>ENG</td><td>English</td></tr>
-                                <tr><td>KSW</td><td>Kiswahili</td></tr>
-                                <tr><td>INT. SCI / IS</td><td>Integrated Science</td></tr>
-                                <tr><td>SOC. ST / SS / SST</td><td>Social Studies</td></tr>
-                                <tr><td>CRE / IRE</td><td>Christian / Islamic Religious Education</td></tr>
-                                <tr><td>AGRIC</td><td>Agriculture</td></tr>
-                                <tr><td>CA&amp;S / CAS</td><td>Creative Arts &amp; Sports</td></tr>
-                                <tr><td>PTS / PRE-TECH</td><td>Pre-Technical Studies</td></tr>
-                                <tr><td>AGG. PTS</td><td>Aggregate Points (total of all subject scores)</td></tr>
-                                <tr><td>RUB</td><td>Rubrics (overall performance level)</td></tr>
-                            </tbody>
-                        </table>
-                        <table class="print-legend-table">
-                            <thead>
-                                <tr><th colspan="2">Performance Level Abbreviations (Rubrics)</th></tr>
-                                <tr><th>Abbreviation</th><th>Full Description</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>EE1</td><td>Exceeding Expectation 1 &mdash; highest performance (scores 64&ndash;72)</td></tr>
-                                <tr><td>EE2</td><td>Exceeding Expectation 2 &mdash; (scores 55&ndash;63)</td></tr>
-                                <tr><td>ME1</td><td>Meeting Expectation 1 &mdash; (scores 46&ndash;54)</td></tr>
-                                <tr><td>ME2</td><td>Meeting Expectation 2 &mdash; (scores 37&ndash;45)</td></tr>
-                                <tr><td>AE1</td><td>Approaching Expectation 1 &mdash; (scores 28&ndash;36)</td></tr>
-                                <tr><td>AE2</td><td>Approaching Expectation 2 &mdash; (scores 19&ndash;27)</td></tr>
-                                <tr><td>BE1</td><td>Below Expectation 1 &mdash; (scores 10&ndash;18)</td></tr>
-                                <tr><td>BE2</td><td>Below Expectation 2 &mdash; lowest performance (scores 0&ndash;9)</td></tr>
-                            </tbody>
-                        </table>
+                        <span class="print-legend-title">KEY &mdash;</span>
+                        <div class="print-legend-cols">
+                            <div class="print-legend-col">
+                                <strong>Subjects:</strong>
+                                MATH=Mathematics &bull; ENG=English &bull; KSW=Kiswahili &bull;
+                                INT.SCI=Integrated Science &bull; SOC.ST=Social Studies &bull;
+                                CRE/IRE=Christian/Islamic Religious Education &bull;
+                                AGRIC=Agriculture &bull; CA&amp;S=Creative Arts &amp; Sports &bull;
+                                PTS=Pre-Technical Studies &bull; AGG.PTS=Aggregate Points &bull; RUB=Rubrics
+                            </div>
+                            <div class="print-legend-col">
+                                <strong>Performance Levels:</strong>
+                                EE1=Exceeding Expectation 1 (64&ndash;72) &bull;
+                                EE2=Exceeding Expectation 2 (55&ndash;63) &bull;
+                                ME1=Meeting Expectation 1 (46&ndash;54) &bull;
+                                ME2=Meeting Expectation 2 (37&ndash;45) &bull;
+                                AE1=Approaching Expectation 1 (28&ndash;36) &bull;
+                                AE2=Approaching Expectation 2 (19&ndash;27) &bull;
+                                BE1=Below Expectation 1 (10&ndash;18) &bull;
+                                BE2=Below Expectation 2 (0&ndash;9)
+                            </div>
+                        </div>
                     </div>
                 </section>`;
         }).join("");
