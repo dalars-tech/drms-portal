@@ -288,26 +288,80 @@
             font-size: 14px;
         }
 
-        .uploads-filters {
+        .uploads-wizard {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.8fr);
+            gap: 18px;
             margin-bottom: 12px;
         }
 
-        .uploads-filter {
+        .uploads-step {
             min-width: 0;
         }
 
-        .uploads-filter label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: bold;
+        .uploads-step h3 {
+            margin: 0 0 10px;
+            color: #374151;
+            font-size: 14px;
         }
 
-        .uploads-list {
-            max-height: min(55vh, 420px);
-            overflow-y: auto;
+        .uploads-step-number {
+            display: inline-grid;
+            width: 22px;
+            aspect-ratio: 1;
+            place-items: center;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .grade-choice-groups {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .grade-choice-group h4 {
+            margin: 0 0 6px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .grade-choice-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .grade-choice {
+            min-height: 36px;
+            padding: 7px 5px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #1f2937;
+            font-size: 12px;
+        }
+
+        .grade-choice:hover:not(:disabled) {
+            border-color: #2563eb;
+            background: #eff6ff;
+            color: #1e40af;
+        }
+
+        .grade-choice[aria-pressed="true"] {
+            border-color: #0f766e;
+            background: #0f766e;
+            color: white;
+        }
+
+        .grade-choice:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        .view-uploads-button {
+            margin-top: 4px;
         }
 
         .uploads-list > li {
@@ -337,15 +391,38 @@
             list-style-position: inside;
         }
 
+        .selected-grade-heading {
+            padding: 10px 0;
+            color: #1e3a8a;
+            font-weight: bold;
+        }
+
+        .term-upload-groups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            padding: 4px 0 12px;
+            list-style: none;
+        }
+
+        .term-upload-group {
+            min-width: 0;
+            padding: 0 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8fafc;
+        }
+
+        .term-upload-group summary {
+            padding: 10px 0;
+            color: #1e3a8a;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         .grade-empty {
             color: #6b7280;
             font-weight: normal;
-        }
-
-        .upload-term-heading {
-            padding: 10px 0 4px;
-            color: #374151;
-            font-weight: bold;
         }
 
         .school-upload-group {
@@ -643,8 +720,13 @@
                 padding: 20px;
             }
 
-            .uploads-filters {
+            .uploads-wizard {
                 grid-template-columns: minmax(0, 1fr);
+                gap: 14px;
+            }
+
+            .grade-choice-groups {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -741,45 +823,62 @@
             <div class="card uploads-card">
                 <h2>📁 Uploaded Results</h2>
 
-                <p>
-                    Select a school and grade to view uploaded files.
-                </p>
-
-                <div class="uploads-filters">
-                    <div class="uploads-filter">
-                        <label for="uploadedResultsSchool">School</label>
+                <div class="uploads-wizard">
+                    <section class="uploads-step">
+                        <h3><span class="uploads-step-number">1</span>School</h3>
                         <select id="uploadedResultsSchool" required>
                             <option value="">Select school</option>
                         </select>
-                    </div>
-                    <div class="uploads-filter">
-                        <label for="uploadedResultsGrade">Grade</label>
-                        <select id="uploadedResultsGrade" required>
-                            <option value="">Select grade</option>
-                            <option value="PP1">PP1</option>
-                            <option value="PP2">PP2</option>
-                            <option value="Grade 1">Grade 1</option>
-                            <option value="Grade 2">Grade 2</option>
-                            <option value="Grade 3">Grade 3</option>
-                            <option value="Grade 4">Grade 4</option>
-                            <option value="Grade 5">Grade 5</option>
-                            <option value="Grade 6">Grade 6</option>
-                            <option value="Grade 7">Grade 7</option>
-                            <option value="Grade 8">Grade 8</option>
-                            <option value="Grade 9">Grade 9</option>
-                            <option value="Grade 10">Grade 10</option>
-                            <option value="Grade 11">Grade 11</option>
-                            <option value="Grade 12">Grade 12</option>
-                        </select>
-                    </div>
+                    </section>
+
+                    <section class="uploads-step">
+                        <h3><span class="uploads-step-number">2</span>Grade</h3>
+                        <div class="grade-choice-groups" role="group" aria-label="Choose grade">
+                            <div class="grade-choice-group">
+                                <h4>Early Years</h4>
+                                <div class="grade-choice-list">
+                                    <button type="button" class="grade-choice" data-upload-grade="PP1" aria-pressed="false" disabled>PP1</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="PP2" aria-pressed="false" disabled>PP2</button>
+                                </div>
+                            </div>
+                            <div class="grade-choice-group">
+                                <h4>Primary</h4>
+                                <div class="grade-choice-list">
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 1" aria-pressed="false" disabled>1</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 2" aria-pressed="false" disabled>2</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 3" aria-pressed="false" disabled>3</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 4" aria-pressed="false" disabled>4</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 5" aria-pressed="false" disabled>5</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 6" aria-pressed="false" disabled>6</button>
+                                </div>
+                            </div>
+                            <div class="grade-choice-group">
+                                <h4>Junior</h4>
+                                <div class="grade-choice-list">
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 7" aria-pressed="false" disabled>7</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 8" aria-pressed="false" disabled>8</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 9" aria-pressed="false" disabled>9</button>
+                                </div>
+                            </div>
+                            <div class="grade-choice-group">
+                                <h4>Senior</h4>
+                                <div class="grade-choice-list">
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 10" aria-pressed="false" disabled>10</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 11" aria-pressed="false" disabled>11</button>
+                                    <button type="button" class="grade-choice" data-upload-grade="Grade 12" aria-pressed="false" disabled>12</button>
+                                </div>
+                            </div>
+                        </div>
+                        <input id="uploadedResultsGrade" type="hidden" value="">
+                    </section>
                 </div>
 
-                <button type="button" onclick="viewUploads()">
+                <button id="viewUploadsButton" class="view-uploads-button" type="button" onclick="viewUploads()" disabled>
                     View Uploads
                 </button>
 
                 <ul id="uploadsList" class="uploads-list">
-                    <li class="uploads-empty">Select a school, then choose View Uploads.</li>
+                    <li class="uploads-empty">Choose a school and grade to view uploads.</li>
                 </ul>
             </div>
 
@@ -976,6 +1075,18 @@
     }
 
 
+    function selectUploadedResultsGrade(grade) {
+        document.getElementById("uploadedResultsGrade").value = grade;
+        document.querySelectorAll(".grade-choice").forEach((button) => {
+            button.setAttribute("aria-pressed", String(button.dataset.uploadGrade === grade));
+        });
+
+        document.getElementById("viewUploadsButton").disabled = !(
+            document.getElementById("uploadedResultsSchool").value && grade
+        );
+    }
+
+
     async function loadUploadSchools(isOwner = false) {
         const select = document.getElementById("uploadSchool");
         const printSelect = document.getElementById("printSchool");
@@ -1106,6 +1217,27 @@
         return matrix.slice(headerIndex + 1).map((values) =>
             Object.fromEntries(headers.map((header, index) => [header, values[index]]))
         );
+    }
+
+
+    function spreadsheetRowsWithColumns(sheet) {
+        const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+        const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+            const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
+        }));
+
+        if (headerIndex < 0) {
+            return [];
+        }
+
+        const headers = matrix[headerIndex].map((header) => String(header ?? "").trim());
+        const normalizedHeaders = headers.map((header) => header.toLowerCase().replace(/[^a-z0-9]/g, ""));
+
+        return matrix.slice(headerIndex + 1).map((values) => ({
+            columns: headers.map((header, index) => ({ header, value: values[index] })),
+            data: Object.fromEntries(normalizedHeaders.map((header, index) => [header, values[index]]))
+        }));
     }
 
 
@@ -1325,7 +1457,7 @@
         uploadButton.disabled = false;
         input.value = "";
         document.getElementById("uploadedResultsSchool").value = schoolId;
-        document.getElementById("uploadedResultsGrade").value = grade;
+        selectUploadedResultsGrade(grade);
         await viewUploads();
     }
 
@@ -1398,8 +1530,8 @@
             const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-            for (const originalRow of spreadsheetRows(sheet)) {
-                const row = normalizeSpreadsheetRow(originalRow);
+            for (const originalRow of spreadsheetRowsWithColumns(sheet)) {
+                const row = originalRow.data;
                 const assessmentNumber = getSpreadsheetValue(row, [
                     "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"
                 ]);
@@ -1428,6 +1560,7 @@
                 results.push({
                     learner_id: learnerKey,
                     assessment_period: upload.assessment_period,
+                    raw_columns: originalRow.columns,
                     mathematics: getSpreadsheetValue(row, ["mathematics", "math", "maths"]),
                     english: getSpreadsheetValue(row, ["english", "eng"]),
                     kiswahili: getSpreadsheetValue(row, ["kiswahili", "swahili"]),
@@ -1468,41 +1601,41 @@
 
         status.textContent = "Preparing printable results...";
 
-        const { data: schoolLearners, error: learnerError } = await supabaseClient
-            .from("learners")
-            .select("id, assessment_number, learner_name, grade, class")
-            .eq("school_id", schoolId)
-            .order("assessment_number", { ascending: true });
-
-        if (learnerError) {
-            status.textContent = `Could not load learners: ${learnerError.message}`;
+        let uploadedResults;
+        try {
+            uploadedResults = await loadUploadedGradeResults(schoolId, term, grade);
+        } catch (uploadError) {
+            status.textContent = `Could not read uploaded spreadsheets: ${uploadError.message}`;
+            report.innerHTML = "";
             return;
         }
 
-        let learners = (schoolLearners || []).filter((learner) =>
-            normalizeGrade(learner.grade) === normalizeGrade(grade)
-        );
-        let results;
+        const useUploadedRows = uploadedResults.results.length > 0;
+        let learners = uploadedResults.learners;
+        let results = uploadedResults.results;
 
-        if (!learners?.length) {
-            try {
-                const uploadedResults = await loadUploadedGradeResults(schoolId, term, grade);
-                learners = uploadedResults.learners;
-                results = uploadedResults.results;
-            } catch (fallbackError) {
-                status.textContent = `Could not read uploaded spreadsheets: ${fallbackError.message}`;
-                report.innerHTML = "";
+        if (!useUploadedRows) {
+            const { data: schoolLearners, error: learnerError } = await supabaseClient
+                .from("learners")
+                .select("id, assessment_number, learner_name, grade, class")
+                .eq("school_id", schoolId)
+                .order("assessment_number", { ascending: true });
+
+            if (learnerError) {
+                status.textContent = `Could not load learners: ${learnerError.message}`;
                 return;
             }
+
+            learners = (schoolLearners || []).filter((learner) =>
+                normalizeGrade(learner.grade) === normalizeGrade(grade)
+            );
 
             if (!learners.length) {
                 status.textContent = "No learners or matching Excel uploads were found for the selected school, term, and grade.";
                 report.innerHTML = "";
                 return;
             }
-        }
 
-        if (!results) {
             const learnerIds = learners.map((learner) => learner.id);
             const { data: savedResults, error: resultError } = await supabaseClient
                 .from("results")
@@ -1524,13 +1657,12 @@
         const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
         const resultMap = new Map();
         (results || []).forEach((result) => {
-            if (result.aggregate_points === null || result.aggregate_points === undefined || String(result.aggregate_points).trim() === "") {
+            if (!useUploadedRows && (result.aggregate_points === null || result.aggregate_points === undefined || String(result.aggregate_points).trim() === "")) {
                 result.aggregate_points = calculateAggregatePoints(normalizeSpreadsheetRow(result));
             }
-            if (result.aggregate_rubric === null || result.aggregate_rubric === undefined || String(result.aggregate_rubric).trim() === "") {
+            if (!useUploadedRows && (result.aggregate_rubric === null || result.aggregate_rubric === undefined || String(result.aggregate_rubric).trim() === "")) {
                 result.aggregate_rubric = calculateAggregateRubric(result.aggregate_points);
             }
-
             if (!resultMap.has(result.learner_id)) {
                 resultMap.set(result.learner_id, []);
             }
@@ -1555,7 +1687,21 @@
             ${learners.map((learner) => {
                 const learnerResults = [...(resultMap.get(learner.id) || [])]
                     .sort((first, second) => Number(first.assessment_period) - Number(second.assessment_period));
-                const resultRows = learnerResults.length
+                const resultRows = useUploadedRows
+                    ? learnerResults.map((result) => {
+                        const assessmentLabel = result.assessment_period
+                            ? `Assessment ${escapePrintText(result.assessment_period)}`
+                            : "Uploaded results";
+                        const columns = result.raw_columns || [];
+                        return `
+                            <div class="print-meta"><strong>${assessmentLabel}</strong></div>
+                            <table class="print-table">
+                                <thead><tr>${columns.map((column) => `<th>${escapePrintText(column.header)}</th>`).join("")}</tr></thead>
+                                <tbody><tr>${columns.map((column) => `<td>${escapePrintText(column.value ?? "")}</td>`).join("")}</tr></tbody>
+                            </table>
+                        `;
+                    }).join("")
+                    : learnerResults.length
                     ? learnerResults.map((result) => `
                         <tr>
                             <th>Assessment ${escapePrintText(result.assessment_period)}</th>
@@ -1572,15 +1718,17 @@
                             <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
                             <span>Term: <strong>${escapePrintText(term)}, ${new Date().getFullYear()}</strong></span>
                         </div>
-                        <table class="print-table">
-                            <thead>
-                                <tr>
-                                    <th>Assessment</th>
-                                    ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
-                                </tr>
-                            </thead>
-                            <tbody>${resultRows}</tbody>
-                        </table>
+                        ${useUploadedRows
+                            ? resultRows || "<p>No uploaded results for this learner.</p>"
+                            : `<table class="print-table">
+                                <thead>
+                                    <tr>
+                                        <th>Assessment</th>
+                                        ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
+                                    </tr>
+                                </thead>
+                                <tbody>${resultRows}</tbody>
+                            </table>`}
                     </section>
                 `;
             }).join("")}
@@ -1774,11 +1922,10 @@
                 gradeItem.appendChild(emptyRow);
                 list.appendChild(gradeItem);
             } else {
-
-            const details = document.createElement("details");
-            const summary = document.createElement("summary");
-            summary.textContent = `${gradeName} (${gradeUploads.length} file${gradeUploads.length === 1 ? "" : "s"})`;
-            details.appendChild(summary);
+            const gradeHeading = document.createElement("div");
+            gradeHeading.className = "selected-grade-heading";
+            gradeHeading.textContent = `${gradeName} (${gradeUploads.length} file${gradeUploads.length === 1 ? "" : "s"})`;
+            gradeItem.appendChild(gradeHeading);
 
             const termGroups = new Map();
             for (const upload of gradeUploads) {
@@ -1790,13 +1937,17 @@
             }
 
             const termList = document.createElement("ul");
-            termList.className = "school-upload-files";
+            termList.className = "term-upload-groups";
 
             for (const [termName, termUploads] of termGroups) {
-                const termHeading = document.createElement("li");
-                termHeading.className = "upload-term-heading";
-                termHeading.textContent = termName;
-                termList.appendChild(termHeading);
+                const termItem = document.createElement("li");
+                termItem.className = "term-upload-group";
+                const termDetails = document.createElement("details");
+                const termSummary = document.createElement("summary");
+                termSummary.textContent = `${termName} (${termUploads.length})`;
+                termDetails.appendChild(termSummary);
+                const termFiles = document.createElement("ul");
+                termFiles.className = "school-upload-files";
 
                 for (const upload of termUploads.sort((first, second) =>
                     (first.assessment_period || 99) - (second.assessment_period || 99))) {
@@ -1858,12 +2009,15 @@
                         item.appendChild(deleteButton);
                     }
 
-                    termList.appendChild(item);
+                    termFiles.appendChild(item);
                 }
+
+                termDetails.appendChild(termFiles);
+                termItem.appendChild(termDetails);
+                termList.appendChild(termItem);
             }
 
-            details.appendChild(termList);
-            gradeItem.appendChild(details);
+            gradeItem.appendChild(termList);
             list.appendChild(gradeItem);
         }
     }
@@ -2141,6 +2295,24 @@
                 renderSchools(event.target.value);
             });
         }
+
+        const uploadsSchool = document.getElementById("uploadedResultsSchool");
+        if (uploadsSchool) {
+            uploadsSchool.addEventListener("change", () => {
+                selectUploadedResultsGrade("");
+                document.querySelectorAll(".grade-choice").forEach((button) => {
+                    button.disabled = !uploadsSchool.value;
+                });
+                document.getElementById("uploadsList").innerHTML =
+                    "<li class=\"uploads-empty\">Choose a grade to continue.</li>";
+            });
+        }
+
+        document.querySelectorAll(".grade-choice").forEach((button) => {
+            button.addEventListener("click", () => {
+                selectUploadedResultsGrade(button.dataset.uploadGrade);
+            });
+        });
     });
 
 
