@@ -680,6 +680,26 @@
             background: #e5e7eb;
         }
 
+        .print-assessment-block {
+            margin-bottom: 12px;
+        }
+
+        .print-assessment-block .print-meta {
+            margin-bottom: 4px;
+        }
+
+        .did-not-undertake {
+            color: #6b7280;
+            font-style: italic;
+            text-align: center !important;
+        }
+
+        .did-not-undertake-row th,
+        .did-not-undertake-row td {
+            color: #6b7280;
+            font-style: italic;
+        }
+
         @media print {
             @page {
                 size: A4 landscape;
@@ -734,6 +754,23 @@
 
             .print-table th {
                 font-size: 7pt;
+            }
+
+            .print-assessment-block {
+                margin-bottom: 8px;
+            }
+
+            .did-not-undertake {
+                color: #4b5563;
+                font-style: italic;
+                text-align: center !important;
+                font-size: 7pt;
+            }
+
+            .did-not-undertake-row th,
+            .did-not-undertake-row td {
+                color: #4b5563;
+                font-style: italic;
             }
 
             .print-values {
@@ -1398,10 +1435,19 @@
 
     function spreadsheetRowsWithColumns(sheet) {
         const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
-        const headerIndex = matrix.findIndex((row) => row.some((cell) => {
+
+        // Find the header row: prefer a row with a known assessment-number column,
+        // but fall back to the first non-empty row so no file structure is rejected.
+        const knownIdKeys = ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber", "learnerno", "no", "sno", "serialno", "rollno"];
+        let headerIndex = matrix.findIndex((row) => row.some((cell) => {
             const header = String(cell ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-            return ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"].includes(header);
+            return knownIdKeys.includes(header);
         }));
+
+        // Fallback: use the first row that has at least 2 non-empty cells (likely a header row)
+        if (headerIndex < 0) {
+            headerIndex = matrix.findIndex((row) => row.filter((cell) => String(cell ?? "").trim() !== "").length >= 2);
+        }
 
         if (headerIndex < 0) {
             return [];
@@ -1410,10 +1456,13 @@
         const headers = matrix[headerIndex].map((header) => String(header ?? "").trim());
         const normalizedHeaders = headers.map((header) => header.toLowerCase().replace(/[^a-z0-9]/g, ""));
 
-        return matrix.slice(headerIndex + 1).map((values) => ({
-            columns: headers.map((header, index) => ({ header, value: values[index] })),
-            data: Object.fromEntries(normalizedHeaders.map((header, index) => [header, values[index]]))
-        }));
+        // Return all rows after the header that have at least one non-empty cell
+        return matrix.slice(headerIndex + 1)
+            .filter((values) => values.some((cell) => String(cell ?? "").trim() !== ""))
+            .map((values) => ({
+                columns: headers.map((header, index) => ({ header, value: values[index] ?? "" })),
+                data: Object.fromEntries(normalizedHeaders.map((header, index) => [header, values[index] ?? ""]))
+            }));
     }
 
 
@@ -1741,22 +1790,33 @@
             const workbook = XLSX.read(await response.arrayBuffer(), { type: "array" });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
+            // Read every data row from the spreadsheet — don't skip based on column names.
+            // Use a row index as a fallback unique key so no learner is ever dropped.
+            let rowIndex = 0;
             for (const originalRow of spreadsheetRowsWithColumns(sheet)) {
+                rowIndex++;
                 const row = originalRow.data;
+
+                // Try all plausible column names for the assessment/admission number.
                 const assessmentNumber = getSpreadsheetValue(row, [
-                    "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"
+                    "assessmentnumber", "assessmentno", "assessment", "admno",
+                    "admissionnumber", "indexnumber", "learnerno", "studentno",
+                    "no", "sno", "serialno", "rollno", "id", "regno", "registrationno"
                 ]);
-                // Use the row's own grade/term value only when it's explicitly present;
-                // otherwise fall back to the file-level grade/term (which already matched).
+
+                // Use row position as the learner key when no assessment number column exists,
+                // so that every learner in the file is always printed.
+                const learnerKey = assessmentNumber
+                    ? assessmentNumber.trim().toLowerCase()
+                    : `row-${upload.storage_path}-${rowIndex}`;
+
+                // Only apply grade/term filters when the row explicitly has those columns
+                // AND the values don't match — never skip a row just because a column is absent.
                 const rowGradeRaw = getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]);
                 const rowGrade = rowGradeRaw || uploadGrade;
                 const rowTermRaw = getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]);
                 const rowTerm = rowTermRaw || uploadTerm;
 
-                if (!assessmentNumber) {
-                    continue;
-                }
-                // Only filter by grade/term if the row has an explicit value that doesn't match.
                 if (rowGradeRaw && normalizeGrade(rowGradeRaw) !== normalizeGrade(grade)) {
                     continue;
                 }
@@ -1764,12 +1824,18 @@
                     continue;
                 }
 
-                const learnerKey = assessmentNumber.trim().toLowerCase();
+                // Try all plausible column names for learner name
+                const learnerName = getSpreadsheetValue(row, [
+                    "learnername", "studentname", "pupilname", "candidate", "name",
+                    "fullname", "names", "learner", "student", "pupil",
+                    "firstname", "surname", "lastname"
+                ]);
+
                 if (!learnersByAssessment.has(learnerKey)) {
                     learnersByAssessment.set(learnerKey, {
                         id: learnerKey,
-                        assessment_number: assessmentNumber,
-                        learner_name: getSpreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
+                        assessment_number: assessmentNumber || String(rowIndex),
+                        learner_name: learnerName,
                         grade: rowGrade,
                         class: getSpreadsheetValue(row, ["class", "classname", "stream", "classstream"])
                     });
@@ -1796,11 +1862,16 @@
             }
         }
 
+        // Preserve original spreadsheet order (the Map preserves insertion order)
+        // Collect all assessment periods found across all uploads for this term/grade
+        const allPeriods = [...new Set(results.map((r) => r.assessment_period))]
+            .filter((p) => p !== null && p !== undefined && String(p).trim() !== "")
+            .sort((a, b) => Number(a) - Number(b));
+
         return {
-            learners: [...learnersByAssessment.values()].sort((first, second) =>
-                String(first.assessment_number).localeCompare(String(second.assessment_number), undefined, { numeric: true })
-            ),
-            results
+            learners: [...learnersByAssessment.values()],
+            results,
+            allPeriods
         };
     }
 
@@ -1873,6 +1944,18 @@
         }
 
         const schoolName = document.getElementById("printSchool").selectedOptions[0]?.textContent || "School";
+
+        // Collect ALL assessment periods that exist for this term, so every learner's slip
+        // shows every assessment — attended or not.
+        let allPeriods;
+        if (useUploadedRows) {
+            allPeriods = uploadedResults.allPeriods;
+        } else {
+            allPeriods = [...new Set((results || []).map((r) => r.assessment_period))]
+                .filter((p) => p !== null && p !== undefined && String(p).trim() !== "")
+                .sort((a, b) => Number(a) - Number(b));
+        }
+
         const resultMap = new Map();
         (results || []).forEach((result) => {
             if (!useUploadedRows && (result.aggregate_points === null || result.aggregate_points === undefined || String(result.aggregate_points).trim() === "")) {
@@ -1882,10 +1965,26 @@
                 result.aggregate_rubric = calculateAggregateRubric(result.aggregate_points);
             }
             if (!resultMap.has(result.learner_id)) {
-                resultMap.set(result.learner_id, []);
+                resultMap.set(result.learner_id, new Map());
             }
-            resultMap.get(result.learner_id).push(result);
+            // Key by assessment_period so we can look up per-period quickly
+            const periodKey = String(result.assessment_period ?? "");
+            if (!resultMap.get(result.learner_id).has(periodKey)) {
+                resultMap.get(result.learner_id).set(periodKey, result);
+            }
         });
+
+        // For uploaded rows, also build a map of period → column headers
+        // (taken from whichever learner has data, so the header row is consistent)
+        const periodHeaders = new Map();
+        if (useUploadedRows) {
+            (results || []).forEach((result) => {
+                const periodKey = String(result.assessment_period ?? "");
+                if (!periodHeaders.has(periodKey) && result.raw_columns && result.raw_columns.length) {
+                    periodHeaders.set(periodKey, result.raw_columns.map((col) => col.header));
+                }
+            });
+        }
 
         const assessmentFields = [
             ["Mathematics", "mathematics"],
@@ -1901,56 +2000,85 @@
             ["Rubrics", "aggregate_rubric"]
         ];
 
-        report.innerHTML = `
-            ${learners.map((learner) => {
-                const learnerResults = [...(resultMap.get(learner.id) || [])]
-                    .sort((first, second) => Number(first.assessment_period) - Number(second.assessment_period));
-                const resultRows = useUploadedRows
-                    ? learnerResults.map((result) => {
-                        const assessmentLabel = result.assessment_period
-                            ? `Assessment ${escapePrintText(result.assessment_period)}`
-                            : "Uploaded results";
+        report.innerHTML = learners.map((learner) => {
+            const learnerPeriodMap = resultMap.get(learner.id) || new Map();
+
+            // Build one block per assessment period in the term
+            const periodsHtml = allPeriods.length
+                ? allPeriods.map((period) => {
+                    const periodKey = String(period ?? "");
+                    const result = learnerPeriodMap.get(periodKey);
+                    const label = periodKey ? `Assessment ${escapePrintText(periodKey)}` : "Assessment";
+
+                    if (!result) {
+                        // Learner did not sit this assessment
+                        if (useUploadedRows) {
+                            const headers = periodHeaders.get(periodKey) || [];
+                            return `
+                                <div class="print-assessment-block">
+                                    <div class="print-meta"><strong>${label}</strong></div>
+                                    ${headers.length
+                                        ? `<table class="print-table">
+                                            <thead><tr>${headers.map((h) => `<th>${escapePrintText(h)}</th>`).join("")}</tr></thead>
+                                            <tbody><tr><td colspan="${headers.length}" class="did-not-undertake">Didn&#39;t Undertake</td></tr></tbody>
+                                        </table>`
+                                        : `<p class="did-not-undertake">Didn&#39;t Undertake</p>`
+                                    }
+                                </div>`;
+                        } else {
+                            return `
+                                <tr class="did-not-undertake-row">
+                                    <th>${label}</th>
+                                    <td colspan="${assessmentFields.length}" class="did-not-undertake">Didn&#39;t Undertake</td>
+                                </tr>`;
+                        }
+                    }
+
+                    // Learner sat this assessment
+                    if (useUploadedRows) {
                         const columns = result.raw_columns || [];
                         return `
-                            <div class="print-meta"><strong>${assessmentLabel}</strong></div>
-                            <table class="print-table">
-                                <thead><tr>${columns.map((column) => `<th>${escapePrintText(column.header)}</th>`).join("")}</tr></thead>
-                                <tbody><tr>${columns.map((column) => `<td>${escapePrintText(column.value ?? "")}</td>`).join("")}</tr></tbody>
-                            </table>
-                        `;
-                    }).join("")
-                    : learnerResults.length
-                    ? learnerResults.map((result) => `
-                        <tr>
-                            <th>Assessment ${escapePrintText(result.assessment_period)}</th>
-                            ${assessmentFields.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
-                        </tr>
-                    `).join("")
-                    : `<tr><td colspan="${assessmentFields.length + 1}">No assessments uploaded for this term.</td></tr>`;
+                            <div class="print-assessment-block">
+                                <div class="print-meta"><strong>${label}</strong></div>
+                                <table class="print-table">
+                                    <thead><tr>${columns.map((col) => `<th>${escapePrintText(col.header)}</th>`).join("")}</tr></thead>
+                                    <tbody><tr>${columns.map((col) => `<td>${escapePrintText(col.value ?? "")}</td>`).join("")}</tr></tbody>
+                                </table>
+                            </div>`;
+                    } else {
+                        return `
+                            <tr>
+                                <th>${label}</th>
+                                ${assessmentFields.map(([, field]) => `<td>${escapePrintText(result[field] ?? "")}</td>`).join("")}
+                            </tr>`;
+                    }
+                }).join("")
+                : (useUploadedRows
+                    ? `<p class="did-not-undertake">No assessments recorded for this term.</p>`
+                    : `<tr><td colspan="${assessmentFields.length + 1}">No assessments uploaded for this term.</td></tr>`);
 
-                return `
-                    <section class="print-learner">
-                        <h1>${escapePrintText(learner.learner_name)}</h1>
-                        <h2>${escapePrintText(schoolName)} - ${escapePrintText(grade)} Results Slip</h2>
-                        <div class="print-meta">
-                            <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
-                            <span>Term: <strong>${escapePrintText(term)}, ${new Date().getFullYear()}</strong></span>
-                        </div>
-                        ${useUploadedRows
-                            ? resultRows || "<p>No uploaded results for this learner.</p>"
-                            : `<table class="print-table">
-                                <thead>
-                                    <tr>
-                                        <th>Assessment</th>
-                                        ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
-                                    </tr>
-                                </thead>
-                                <tbody>${resultRows}</tbody>
-                            </table>`}
-                    </section>
-                `;
-            }).join("")}
-        `;
+            return `
+                <section class="print-learner">
+                    <h1>${escapePrintText(learner.learner_name)}</h1>
+                    <h2>${escapePrintText(schoolName)} &mdash; ${escapePrintText(grade)} Results Slip</h2>
+                    <div class="print-meta">
+                        <span>Assessment Number: <strong>${escapePrintText(learner.assessment_number)}</strong></span>
+                        <span>Term: <strong>${escapePrintText(term)}, ${new Date().getFullYear()}</strong></span>
+                    </div>
+                    ${useUploadedRows
+                        ? periodsHtml
+                        : `<table class="print-table">
+                            <thead>
+                                <tr>
+                                    <th>Assessment</th>
+                                    ${assessmentFields.map(([label]) => `<th>${escapePrintText(label)}</th>`).join("")}
+                                </tr>
+                            </thead>
+                            <tbody>${periodsHtml}</tbody>
+                        </table>`
+                    }
+                </section>`;
+        }).join("");
 
         report.style.zoom = "";
         status.textContent = `${learners.length} learner results slips ready to print for ${term}.`;
