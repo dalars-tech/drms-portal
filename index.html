@@ -239,9 +239,9 @@
         }
 
         .uploaded-sheet-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px 20px;
             margin-bottom: 12px;
         }
 
@@ -353,6 +353,10 @@
             .download-button {
                 width: 100%;
                 text-align: center;
+            }
+
+            .uploaded-sheet-meta {
+                grid-template-columns: minmax(0, 1fr);
             }
         }
 
@@ -581,8 +585,10 @@
 
         <section id="uploadedSheetView" hidden aria-label="Uploaded spreadsheet results">
             <div class="uploaded-sheet-meta">
-                <p><strong>Grade:</strong> <span id="uploadedSheetGrade"></span></p>
+                <p><strong>School:</strong> <span id="uploadedSheetSchool"></span></p>
+                <p><strong>Learner:</strong> <span id="uploadedSheetLearner"></span></p>
                 <p><strong>Assessment:</strong> <span id="uploadedSheetAssessment"></span></p>
+                <p><strong>Term:</strong> <span id="uploadedSheetTerm"></span></p>
             </div>
             <div class="uploaded-sheet-scroll">
                 <table class="uploaded-sheet-table">
@@ -1059,7 +1065,7 @@ function mergeUploadedResult(indexedResult, uploadedResult) {
     return mergedResult;
 }
 
-function renderUploadedSheetRow(columns, grade, assessmentPeriod) {
+function renderUploadedSheetRow(columns, schoolName, learnerName, assessmentPeriod, term) {
     const headers = document.getElementById("uploadedSheetHeaders");
     const values = document.getElementById("uploadedSheetValues");
 
@@ -1078,8 +1084,14 @@ function renderUploadedSheetRow(columns, grade, assessmentPeriod) {
         values.appendChild(value);
     });
 
-    document.getElementById("uploadedSheetGrade").textContent = formatGradeDisplay(grade);
-    document.getElementById("uploadedSheetAssessment").textContent = assessmentPeriod ?? "";
+    const normalizedTerm = String(term ?? "").trim();
+    const termYear = normalizedTerm.match(/\b(?:19|20)\d{2}\b/)?.[0] || String(new Date().getFullYear());
+    document.getElementById("uploadedSheetSchool").textContent = schoolName || "School";
+    document.getElementById("uploadedSheetLearner").textContent = learnerName || "";
+    document.getElementById("uploadedSheetAssessment").textContent = assessmentPeriod
+        ? `Assessment ${assessmentPeriod}`
+        : "Not specified";
+    document.getElementById("uploadedSheetTerm").textContent = `${formatTermDisplay(normalizedTerm)}, ${termYear}`;
     document.getElementById("mappedResultView").hidden = true;
     document.getElementById("uploadedSheetView").hidden = false;
 }
@@ -1317,7 +1329,13 @@ async function searchResults() {
 
     data = fillAggregateFields(data);
     if (Array.isArray(data.rawColumns) && data.rawColumns.length) {
-        renderUploadedSheetRow(data.rawColumns, data.grade, data.assessment_period);
+        renderUploadedSheetRow(
+            data.rawColumns,
+            data.school_name,
+            data.learner_name,
+            data.assessment_period,
+            data.term || selectedTerm
+        );
     }
     message.textContent = "";
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
