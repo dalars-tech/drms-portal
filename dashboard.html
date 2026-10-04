@@ -1244,7 +1244,7 @@
             });
         });
 
-        if (uploadsSelect) {
+        if (uploadsSelect && !schools?.some((s) => s.id === uploadsSelect.value)) {
             uploadsSelect.value = "";
         }
 
@@ -1266,7 +1266,7 @@
 
         const { data: uploads, error } = await uploadQuery;
         if (error) {
-            choices.innerHTML = `<p class=\"uploads-empty\">Could not load schools with uploads: ${error.message}</p>`;
+            choices.innerHTML = `<p class="uploads-empty">Could not load schools with uploads: ${error.message}</p>`;
             return;
         }
 
@@ -1289,12 +1289,13 @@
             return;
         }
 
+        const currentSelectedSchool = document.getElementById("uploadedResultsSchool")?.value;
         schoolsWithUploads.forEach((school) => {
             const choice = document.createElement("button");
             choice.type = "button";
             choice.className = "uploaded-school-choice";
             choice.dataset.uploadSchool = school.id;
-            choice.setAttribute("aria-pressed", "false");
+            choice.setAttribute("aria-pressed", String(Boolean(currentSelectedSchool && school.id === currentSelectedSchool)));
 
             const schoolName = document.createElement("span");
             schoolName.textContent = school.school_name;
@@ -1613,7 +1614,7 @@
             return;
         }
 
-        const { error: recordError } = await supabaseClient
+        let { error: recordError } = await supabaseClient
             .from("result_uploads")
             .insert({
                 file_name: file.name,
@@ -1625,6 +1626,19 @@
                 grade,
                 assessment_period: assessmentPeriod
             });
+
+        if (recordError && /assessment_period|term|grade|schema cache|does not exist/i.test(recordError.message)) {
+            const legacyInsert = await supabaseClient
+                .from("result_uploads")
+                .insert({
+                    file_name: file.name,
+                    storage_path: filePath,
+                    file_type: file.type,
+                    school_id: schoolId,
+                    uploaded_by: session.user.id
+                });
+            recordError = legacyInsert.error;
+        }
 
         if (recordError) {
             await supabaseClient.storage.from("results").remove([filePath]);
@@ -1649,6 +1663,7 @@
 
         uploadButton.disabled = false;
         input.value = "";
+        await loadUploadSchools(isOwner);
         selectUploadedResultsSchool(schoolId);
         selectUploadedResultsGrade(grade);
         document.getElementById("uploadedResultsTerm").value = term;
@@ -2011,7 +2026,8 @@
 
         list.innerHTML = "<li>Loading uploads...</li>";
 
-        const {
+        try {
+            const {
             data: { session }
         } = await supabaseClient.auth.getSession();
 
@@ -2027,7 +2043,7 @@
             .order("school_name", { ascending: true });
 
         if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
-            schoolQuery = schoolQuery.eq("administrator_email", session.user.email?.toLowerCase());
+            schoolQuery = schoolQuery.ilike("administrator_email", session.user.email);
         }
 
         const { data: schools, error: schoolsError } = await schoolQuery;
@@ -2037,12 +2053,8 @@
             return;
         }
 
-        const selectedSchool = (schools || []).find((school) => school.id === schoolId);
-
-        if (!selectedSchool) {
-            list.innerHTML = "<li class=\"uploads-empty\">School not found or you do not have access to it.</li>";
-            return;
-        }
+        const selectedSchool = (schools || []).find((school) => school.id === schoolId)
+            || { id: schoolId, school_name: document.querySelector(`.uploaded-school-choice[data-upload-school="${schoolId}"] span`)?.textContent || "School" };
 
         let uploadQuery = supabaseClient
             .from("result_uploads")
@@ -2122,8 +2134,8 @@
         schoolHeading.textContent = selectedSchool.school_name;
         list.appendChild(schoolHeading);
 
-        const gradeName = document.getElementById("uploadedResultsGrade").selectedOptions[0]?.textContent || gradeValue;
-        const gradeUploads = uploadsByGrade.get(gradeKey(gradeValue)) || [];
+        const gradeName = gradeValue;
+        const gradeUploads = uploads || [];
         if (!gradeUploads.length) {
             const emptyMessage = document.createElement("li");
             emptyMessage.className = "uploads-empty";
@@ -2158,6 +2170,7 @@
                 const termItem = document.createElement("li");
                 termItem.className = "term-upload-group";
                 const termDetails = document.createElement("details");
+                termDetails.open = true;
                 const termSummary = document.createElement("summary");
                 termSummary.textContent = `${termName} (${termUploads.length})`;
                 termDetails.appendChild(termSummary);
@@ -2234,6 +2247,10 @@
 
             gradeItem.appendChild(termList);
             list.appendChild(gradeItem);
+        } catch (error) {
+            console.error("Error viewing uploads:", error);
+            list.innerHTML = `<li class="uploads-empty">Could not load uploads: ${error.message}</li>`;
+        }
     }
 
 
