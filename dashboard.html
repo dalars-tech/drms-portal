@@ -290,9 +290,28 @@
 
         .uploads-wizard {
             display: grid;
-            grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.8fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-areas:
+                "school grade grade grade"
+                "term term assessment assessment";
             gap: 18px;
             margin-bottom: 12px;
+        }
+
+        .uploads-school-step {
+            grid-area: school;
+        }
+
+        .uploads-grade-step {
+            grid-area: grade;
+        }
+
+        .uploads-term-step {
+            grid-area: term;
+        }
+
+        .uploads-assessment-step {
+            grid-area: assessment;
         }
 
         .uploads-step {
@@ -358,10 +377,6 @@
         .grade-choice:disabled {
             cursor: not-allowed;
             opacity: 0.45;
-        }
-
-        .view-uploads-button {
-            margin-top: 4px;
         }
 
         .uploads-list > li {
@@ -722,6 +737,11 @@
 
             .uploads-wizard {
                 grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "school"
+                    "grade"
+                    "term"
+                    "assessment";
                 gap: 14px;
             }
 
@@ -824,14 +844,14 @@
                 <h2>📁 Uploaded Results</h2>
 
                 <div class="uploads-wizard">
-                    <section class="uploads-step">
+                    <section class="uploads-step uploads-school-step">
                         <h3><span class="uploads-step-number">1</span>School</h3>
                         <select id="uploadedResultsSchool" required>
                             <option value="">Select school</option>
                         </select>
                     </section>
 
-                    <section class="uploads-step">
+                    <section class="uploads-step uploads-grade-step">
                         <h3><span class="uploads-step-number">2</span>Grade</h3>
                         <div class="grade-choice-groups" role="group" aria-label="Choose grade">
                             <div class="grade-choice-group">
@@ -871,14 +891,28 @@
                         </div>
                         <input id="uploadedResultsGrade" type="hidden" value="">
                     </section>
+                    <section class="uploads-step uploads-term-step">
+                        <h3><span class="uploads-step-number">3</span>Term</h3>
+                        <select id="uploadedResultsTerm" required disabled>
+                            <option value="">Select term</option>
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3">Term 3</option>
+                        </select>
+                    </section>
+                    <section class="uploads-step uploads-assessment-step">
+                        <h3><span class="uploads-step-number">4</span>Assessment</h3>
+                        <select id="uploadedResultsAssessment" required disabled>
+                            <option value="">Select assessment</option>
+                            <option value="1">Assessment 1</option>
+                            <option value="2">Assessment 2</option>
+                            <option value="3">Assessment 3</option>
+                        </select>
+                    </section>
                 </div>
 
-                <button id="viewUploadsButton" class="view-uploads-button" type="button" onclick="viewUploads()" disabled>
-                    View Uploads
-                </button>
-
                 <ul id="uploadsList" class="uploads-list">
-                    <li class="uploads-empty">Choose a school and grade to view uploads.</li>
+                    <li class="uploads-empty">Choose a school, grade, term, and assessment.</li>
                 </ul>
             </div>
 
@@ -1076,14 +1110,33 @@
 
 
     function selectUploadedResultsGrade(grade) {
-        document.getElementById("uploadedResultsGrade").value = grade;
+        const gradeInput = document.getElementById("uploadedResultsGrade");
+        const gradeChanged = gradeInput.value !== grade;
+        gradeInput.value = grade;
+
+        if (gradeChanged) {
+            document.getElementById("uploadedResultsTerm").value = "";
+            document.getElementById("uploadedResultsAssessment").value = "";
+        }
+
         document.querySelectorAll(".grade-choice").forEach((button) => {
             button.setAttribute("aria-pressed", String(button.dataset.uploadGrade === grade));
         });
 
-        document.getElementById("viewUploadsButton").disabled = !(
-            document.getElementById("uploadedResultsSchool").value && grade
-        );
+        updateUploadedResultsWizard();
+    }
+
+
+    function updateUploadedResultsWizard() {
+        const hasSchool = Boolean(document.getElementById("uploadedResultsSchool").value);
+        const hasGrade = Boolean(document.getElementById("uploadedResultsGrade").value);
+        const hasTerm = Boolean(document.getElementById("uploadedResultsTerm").value);
+
+        document.querySelectorAll(".grade-choice").forEach((button) => {
+            button.disabled = !hasSchool;
+        });
+        document.getElementById("uploadedResultsTerm").disabled = !hasGrade;
+        document.getElementById("uploadedResultsAssessment").disabled = !hasTerm;
     }
 
 
@@ -1249,6 +1302,24 @@
         return {
             grade: gradeMatch ? `Grade ${gradeMatch[1]}` : "",
             class: classMatch ? classMatch[1] : ""
+        };
+    }
+
+
+    function uploadPathMetadata(storagePath) {
+        const segments = String(storagePath || "").split("/");
+        const assessmentIndex = segments.findIndex((segment) => /^assessment-\d+$/i.test(segment));
+
+        if (assessmentIndex < 2) {
+            return { grade: "", term: "", assessmentPeriod: null };
+        }
+
+        const grade = segments[assessmentIndex - 1].replace(/-/g, " ");
+        const term = segments[assessmentIndex - 2].replace(/-/g, " ");
+        return {
+            grade,
+            term: /^term\s*/i.test(term) ? term.replace(/^term\s*/i, "Term ") : term,
+            assessmentPeriod: Number(segments[assessmentIndex].match(/\d+/)?.[0]) || null
         };
     }
 
@@ -1458,6 +1529,9 @@
         input.value = "";
         document.getElementById("uploadedResultsSchool").value = schoolId;
         selectUploadedResultsGrade(grade);
+        document.getElementById("uploadedResultsTerm").value = term;
+        document.getElementById("uploadedResultsAssessment").value = String(assessmentPeriod);
+        updateUploadedResultsWizard();
         await viewUploads();
     }
 
@@ -1805,9 +1879,11 @@
         const list = document.getElementById("uploadsList");
         const schoolId = document.getElementById("uploadedResultsSchool").value;
         const gradeValue = document.getElementById("uploadedResultsGrade").value;
+        const termValue = document.getElementById("uploadedResultsTerm").value;
+        const assessmentValue = Number(document.getElementById("uploadedResultsAssessment").value);
 
-        if (!schoolId || !gradeValue) {
-            list.innerHTML = "<li class=\"uploads-empty\">Select a school and grade, then choose View Uploads.</li>";
+        if (!schoolId || !gradeValue || !termValue || !assessmentValue) {
+            list.innerHTML = "<li class=\"uploads-empty\">Choose a school, grade, term, and assessment.</li>";
             return;
         }
 
@@ -1849,7 +1925,6 @@
         let uploadQuery = supabaseClient
             .from("result_uploads")
             .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id, term, grade, assessment_period")
-            .eq("school_id", schoolId)
             .order("uploaded_at", { ascending: false });
 
         if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
@@ -1862,7 +1937,6 @@
             let legacyUploadQuery = supabaseClient
                 .from("result_uploads")
                 .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id")
-                .eq("school_id", schoolId)
                 .order("uploaded_at", { ascending: false });
 
             if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
@@ -1879,6 +1953,12 @@
             return;
         }
 
+        uploads = (uploads || []).filter((upload) => {
+            const pathParts = String(upload.storage_path || "").split("/");
+            return upload.school_id === schoolId
+                || (!upload.school_id && pathParts.includes(schoolId));
+        });
+
         list.innerHTML = "";
         const gradeLabels = ["PP1", "PP2", ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
         const gradeKey = (value) => {
@@ -1890,10 +1970,25 @@
             const number = normalized.match(/^(?:grade|grd|g)?0*(\d+)$/)?.[1];
             return number ? `grade${Number(number)}` : normalized;
         };
+        uploads = uploads.filter((upload) => {
+            const pathMetadata = uploadPathMetadata(upload.storage_path);
+            const matchesSchool = upload.school_id === schoolId
+                || (!upload.school_id && String(upload.storage_path || "").split("/").includes(schoolId));
+            const uploadGrade = upload.grade || fileMetadata(upload.file_name).grade || pathMetadata.grade;
+            const uploadTerm = upload.term || pathMetadata.term;
+            const uploadAssessment = upload.assessment_period ?? pathMetadata.assessmentPeriod;
+
+            return matchesSchool
+                && gradeKey(uploadGrade) === gradeKey(gradeValue)
+                && normalizeTerm(uploadTerm) === normalizeTerm(termValue)
+                && Number(uploadAssessment) === assessmentValue;
+        });
+
         const uploadsByGrade = new Map(gradeLabels.map((grade) => [gradeKey(grade), []]));
 
         for (const upload of uploads || []) {
-            const key = gradeKey(upload.grade || fileMetadata(upload.file_name).grade);
+            const pathMetadata = uploadPathMetadata(upload.storage_path);
+            const key = gradeKey(upload.grade || fileMetadata(upload.file_name).grade || pathMetadata.grade);
             const gradeUploads = uploadsByGrade.get(key);
             if (gradeUploads) {
                 gradeUploads.push(upload);
@@ -1907,21 +2002,16 @@
 
         const gradeName = document.getElementById("uploadedResultsGrade").selectedOptions[0]?.textContent || gradeValue;
         const gradeUploads = uploadsByGrade.get(gradeKey(gradeValue)) || [];
+        if (!gradeUploads.length) {
+            const emptyMessage = document.createElement("li");
+            emptyMessage.className = "uploads-empty";
+            emptyMessage.textContent = `No uploads found for ${gradeName}, ${termValue}, Assessment ${assessmentValue}.`;
+            list.appendChild(emptyMessage);
+            return;
+        }
+
             const gradeItem = document.createElement("li");
             gradeItem.className = "grade-upload-row";
-
-            if (!gradeUploads.length) {
-                const emptyRow = document.createElement("div");
-                emptyRow.className = "school-upload-file";
-                const name = document.createElement("strong");
-                name.textContent = gradeName;
-                const empty = document.createElement("span");
-                empty.className = "grade-empty";
-                empty.textContent = "Empty";
-                emptyRow.append(name, empty);
-                gradeItem.appendChild(emptyRow);
-                list.appendChild(gradeItem);
-            } else {
             const gradeHeading = document.createElement("div");
             gradeHeading.className = "selected-grade-heading";
             gradeHeading.textContent = `${gradeName} (${gradeUploads.length} file${gradeUploads.length === 1 ? "" : "s"})`;
@@ -1929,7 +2019,10 @@
 
             const termGroups = new Map();
             for (const upload of gradeUploads) {
-                const termName = upload.term || "Term not set";
+                    const termName = upload.term
+                        || fileMetadata(upload.file_name).term
+                        || uploadPathMetadata(upload.storage_path).term
+                        || "Term not set";
                 if (!termGroups.has(termName)) {
                     termGroups.set(termName, []);
                 }
@@ -2019,7 +2112,6 @@
 
             gradeItem.appendChild(termList);
             list.appendChild(gradeItem);
-        }
     }
 
 
@@ -2300,17 +2392,34 @@
         if (uploadsSchool) {
             uploadsSchool.addEventListener("change", () => {
                 selectUploadedResultsGrade("");
-                document.querySelectorAll(".grade-choice").forEach((button) => {
-                    button.disabled = !uploadsSchool.value;
-                });
                 document.getElementById("uploadsList").innerHTML =
                     "<li class=\"uploads-empty\">Choose a grade to continue.</li>";
+            });
+        }
+
+        const uploadsTerm = document.getElementById("uploadedResultsTerm");
+        if (uploadsTerm) {
+            uploadsTerm.addEventListener("change", () => {
+                document.getElementById("uploadedResultsAssessment").value = "";
+                updateUploadedResultsWizard();
+                document.getElementById("uploadsList").innerHTML =
+                    "<li class=\"uploads-empty\">Choose an assessment to continue.</li>";
+            });
+        }
+
+        const uploadsAssessment = document.getElementById("uploadedResultsAssessment");
+        if (uploadsAssessment) {
+            uploadsAssessment.addEventListener("change", () => {
+                updateUploadedResultsWizard();
+                viewUploads();
             });
         }
 
         document.querySelectorAll(".grade-choice").forEach((button) => {
             button.addEventListener("click", () => {
                 selectUploadedResultsGrade(button.dataset.uploadGrade);
+                document.getElementById("uploadsList").innerHTML =
+                    "<li class=\"uploads-empty\">Choose a term to continue.</li>";
             });
         });
     });
