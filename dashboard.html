@@ -1746,14 +1746,21 @@
                 const assessmentNumber = getSpreadsheetValue(row, [
                     "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"
                 ]);
-                const rowGrade = getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"])
-                    || uploadGrade;
-                const rowTerm = getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"])
-                    || uploadTerm;
+                // Use the row's own grade/term value only when it's explicitly present;
+                // otherwise fall back to the file-level grade/term (which already matched).
+                const rowGradeRaw = getSpreadsheetValue(row, ["grade", "gradename", "gradelevel", "level", "form", "classlevel"]);
+                const rowGrade = rowGradeRaw || uploadGrade;
+                const rowTermRaw = getSpreadsheetValue(row, ["term", "schoolterm", "academicterm", "examterm", "period"]);
+                const rowTerm = rowTermRaw || uploadTerm;
 
-                if (!assessmentNumber
-                    || normalizeGrade(rowGrade) !== normalizeGrade(grade)
-                    || (rowTerm && normalizeTerm(rowTerm) !== normalizeTerm(term))) {
+                if (!assessmentNumber) {
+                    continue;
+                }
+                // Only filter by grade/term if the row has an explicit value that doesn't match.
+                if (rowGradeRaw && normalizeGrade(rowGradeRaw) !== normalizeGrade(grade)) {
+                    continue;
+                }
+                if (rowTermRaw && normalizeTerm(rowTermRaw) !== normalizeTerm(term)) {
                     continue;
                 }
 
