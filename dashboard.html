@@ -302,6 +302,38 @@
             grid-area: school;
         }
 
+        .uploaded-school-choices {
+            display: grid;
+            gap: 8px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .uploaded-school-choice {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            padding: 9px 11px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #1f2937;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+
+        .uploaded-school-choice[aria-pressed="true"] {
+            border-color: #0f766e;
+            background: #f0fdfa;
+            color: #115e59;
+        }
+
+        .uploaded-school-count {
+            color: #6b7280;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
         .uploads-grade-step {
             grid-area: grade;
         }
@@ -846,9 +878,10 @@
                 <div class="uploads-wizard">
                     <section class="uploads-step uploads-school-step">
                         <h3><span class="uploads-step-number">1</span>School</h3>
-                        <select id="uploadedResultsSchool" required>
-                            <option value="">Select school</option>
-                        </select>
+                        <div id="uploadedSchoolChoices" class="uploaded-school-choices" role="list" aria-label="Schools with uploaded results">
+                            <p class="uploads-empty">Loading schools with uploads...</p>
+                        </div>
+                        <input id="uploadedResultsSchool" type="hidden" value="">
                     </section>
 
                     <section class="uploads-step uploads-grade-step">
@@ -1127,6 +1160,18 @@
     }
 
 
+    function selectUploadedResultsSchool(schoolId) {
+        document.getElementById("uploadedResultsSchool").value = schoolId;
+        document.querySelectorAll(".uploaded-school-choice").forEach((button) => {
+            button.setAttribute("aria-pressed", String(button.dataset.uploadSchool === schoolId));
+        });
+        selectUploadedResultsGrade("");
+        document.getElementById("uploadsList").innerHTML = schoolId
+            ? "<li class=\"uploads-empty\">Choose a grade to continue.</li>"
+            : "<li class=\"uploads-empty\">Choose a school with uploaded results.</li>";
+    }
+
+
     function updateUploadedResultsWizard() {
         const hasSchool = Boolean(document.getElementById("uploadedResultsSchool").value);
         const hasGrade = Boolean(document.getElementById("uploadedResultsGrade").value);
@@ -1144,8 +1189,9 @@
         const select = document.getElementById("uploadSchool");
         const printSelect = document.getElementById("printSchool");
         const uploadsSelect = document.getElementById("uploadedResultsSchool");
+        const uploadsSchoolList = document.getElementById("uploadedSchoolChoices");
 
-        if (!select && !printSelect && !uploadsSelect) {
+        if (!select && !printSelect && !uploadsSelect && !uploadsSchoolList) {
             return;
         }
 
@@ -1169,13 +1215,16 @@
         const { data: schools, error } = await schoolQuery;
 
         if (error) {
-            [select, printSelect, uploadsSelect].filter(Boolean).forEach((schoolSelect) => {
+            [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
                 schoolSelect.innerHTML = "<option value=\"\">Could not load schools</option>";
             });
+            if (uploadsSchoolList) {
+                uploadsSchoolList.innerHTML = "<p class=\"uploads-empty\">Could not load schools.</p>";
+            }
             return;
         }
 
-        [select, printSelect, uploadsSelect].filter(Boolean).forEach((schoolSelect) => {
+        [select, printSelect].filter(Boolean).forEach((schoolSelect) => {
             schoolSelect.innerHTML = "<option value=\"\">Select school</option>";
             (schools || []).forEach((school) => {
                 const option = document.createElement("option");
@@ -1183,6 +1232,69 @@
                 option.textContent = schoolLabel(school);
                 schoolSelect.appendChild(option);
             });
+        });
+
+        if (uploadsSelect) {
+            uploadsSelect.value = "";
+        }
+
+        if (uploadsSchoolList) {
+            await loadSchoolsWithUploads(schools || [], isOwner, session.user.id);
+        }
+    }
+
+
+    async function loadSchoolsWithUploads(schools, isOwner, userId) {
+        const choices = document.getElementById("uploadedSchoolChoices");
+        let uploadQuery = supabaseClient
+            .from("result_uploads")
+            .select("school_id, storage_path");
+
+        if (!isOwner) {
+            uploadQuery = uploadQuery.eq("uploaded_by", userId);
+        }
+
+        const { data: uploads, error } = await uploadQuery;
+        if (error) {
+            choices.innerHTML = `<p class=\"uploads-empty\">Could not load schools with uploads: ${error.message}</p>`;
+            return;
+        }
+
+        const uploadCounts = new Map();
+        for (const upload of uploads || []) {
+            const schoolId = upload.school_id || String(upload.storage_path || "").split("/")[1];
+            if (schoolId) {
+                uploadCounts.set(schoolId, (uploadCounts.get(schoolId) || 0) + 1);
+            }
+        }
+
+        const schoolsWithUploads = schools.filter((school) => uploadCounts.has(school.id));
+        choices.replaceChildren();
+
+        if (!schoolsWithUploads.length) {
+            const emptyMessage = document.createElement("p");
+            emptyMessage.className = "uploads-empty";
+            emptyMessage.textContent = "No schools have uploaded results yet.";
+            choices.appendChild(emptyMessage);
+            return;
+        }
+
+        schoolsWithUploads.forEach((school) => {
+            const choice = document.createElement("button");
+            choice.type = "button";
+            choice.className = "uploaded-school-choice";
+            choice.dataset.uploadSchool = school.id;
+            choice.setAttribute("aria-pressed", "false");
+
+            const schoolName = document.createElement("span");
+            schoolName.textContent = school.school_name;
+            const count = uploadCounts.get(school.id);
+            const fileCount = document.createElement("span");
+            fileCount.className = "uploaded-school-count";
+            fileCount.textContent = `${count} upload${count === 1 ? "" : "s"}`;
+
+            choice.append(schoolName, fileCount);
+            choices.appendChild(choice);
         });
     }
 
@@ -1527,7 +1639,7 @@
 
         uploadButton.disabled = false;
         input.value = "";
-        document.getElementById("uploadedResultsSchool").value = schoolId;
+        selectUploadedResultsSchool(schoolId);
         selectUploadedResultsGrade(grade);
         document.getElementById("uploadedResultsTerm").value = term;
         document.getElementById("uploadedResultsAssessment").value = String(assessmentPeriod);
@@ -2388,12 +2500,13 @@
             });
         }
 
-        const uploadsSchool = document.getElementById("uploadedResultsSchool");
-        if (uploadsSchool) {
-            uploadsSchool.addEventListener("change", () => {
-                selectUploadedResultsGrade("");
-                document.getElementById("uploadsList").innerHTML =
-                    "<li class=\"uploads-empty\">Choose a grade to continue.</li>";
+        const uploadsSchoolList = document.getElementById("uploadedSchoolChoices");
+        if (uploadsSchoolList) {
+            uploadsSchoolList.addEventListener("click", (event) => {
+                const choice = event.target.closest(".uploaded-school-choice");
+                if (choice) {
+                    selectUploadedResultsSchool(choice.dataset.uploadSchool);
+                }
             });
         }
 
