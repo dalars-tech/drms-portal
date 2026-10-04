@@ -234,7 +234,7 @@
 
         .uploaded-sheet-scroll {
             max-width: 100%;
-            overflow-x: hidden;
+            overflow-x: auto;
             border: 1px solid #dbe2ea;
         }
 
@@ -250,8 +250,9 @@
         }
 
         .uploaded-sheet-table {
-            width: 100%;
-            table-layout: fixed;
+            width: max-content;
+            min-width: 100%;
+            table-layout: auto;
             border-collapse: collapse;
             font-size: 14px;
         }
@@ -264,6 +265,12 @@
             white-space: normal;
             overflow-wrap: anywhere;
             vertical-align: top;
+        }
+
+        .uploaded-sheet-learner-name {
+            min-width: 180px;
+            white-space: nowrap !important;
+            overflow-wrap: normal !important;
         }
 
         .uploaded-sheet-table th {
@@ -504,12 +511,12 @@
 
         <div id="mappedResultView">
         <div class="result-row">
-            <strong>Assessment Number</strong>
+            <strong>Assessment No.</strong>
             <span id="resultAssessment"></span>
         </div>
 
         <div class="result-row">
-            <strong>Learner's Name</strong>
+            <strong>Learner Name</strong>
             <span id="resultName"></span>
         </div>
 
@@ -526,27 +533,27 @@
         <br>
 
         <div class="result-row">
-            <strong>Mathematics</strong>
+            <strong>Maths</strong>
             <span id="mathematics"></span>
         </div>
 
         <div class="result-row">
-            <strong>English</strong>
+            <strong>Eng</strong>
             <span id="english"></span>
         </div>
 
         <div class="result-row">
-            <strong>Kiswahili</strong>
+            <strong>Kisw</strong>
             <span id="kiswahili"></span>
         </div>
 
         <div class="result-row">
-            <strong>Integrated Science</strong>
+            <strong>Int. Sci.</strong>
             <span id="integratedScience"></span>
         </div>
 
         <div class="result-row">
-            <strong>Social Studies</strong>
+            <strong>SST</strong>
             <span id="socialStudies"></span>
         </div>
 
@@ -556,28 +563,28 @@
         </div>
 
         <div class="result-row">
-            <strong>Agriculture</strong>
+            <strong>Agric</strong>
             <span id="agriculture"></span>
         </div>
 
         <div class="result-row">
-            <strong>Creative Arts and Sports</strong>
+            <strong>C.A. &amp; Sports</strong>
             <span id="creativeArtsSports"></span>
         </div>
 
         <div class="result-row">
-            <strong>Pre-Technical Studies</strong>
+            <strong>Pre-Tech</strong>
             <span id="preTechnical"></span>
         </div>
 
         <div class="aggregate">
             <div class="result-row">
-                <strong>Aggregate Points</strong>
+                <strong>AGG</strong>
                 <span id="aggregatePoints"></span>
             </div>
 
             <div class="result-row">
-                <strong>Rubrics</strong>
+                <strong>RUB</strong>
                 <span id="aggregateRubrics"></span>
             </div>
         </div>
@@ -1078,6 +1085,10 @@ function renderUploadedSheetRow(columns, schoolName, learnerName, assessmentPeri
         headers.appendChild(header);
 
         const value = document.createElement("td");
+        const normalizedHeader = column.header.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (["learnername", "studentname", "pupilname", "candidate", "name"].includes(normalizedHeader)) {
+            value.className = "uploaded-sheet-learner-name";
+        }
         value.textContent = column.value === null || column.value === undefined
             ? ""
             : String(column.value);
