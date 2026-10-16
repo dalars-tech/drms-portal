@@ -1919,8 +1919,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="enrollClass">Class / Stream (Optional)</label>
-                            <input id="enrollClass" type="text" placeholder="e.g. Stream Blue, 8A">
+                            <label for="enrollClass">Class / Stream <span style="color: #ef4444;">*</span></label>
+                            <input id="enrollClass" type="text" placeholder="e.g. Stream Blue, 8A" required>
                         </div>
 
                         <div class="form-group">
@@ -2645,6 +2645,52 @@
 
     // Authentication Guard & Role-Based Workspaces
     async function checkLogin() {
+        // ──────────────────────────────────────────────────────
+        // TEACHER ACCESS CODE SESSION (no Supabase Auth needed)
+        // ──────────────────────────────────────────────────────
+        const teacherCodeSession = JSON.parse(sessionStorage.getItem("drms_teacher_session") || "null");
+        if (teacherCodeSession && teacherCodeSession.role === "teacher" && teacherCodeSession.school_id) {
+            currentUserRole = "teacher";
+            currentUserSchool = { id: teacherCodeSession.school_id, school_name: teacherCodeSession.school_name };
+            currentUserTeacherProfile = {
+                teacher_name: teacherCodeSession.teacher_name,
+                subject: teacherCodeSession.subject,
+                school_id: teacherCodeSession.school_id
+            };
+
+            // Set UI labels
+            const displayName = teacherCodeSession.teacher_name || "Teacher";
+            const welcomeP = document.querySelector(".welcome p");
+            if (welcomeP) welcomeP.textContent = "Welcome, " + displayName;
+            const userDisplayName = document.getElementById("userDisplayName");
+            if (userDisplayName) userDisplayName.textContent = displayName;
+            const userAvatar = document.getElementById("userAvatar");
+            if (userAvatar) {
+                const initials = displayName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
+                userAvatar.textContent = initials || "TR";
+            }
+            const subjectLabel = teacherCodeSession.subject && teacherCodeSession.subject !== "all"
+                ? teacherCodeSession.subject.replace(/_/g, " ").toUpperCase()
+                : "All Subjects";
+            const accountRole = document.getElementById("accountRole");
+            if (accountRole) accountRole.textContent = `Teacher: ${subjectLabel}`;
+            const assignedSchoolEl = document.getElementById("assignedSchool");
+            if (assignedSchoolEl) assignedSchoolEl.textContent = "School: " + (teacherCodeSession.school_name || "Assigned");
+            const kpiScopeText = document.getElementById("kpiScopeText");
+            if (kpiScopeText) kpiScopeText.textContent = teacherCodeSession.school_name || "My School";
+
+            // Apply teacher code restrictions — only Subject Scores & Learner Enrollment visible
+            applyTeacherCodeRestrictions(teacherCodeSession);
+
+            // Populate school dropdowns with just their school
+            await loadSchoolDropdownsForCodeTeacher(teacherCodeSession);
+            await updateLearnerCountKPI();
+            return;
+        }
+
+        // ──────────────────────────────────────────────────────
+        // STANDARD SUPABASE AUTH SESSION
+        // ──────────────────────────────────────────────────────
         const {
             data: { session }
         } = await supabaseClient.auth.getSession();
@@ -2768,13 +2814,18 @@
 
         // UI Role Customization
         if (currentUserRole === "teacher") {
-            // Subject Teacher: access to Marksheets, Enrolled Learners, Reports, Zeraki Upload
+            // Subject Teacher (auth-based): access to Marksheets, Enrolled Learners, Reports, Zeraki Upload
             const schoolCard = document.getElementById("schoolManagementCard");
             if (schoolCard) schoolCard.hidden = true;
             const schoolsTab = document.getElementById("tabBtnSchools");
             if (schoolsTab) schoolsTab.hidden = true;
             const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
             if (btnSchoolsHeader) btnSchoolsHeader.hidden = true;
+            // Hide Print and Repository tabs for auth-based teachers too
+            const tabPrint = document.getElementById("tabBtnPrint");
+            if (tabPrint) tabPrint.hidden = true;
+            const tabRepo = document.getElementById("tabBtnRepository");
+            if (tabRepo) tabRepo.hidden = true;
 
             // Auto-select subject if assigned
             if (currentUserTeacherProfile?.subject && currentUserTeacherProfile.subject !== "all") {
@@ -2815,8 +2866,9 @@
     }
 
     async function logout() {
-        await supabaseClient.auth.signOut();
-        window.location.href = "index.html";
+        sessionStorage.removeItem("drms_teacher_session");
+        try { await supabaseClient.auth.signOut(); } catch {}
+        window.location.href = "Admin.html";
     }
 
     async function updateLearnerCountKPI() {
@@ -4797,7 +4849,74 @@
         switchPortalTab('schools');
     }
 
+    // =========================================================================
+    // TEACHER ACCESS CODE SESSION: Restricted Dashboard Helpers
+    // =========================================================================
+    function applyTeacherCodeRestrictions(teacherSession) {
+        // Hide all admin-only tabs and header buttons
+        const hiddenTabs = ["tabBtnPrint", "tabBtnUpload", "tabBtnRepository", "tabBtnSchools"];
+        hiddenTabs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.hidden = true;
+        });
+
+        // Hide admin-only header buttons
+        const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
+        if (btnSchoolsHeader) btnSchoolsHeader.hidden = true;
+        const btnPasswordHeader = document.getElementById("btnChangePasswordHeader");
+        if (btnPasswordHeader) btnPasswordHeader.hidden = true;
+
+        // Hide school management and teacher management cards
+        const schoolCard = document.getElementById("schoolManagementCard");
+        if (schoolCard) schoolCard.hidden = true;
+        const teacherCard = document.getElementById("teacherManagementCard");
+        if (teacherCard) teacherCard.hidden = true;
+
+        // Auto-select subject for the teacher's assigned learning area
+        if (teacherSession.subject && teacherSession.subject !== "all") {
+            const scoreSubject = document.getElementById("scoreSubject");
+            if (scoreSubject) {
+                scoreSubject.value = teacherSession.subject;
+                scoreSubject.disabled = true; // Lock to their assigned subject
+            }
+        }
+
+        // Default to Subject Scores Entry tab
+        switchPortalTab("teacherscores");
+    }
+
+    async function loadSchoolDropdownsForCodeTeacher(teacherSession) {
+        const schoolId = teacherSession.school_id;
+        const schoolName = teacherSession.school_name || "Assigned School";
+
+        // Populate all school dropdown selects with just this teacher's school
+        const selectIds = ["uploadSchool", "printSchool", "enrollSchool", "scoreSchool", "teacherAssignSchool"];
+        selectIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = `<option value="${schoolId}">${escapePrintText(schoolName)}</option>`;
+                el.value = schoolId;
+                el.disabled = true;
+            }
+        });
+
+        // Trigger initial marksheet load
+        loadSubjectMarksheet();
+    }
+
+    // Override logout for code-auth teachers
+    const _originalLogout = logout;
+    async function logout() {
+        sessionStorage.removeItem("drms_teacher_session");
+        try {
+            await supabaseClient.auth.signOut();
+        } catch {}
+        window.location.href = "Admin.html";
+    }
+
+    // =========================================================================
     // Initialize Application
+    // =========================================================================
     document.addEventListener("DOMContentLoaded", () => {
         checkLogin();
 
