@@ -257,6 +257,18 @@
             color: white;
         }
 
+        .btn-password-header {
+            background: rgba(99, 102, 241, 0.2);
+            color: #c7d2fe;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-password-header:hover {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
         .btn-logout-header {
             background: rgba(239, 68, 68, 0.15);
             color: #fca5a5;
@@ -606,6 +618,85 @@
 
         .btn-danger:hover:not(:disabled) {
             background: var(--danger-hover);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #b45309;
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.4);
+        }
+
+        .status-badge-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .status-badge-inline.badge-draft {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .status-badge-inline.badge-published {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-badge-inline.badge-pending {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .teacher-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: end;
+        }
+
+        .teacher-form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .teacher-form-field label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .teachers-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .teachers-table th, .teachers-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .teachers-table th {
+            background: var(--surface-alt);
+            font-weight: 700;
+            color: var(--text-muted);
         }
 
         /* Hero Notice Boxes */
@@ -1557,6 +1648,10 @@
                 🏫 Manage Schools
             </button>
 
+            <button type="button" class="header-btn btn-password-header" id="btnChangePasswordHeader" onclick="openPasswordChangeModal()">
+                🔑 Change Password
+            </button>
+
             <button type="button" class="header-btn btn-logout-header" onclick="logout()">
                 Sign Out
             </button>
@@ -1958,13 +2053,21 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <div style="font-size: 13px; color: var(--text-muted);">
-                        Enter numeric points (e.g. 1 to 8) for each learner. Press <kbd style="background:#eee; padding:2px 5px; border-radius:3px;">Tab</kbd> or <kbd style="background:#eee; padding:2px 5px; border-radius:3px;">Enter</kbd> to move to the next learner.
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span id="marksheetStatusBadge" class="status-badge-inline badge-pending">⏳ Status: No Scores Saved</span>
+                        <span style="font-size: 13px; color: var(--text-muted);">
+                            Enter numeric points (0 to 8). Press <kbd style="background:#eee; padding:2px 5px; border-radius:3px;">Tab</kbd> or <kbd style="background:#eee; padding:2px 5px; border-radius:3px;">Enter</kbd> to move down.
+                        </span>
                     </div>
 
-                    <button type="button" class="btn-success" onclick="saveSubjectMarksheet()">
-                        💾 Save Scores & Recompute AGG/RUB
-                    </button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn-warning" onclick="saveSubjectMarksheet(false)">
+                            💾 Save Changes (Draft)
+                        </button>
+                        <button type="button" class="btn-success" onclick="saveSubjectMarksheet(true)">
+                            🚀 Publish Results
+                        </button>
+                    </div>
                 </div>
 
                 <div id="scoreStatus" class="upload-status" aria-live="polite"></div>
@@ -1995,39 +2098,33 @@
         </section>
 
         <!-- ========================================== -->
-        <!-- TAB 4: UPLOAD & INGESTION STATION -->
+        <!-- TAB 4: ZERAKI RESULTS INGESTION HUB -->
         <!-- ========================================== -->
         <section id="paneUpload" class="workspace-pane">
             <div class="card upload-card">
                 <div class="card-header-bar">
                     <div class="card-title-group">
-                        <h2>📤 Ingest & Index Learner Results</h2>
-                        <p>Upload Excel (.xlsx, .xls) spreadsheets or PDF files. Spreadsheets are instantly parsed and indexed into the institutional results database.</p>
+                        <h2>⚡ Zeraki Results Ingestion Hub</h2>
+                        <p>Download customized Excel marksheets for enrolled learners, upload filled sheets with live parsing & validation, auto-calculate AGG/RUB, and publish when verified.</p>
                     </div>
-                    <span class="card-badge-pill badge-blue">Automated Ingestion</span>
+                    <div style="display:flex; gap:8px;">
+                        <span class="card-badge-pill badge-purple">Zeraki Engine</span>
+                        <span class="card-badge-pill badge-blue">CBC Automated</span>
+                    </div>
                 </div>
 
+                <!-- Parameters Grid -->
                 <div class="form-row-grid">
                     <div class="form-group">
                         <label for="uploadSchool">Target Institution</label>
-                        <select id="uploadSchool" required>
+                        <select id="uploadSchool" required onchange="handleUploadScopeChange()">
                             <option value="">Select school</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="uploadTerm">Academic Term</label>
-                        <select id="uploadTerm" required>
-                            <option value="">Select term</option>
-                            <option value="Term 1">Term 1</option>
-                            <option value="Term 2">Term 2</option>
-                            <option value="Term 3">Term 3</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
                         <label for="uploadGrade">Grade Level</label>
-                        <select id="uploadGrade" required>
+                        <select id="uploadGrade" required onchange="handleUploadScopeChange()">
                             <option value="">Select grade</option>
                             <option value="PP1">PP1</option>
                             <option value="PP2">PP2</option>
@@ -2047,36 +2144,142 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="uploadTerm">Academic Term</label>
+                        <select id="uploadTerm" required>
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3">Term 3</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label for="uploadAssessment">Assessment Period</label>
                         <select id="uploadAssessment" required>
-                            <option value="">Select assessment</option>
                             <option value="1">Assessment 1 (Beginning of Term / CAT 1)</option>
                             <option value="2">Assessment 2 (Mid-Term / CAT 2)</option>
                             <option value="3">Assessment 3 (End of Term / CAT 3)</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label for="uploadMode">Marksheet Type</label>
+                        <select id="uploadMode" onchange="toggleUploadMode()">
+                            <option value="subject">Single Learning Area (Teacher Marksheet)</option>
+                            <option value="broadsheet">Complete Broadsheet (All Learning Areas)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="uploadSubjectGroup">
+                        <label for="uploadSubject">Learning Area / Subject</label>
+                        <select id="uploadSubject">
+                            <option value="mathematics">Mathematics</option>
+                            <option value="english">English</option>
+                            <option value="kiswahili">Kiswahili</option>
+                            <option value="integrated_science">Integrated Science</option>
+                            <option value="social_studies">Social Studies</option>
+                            <option value="cre_ire">CRE / IRE</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="creative_arts_sports">Creative Arts & Sports</option>
+                            <option value="pre_technical_studies">Pre-Technical Studies</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Dropzone Style Button -->
-                <div class="upload-dropzone" onclick="uploadResults()">
-                    <div class="upload-icon-circle">📂</div>
-                    <h4>Click to Choose Excel or PDF Results File</h4>
-                    <p>Accepted formats: .xlsx, .xls, .pdf (Maximum 10 MB per file)</p>
+                <!-- Zeraki Quick-Action Bar -->
+                <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <button type="button" class="btn-accent" onclick="downloadZerakiTemplate()">
+                            📥 Download Zeraki Excel Template (.xlsx)
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="openDirectMarksheetFromUpload()">
+                            ✍️ Direct Online Marksheet Entry
+                        </button>
+                    </div>
+                    <span id="zerakiTemplateNote" style="font-size: 13px; color: var(--text-muted);">
+                        💡 Pre-populates all enrolled learners for the selected school & grade.
+                    </span>
                 </div>
 
-                <button type="button" class="btn-accent" onclick="uploadResults()">
-                    Choose File & Start Ingestion
-                </button>
+                <!-- Drag & Drop Zone -->
+                <div id="zerakiDropzone" class="upload-dropzone" onclick="triggerZerakiFileInput()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
+                    <div class="upload-icon-circle">📊</div>
+                    <h4 id="zerakiDropTitle">Drag & Drop Zeraki Results Spreadsheet (.xlsx / .csv) Here, or Click to Browse</h4>
+                    <p id="zerakiDropSub">Automatic column matching, learner identification, aggregate recalculation, and draft preview.</p>
+                </div>
 
                 <input
                     id="resultsFile"
                     type="file"
-                    accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    accept=".xlsx,.xls,.csv,.pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     hidden
-                    onchange="handleResultsFile(this)"
+                    onchange="handleZerakiFileSelect(this)"
                 >
 
                 <div id="uploadStatus" class="upload-status" aria-live="polite"></div>
+
+                <!-- Zeraki Live Telemetry / Verification Stats (Visible when spreadsheet is parsed) -->
+                <div id="zerakiKpiBar" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0;">
+                    <div class="telemetry-card" style="padding: 12px 16px;">
+                        <div class="telemetry-label">Registered Enrolled</div>
+                        <div class="telemetry-value" id="kpiZerakiTotal">0</div>
+                    </div>
+                    <div class="telemetry-card" style="padding: 12px 16px;">
+                        <div class="telemetry-label">Matched in File</div>
+                        <div class="telemetry-value" id="kpiZerakiMatched">0</div>
+                    </div>
+                    <div class="telemetry-card" style="padding: 12px 16px;">
+                        <div class="telemetry-label">Mean / Average Score</div>
+                        <div class="telemetry-value" id="kpiZerakiMean">--</div>
+                    </div>
+                    <div class="telemetry-card" style="padding: 12px 16px;">
+                        <div class="telemetry-label">Ingestion State</div>
+                        <div class="telemetry-value" id="kpiZerakiState" style="color: #d97706; font-size: 18px;">Pending Approval</div>
+                    </div>
+                </div>
+
+                <!-- Parsed Results Table Preview -->
+                <div id="zerakiPreviewSection" style="display: none; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 2px;">
+                                📋 Parsed Results Verification Marksheet
+                            </h3>
+                            <p style="font-size: 13px; color: var(--text-muted);">
+                                Review the parsed scores below. You can edit any mark directly in the table before saving.
+                            </p>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="btn-warning" onclick="commitZerakiResults(false)">
+                                💾 Save Changes (Draft)
+                            </button>
+                            <button type="button" class="btn-success" onclick="commitZerakiResults(true)">
+                                🚀 Publish Results
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="resetZerakiUpload()">
+                                🔄 Discard
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="portal-table-container">
+                        <table class="portal-data-table" id="zerakiPreviewTable">
+                            <thead id="zerakiPreviewHead">
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Assessment Number</th>
+                                    <th>Learner Name</th>
+                                    <th>Stream</th>
+                                    <th id="thZerakiSubject">Score Points</th>
+                                    <th>Calculated AGG</th>
+                                    <th>Calculated Rubric (RUB)</th>
+                                    <th>Match Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="zerakiPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -2196,6 +2399,87 @@
                 <div id="schoolStatus" class="school-status" aria-live="polite"></div>
                 <ul id="schoolsList" class="schools-list"></ul>
             </div>
+
+            <!-- TEACHER & STAFF ACCOUNT ASSIGNMENT (Visible to School Admins & Owner) -->
+            <div class="card" id="teacherManagementCard" style="margin-top: 24px;">
+                <div class="card-header-bar">
+                    <div class="card-title-group">
+                        <h2>👨‍🏫 School Teachers & Staff Accounts</h2>
+                        <p>Assign subject teachers to your institution. Teachers receive dedicated accounts to view learners and enter/upload scores for their learning areas.</p>
+                    </div>
+                    <span class="card-badge-pill badge-green">Teacher Access Control</span>
+                </div>
+
+                <form class="teacher-form-grid" onsubmit="event.preventDefault(); assignTeacherAccount();">
+                    <div class="teacher-form-field">
+                        <label for="teacherAssignSchool">Institution</label>
+                        <select id="teacherAssignSchool" required onchange="renderSchoolTeachers()">
+                            <option value="">Select school</option>
+                        </select>
+                    </div>
+
+                    <div class="teacher-form-field">
+                        <label for="teacherFullName">Teacher Full Name</label>
+                        <input id="teacherFullName" type="text" placeholder="e.g. Mr. John Kamau" required>
+                    </div>
+
+                    <div class="teacher-form-field">
+                        <label for="teacherEmail">Teacher Email Address</label>
+                        <input id="teacherEmail" type="email" placeholder="teacher@school.edu" required>
+                    </div>
+
+                    <div class="teacher-form-field">
+                        <label for="teacherSubject">Assigned Learning Area</label>
+                        <select id="teacherSubject" required>
+                            <option value="mathematics">Mathematics</option>
+                            <option value="english">English</option>
+                            <option value="kiswahili">Kiswahili</option>
+                            <option value="integrated_science">Integrated Science</option>
+                            <option value="social_studies">Social Studies</option>
+                            <option value="cre_ire">CRE / IRE</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="creative_arts_sports">Creative Arts & Sports</option>
+                            <option value="pre_technical_studies">Pre-Technical Studies</option>
+                            <option value="all">All Subjects (Class Teacher)</option>
+                        </select>
+                    </div>
+
+                    <div class="teacher-form-field">
+                        <label for="teacherInitialPassword">Initial Password</label>
+                        <input id="teacherInitialPassword" type="text" placeholder="Secret initial password (min 6 chars)" minlength="6" required value="Teacher@2025">
+                    </div>
+
+                    <div>
+                        <button id="btnAssignTeacher" type="submit" class="btn-accent" style="height: 42px;">
+                            ➕ Assign Teacher
+                        </button>
+                    </div>
+                </form>
+
+                <div id="teacherAssignStatus" class="school-status" aria-live="polite"></div>
+
+                <div class="portal-table-container">
+                    <table class="teachers-table" id="teachersTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Teacher Full Name</th>
+                                <th>Email Address</th>
+                                <th>Assigned Subject</th>
+                                <th>Institution</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachersListBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">
+                                    Loading assigned teachers...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
@@ -2208,6 +2492,35 @@
                 <button type="button" class="btn-secondary" onclick="closePreview()">Close</button>
             </div>
             <iframe id="previewFrame" class="preview-frame" title="Document preview"></iframe>
+        </div>
+    </div>
+
+    <!-- Self-Service Change Password Modal -->
+    <div id="passwordModal" class="preview-modal" hidden>
+        <div class="preview-panel" style="max-width: 480px; height: auto;" role="dialog" aria-modal="true" aria-labelledby="pwdModalTitle">
+            <div class="preview-header">
+                <h3 id="pwdModalTitle">🔑 Change Your Secret Password</h3>
+                <button type="button" class="btn-secondary" onclick="closePasswordChangeModal()">✕</button>
+            </div>
+            <form onsubmit="event.preventDefault(); submitPasswordChange();" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">LOGGED IN ACCOUNT</label>
+                    <input type="text" id="pwdUserEmail" readonly style="width:100%; padding:10px 14px; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-main); font-weight:600;" />
+                </div>
+                <div>
+                    <label for="newSecretPassword" style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">NEW SECRET PASSWORD</label>
+                    <input type="password" id="newSecretPassword" required minlength="6" placeholder="Enter new secret password (min 6 chars)" style="width:100%; padding:10px 14px; background:white; border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-main);" />
+                </div>
+                <div>
+                    <label for="confirmSecretPassword" style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">CONFIRM NEW PASSWORD</label>
+                    <input type="password" id="confirmSecretPassword" required minlength="6" placeholder="Confirm your new secret password" style="width:100%; padding:10px 14px; background:white; border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-main);" />
+                </div>
+                <div id="pwdChangeStatus" style="font-size:13px; font-weight:600;" aria-live="polite"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+                    <button type="button" class="btn-secondary" onclick="closePasswordChangeModal()">Cancel</button>
+                    <button type="submit" class="btn-accent" id="btnSubmitPasswordChange">Update Secret Password</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -2260,7 +2573,77 @@
     setInterval(updateLiveClock, 1000);
     updateLiveClock();
 
-    // Authentication Guard
+    // Current Session State
+    let currentUserSession = null;
+    let currentUserRole = "owner"; // "owner" | "school_admin" | "teacher"
+    let currentUserSchool = null;
+    let currentUserTeacherProfile = null;
+
+    // Self-Service Password Modal Functions
+    function openPasswordChangeModal() {
+        const modal = document.getElementById("passwordModal");
+        const emailInput = document.getElementById("pwdUserEmail");
+        const status = document.getElementById("pwdChangeStatus");
+        if (currentUserSession?.user?.email) {
+            emailInput.value = currentUserSession.user.email;
+        }
+        document.getElementById("newSecretPassword").value = "";
+        document.getElementById("confirmSecretPassword").value = "";
+        status.textContent = "";
+        modal.hidden = false;
+    }
+
+    function closePasswordChangeModal() {
+        document.getElementById("passwordModal").hidden = true;
+    }
+
+    async function submitPasswordChange() {
+        const newPwd = document.getElementById("newSecretPassword").value;
+        const confirmPwd = document.getElementById("confirmSecretPassword").value;
+        const status = document.getElementById("pwdChangeStatus");
+        const btn = document.getElementById("btnSubmitPasswordChange");
+
+        if (!newPwd || newPwd.length < 6) {
+            status.style.color = "var(--danger)";
+            status.textContent = "Secret password must be at least 6 characters long.";
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            status.style.color = "var(--danger)";
+            status.textContent = "Passwords do not match. Please verify and retype.";
+            return;
+        }
+
+        btn.disabled = true;
+        status.style.color = "#2563eb";
+        status.textContent = "Updating your secret password with Supabase Auth...";
+
+        try {
+            const { data, error } = await supabaseClient.auth.updateUser({
+                password: newPwd
+            });
+
+            if (error) {
+                status.style.color = "var(--danger)";
+                status.textContent = `Password update failed: ${error.message}`;
+                btn.disabled = false;
+                return;
+            }
+
+            status.style.color = "#10b981";
+            status.textContent = "✅ Success! Your secret password has been updated.";
+            setTimeout(() => {
+                closePasswordChangeModal();
+            }, 1800);
+        } catch (err) {
+            status.style.color = "var(--danger)";
+            status.textContent = `Error: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Authentication Guard & Role-Based Workspaces
     async function checkLogin() {
         const {
             data: { session }
@@ -2271,35 +2654,92 @@
             return;
         }
 
-        const isOwner = session.user.email?.toLowerCase() === PORTAL_OWNER_EMAIL;
-        let assignedSchools = [];
+        currentUserSession = session;
+        const userEmail = session.user.email?.toLowerCase();
+        const isOwner = userEmail === PORTAL_OWNER_EMAIL;
 
-        if (!isOwner) {
-            const { data, error: assignmentError } = await supabaseClient
+        let roleLabel = "Project Owner";
+        let assignedSchool = null;
+        currentUserRole = isOwner ? "owner" : null;
+
+        if (isOwner) {
+            roleLabel = "Project Owner";
+        } else {
+            // 1. Check if user is a registered School Administrator
+            const { data: adminSchools } = await supabaseClient
                 .from("schools")
-                .select("id, school_name")
-                .eq("administrator_email", session.user.email?.toLowerCase())
+                .select("id, school_name, administrator_name")
+                .eq("administrator_email", userEmail)
                 .limit(1);
-            assignedSchools = data || [];
 
-            if (assignmentError || !assignedSchools?.length) {
-                await supabaseClient.auth.signOut();
-                alert(assignmentError
-                    ? "Your administrator account could not be verified. Contact the project owner."
-                    : "Your account is not assigned to a school yet. Contact the project owner.");
-                window.location.href = "Admin.html";
-                return;
+            if (adminSchools && adminSchools.length > 0) {
+                currentUserRole = "school_admin";
+                assignedSchool = adminSchools[0];
+                roleLabel = "School Administrator";
+            } else {
+                // 2. Check if user is an Assigned Subject Teacher
+                let teacherRecord = null;
+                try {
+                    const { data: tData } = await supabaseClient
+                        .from("school_teachers")
+                        .select("id, school_id, teacher_name, email, subject, schools(id, school_name)")
+                        .eq("email", userEmail)
+                        .limit(1);
+                    if (tData && tData.length > 0) {
+                        teacherRecord = tData[0];
+                    }
+                } catch (e) {
+                    console.warn("Could not query school_teachers table:", e);
+                }
+
+                // Check user metadata fallback
+                if (!teacherRecord && session.user.user_metadata?.role === "teacher") {
+                    teacherRecord = {
+                        school_id: session.user.user_metadata.school_id,
+                        teacher_name: session.user.user_metadata.full_name || userEmail,
+                        subject: session.user.user_metadata.subject || ""
+                    };
+                }
+
+                // Check local backup storage fallback
+                if (!teacherRecord) {
+                    const localTeachers = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
+                    const match = localTeachers.find(t => t.email?.toLowerCase() === userEmail);
+                    if (match) {
+                        teacherRecord = match;
+                    }
+                }
+
+                if (teacherRecord && teacherRecord.school_id) {
+                    currentUserRole = "teacher";
+                    currentUserTeacherProfile = teacherRecord;
+                    roleLabel = teacherRecord.subject && teacherRecord.subject !== "all"
+                        ? `Teacher: ${teacherRecord.subject.replace(/_/g, " ").toUpperCase()}`
+                        : "Subject Teacher";
+
+                    if (teacherRecord.schools?.school_name) {
+                        assignedSchool = teacherRecord.schools;
+                    } else {
+                        const { data: sData } = await supabaseClient
+                            .from("schools")
+                            .select("id, school_name")
+                            .eq("id", teacherRecord.school_id)
+                            .single();
+                        assignedSchool = sData || { id: teacherRecord.school_id, school_name: "Assigned Institution" };
+                    }
+                } else {
+                    await supabaseClient.auth.signOut();
+                    alert("Your account is not assigned to any institution or teacher role. Contact your school administrator or portal owner.");
+                    window.location.href = "Admin.html";
+                    return;
+                }
             }
         }
 
-        const { data: profile } = await supabaseClient
-            .from("admin_profiles")
-            .select("full_name, role")
-            .eq("id", session.user.id)
-            .single();
+        currentUserSchool = assignedSchool;
 
-        const displayName = profile?.full_name || (isOwner ? "Project Owner" : "School Administrator");
-        const roleLabel = isOwner ? "Project Owner" : "School Administrator";
+        const displayName = currentUserTeacherProfile?.teacher_name
+            || (isOwner ? "Project Owner" : (assignedSchool?.administrator_name || "Administrator"));
 
         const welcomeP = document.querySelector(".welcome p");
         if (welcomeP) welcomeP.textContent = "Welcome, " + displayName;
@@ -2310,7 +2750,7 @@
         const userAvatar = document.getElementById("userAvatar");
         if (userAvatar) {
             const initials = displayName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
-            userAvatar.textContent = initials || "AD";
+            userAvatar.textContent = initials || (currentUserRole === "teacher" ? "TR" : "AD");
         }
 
         const accountRole = document.getElementById("accountRole");
@@ -2318,21 +2758,56 @@
 
         const schoolText = isOwner
             ? "All Managed Institutions"
-            : (assignedSchools[0]?.school_name || "Assigned Institution");
+            : (assignedSchool?.school_name || "Assigned Institution");
 
         const assignedSchoolEl = document.getElementById("assignedSchool");
         if (assignedSchoolEl) assignedSchoolEl.textContent = "School: " + schoolText;
 
         const kpiScopeText = document.getElementById("kpiScopeText");
-        if (kpiScopeText) kpiScopeText.textContent = isOwner ? "Global Scope" : (assignedSchools[0]?.school_name || "My School");
+        if (kpiScopeText) kpiScopeText.textContent = isOwner ? "Global Scope" : (assignedSchool?.school_name || "My School");
 
-        if (!isOwner) {
+        // UI Role Customization
+        if (currentUserRole === "teacher") {
+            // Subject Teacher: access to Marksheets, Enrolled Learners, Reports, Zeraki Upload
             const schoolCard = document.getElementById("schoolManagementCard");
             if (schoolCard) schoolCard.hidden = true;
             const schoolsTab = document.getElementById("tabBtnSchools");
             if (schoolsTab) schoolsTab.hidden = true;
             const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
             if (btnSchoolsHeader) btnSchoolsHeader.hidden = true;
+
+            // Auto-select subject if assigned
+            if (currentUserTeacherProfile?.subject && currentUserTeacherProfile.subject !== "all") {
+                const scoreSubject = document.getElementById("scoreSubject");
+                if (scoreSubject) scoreSubject.value = currentUserTeacherProfile.subject;
+                const uploadSubject = document.getElementById("uploadSubject");
+                if (uploadSubject) uploadSubject.value = currentUserTeacherProfile.subject;
+            }
+
+            // Default active tab to Subject Scores Marksheet
+            switchPortalTab("teacherscores");
+        } else if (currentUserRole === "school_admin") {
+            // School Admin: manage teachers for their school, cannot create/delete schools
+            const schoolCard = document.getElementById("schoolManagementCard");
+            if (schoolCard) schoolCard.hidden = true;
+            const schoolsTab = document.getElementById("tabBtnSchools");
+            if (schoolsTab) {
+                schoolsTab.hidden = false;
+                schoolsTab.querySelector("span").textContent = "👨‍🏫 Staff & Teachers";
+            }
+            const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
+            if (btnSchoolsHeader) {
+                btnSchoolsHeader.hidden = false;
+                btnSchoolsHeader.textContent = "👨‍🏫 Staff & Teachers";
+            }
+        } else {
+            // Project Owner: full unrestricted access
+            const schoolCard = document.getElementById("schoolManagementCard");
+            if (schoolCard) schoolCard.hidden = false;
+            const schoolsTab = document.getElementById("tabBtnSchools");
+            if (schoolsTab) schoolsTab.hidden = false;
+            const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
+            if (btnSchoolsHeader) btnSchoolsHeader.hidden = false;
         }
 
         await loadUploadSchools(isOwner);
@@ -2346,9 +2821,11 @@
 
     async function updateLearnerCountKPI() {
         try {
-            const { count, error } = await supabaseClient
-                .from("learners")
-                .select("*", { count: 'exact', head: true });
+            let query = supabaseClient.from("learners").select("*", { count: "exact", head: true });
+            if (currentUserSchool?.id && currentUserRole !== "owner") {
+                query = query.eq("school_id", currentUserSchool.id);
+            }
+            const { count, error } = await query;
             if (!error && count !== null) {
                 const kpi = document.getElementById("kpiLearnersCount");
                 if (kpi) kpi.textContent = count;
@@ -2364,6 +2841,7 @@
         const printSelect = document.getElementById("printSchool");
         const enrollSelect = document.getElementById("enrollSchool");
         const scoreSelect = document.getElementById("scoreSchool");
+        const teacherSchoolSelect = document.getElementById("teacherAssignSchool");
         const uploadsSelect = document.getElementById("uploadedResultsSchool");
         const uploadsSchoolList = document.getElementById("uploadedSchoolChoices");
 
@@ -2379,14 +2857,17 @@
             .order("school_name", { ascending: true });
 
         if (!isOwner) {
-            schoolQuery = schoolQuery.eq("administrator_email", session.user.email);
+            if (currentUserSchool?.id) {
+                schoolQuery = schoolQuery.eq("id", currentUserSchool.id);
+            } else {
+                schoolQuery = schoolQuery.eq("administrator_email", session.user.email);
+            }
         }
 
         const { data: schools, error } = await schoolQuery;
-
         if (error) return;
 
-        const targets = [select, printSelect, enrollSelect, scoreSelect].filter(Boolean);
+        const targets = [select, printSelect, enrollSelect, scoreSelect, teacherSchoolSelect].filter(Boolean);
         targets.forEach((schoolSelect) => {
             schoolSelect.innerHTML = "<option value=\"\">Select school</option>";
             (schools || []).forEach((school) => {
@@ -2397,31 +2878,33 @@
             });
         });
 
-        // Set default selection if only one school
-        if (schools && schools.length === 1) {
-            targets.forEach(s => s.value = schools[0].id);
+        // Auto-select and lock if single school or non-owner
+        if (schools && schools.length > 0) {
+            const defaultId = currentUserSchool?.id || schools[0].id;
+            targets.forEach(s => {
+                s.value = defaultId;
+                if (!isOwner) s.disabled = true;
+            });
         }
 
         if (uploadsSchoolList) {
             await loadSchoolsWithUploads(schools || [], isOwner, session.user.id);
         }
+
+        if (teacherSchoolSelect && teacherSchoolSelect.value) {
+            await renderSchoolTeachers();
+        }
     }
 
     async function loadSchoolsWithUploads(schools, isOwner, userId) {
         const choices = document.getElementById("uploadedSchoolChoices");
+        if (!choices) return;
+
         let uploadQuery = supabaseClient
             .from("result_uploads")
             .select("school_id, storage_path");
 
-        if (!isOwner) {
-            uploadQuery = uploadQuery.eq("uploaded_by", userId);
-        }
-
-        const { data: uploads, error } = await uploadQuery;
-        if (error) {
-            choices.innerHTML = `<p class="uploads-empty">Could not load schools with uploads: ${error.message}</p>`;
-            return;
-        }
+        const { data: uploads } = await uploadQuery;
 
         const uploadCounts = new Map();
         for (const upload of uploads || []) {
@@ -2431,35 +2914,43 @@
             }
         }
 
-        const schoolsWithUploads = schools.filter((school) => uploadCounts.has(school.id));
         choices.replaceChildren();
 
-        if (!schoolsWithUploads.length) {
+        if (!schools.length) {
             const emptyMessage = document.createElement("p");
             emptyMessage.className = "uploads-empty";
-            emptyMessage.textContent = "No schools have uploaded results yet.";
+            emptyMessage.textContent = "No schools assigned or registered.";
             choices.appendChild(emptyMessage);
             return;
         }
 
-        const currentSelectedSchool = document.getElementById("uploadedResultsSchool")?.value;
-        schoolsWithUploads.forEach((school) => {
+        let currentSelectedSchool = document.getElementById("uploadedResultsSchool")?.value;
+        if (!currentSelectedSchool && schools.length > 0) {
+            currentSelectedSchool = schools[0].id;
+            document.getElementById("uploadedResultsSchool").value = currentSelectedSchool;
+        }
+
+        schools.forEach((school) => {
             const choice = document.createElement("button");
             choice.type = "button";
             choice.className = "uploaded-school-choice";
             choice.dataset.uploadSchool = school.id;
-            choice.setAttribute("aria-pressed", String(Boolean(currentSelectedSchool && school.id === currentSelectedSchool)));
+            const isSelected = Boolean(currentSelectedSchool && school.id === currentSelectedSchool);
+            choice.setAttribute("aria-pressed", String(isSelected));
 
             const schoolName = document.createElement("span");
             schoolName.textContent = school.school_name;
-            const count = uploadCounts.get(school.id);
+            const count = uploadCounts.get(school.id) || 0;
             const fileCount = document.createElement("span");
             fileCount.className = "uploaded-school-count";
             fileCount.textContent = `${count} upload${count === 1 ? "" : "s"}`;
 
             choice.append(schoolName, fileCount);
+            choice.onclick = () => selectUploadedResultsSchool(school.id);
             choices.appendChild(choice);
         });
+
+        updateUploadedResultsWizard();
     }
 
     // =========================================================================
@@ -2689,7 +3180,28 @@
             .eq("assessment_period", assessmentPeriod);
 
         activeMarksheetResults = new Map();
-        (results || []).forEach(r => activeMarksheetResults.set(r.learner_id, r));
+        let isAnyPublished = false;
+        let isAnyDraft = false;
+
+        (results || []).forEach(r => {
+            activeMarksheetResults.set(r.learner_id, r);
+            if (r.status === "published") isAnyPublished = true;
+            if (r.status === "draft") isAnyDraft = true;
+        });
+
+        const statusBadge = document.getElementById("marksheetStatusBadge");
+        if (statusBadge) {
+            if (isAnyPublished) {
+                statusBadge.className = "status-badge-inline badge-published";
+                statusBadge.textContent = "✅ Status: Published (Official)";
+            } else if (isAnyDraft || activeMarksheetResults.size > 0) {
+                statusBadge.className = "status-badge-inline badge-draft";
+                statusBadge.textContent = "📝 Status: Saved Draft (Unpublished)";
+            } else {
+                statusBadge.className = "status-badge-inline badge-pending";
+                statusBadge.textContent = "⏳ Status: Not Yet Saved";
+            }
+        }
 
         // 3. Render interactive marksheet rows
         tbody.innerHTML = learners.map((l, index) => {
@@ -2744,20 +3256,21 @@
         }
     }
 
-    async function saveSubjectMarksheet() {
+    async function saveSubjectMarksheet(isPublish = false) {
         const schoolId = document.getElementById("scoreSchool").value;
         const grade = document.getElementById("scoreGrade").value;
         const term = document.getElementById("scoreTerm").value;
         const assessmentPeriod = Number(document.getElementById("scoreAssessment").value);
         const subject = document.getElementById("scoreSubject").value;
         const status = document.getElementById("scoreStatus");
+        const statusBadge = document.getElementById("marksheetStatusBadge");
 
         if (!schoolId || !grade || !term || !assessmentPeriod || !subject) {
             status.textContent = "Please select all parameters before saving.";
             return;
         }
 
-        status.textContent = "Calculating aggregate scores and saving...";
+        status.textContent = isPublish ? "Publishing scores and recomputing broadsheet..." : "Saving changes as draft...";
 
         const inputs = Array.from(document.querySelectorAll(".points-input"));
         const upsertRows = [];
@@ -2775,6 +3288,7 @@
 
             const updatedObj = { ...existingResult };
             updatedObj[subject] = pointsVal !== "" ? pointsVal : null;
+            updatedObj.status = isPublish ? "published" : "draft";
 
             // Compute total AGG
             let totalPoints = 0;
@@ -2799,16 +3313,42 @@
             if (rubEl) rubEl.innerHTML = getRubricShortBadge(updatedObj.aggregate_rubric);
         }
 
-        const { error } = await supabaseClient
+        let { error } = await supabaseClient
             .from("results")
             .upsert(upsertRows, { onConflict: "learner_id,term,assessment_period" });
+
+        if (error && error.message?.includes("status")) {
+            // Graceful retry without status column if database schema has not added column yet
+            const cleanRows = upsertRows.map(r => {
+                const copy = { ...r };
+                delete copy.status;
+                return copy;
+            });
+            const retryRes = await supabaseClient
+                .from("results")
+                .upsert(cleanRows, { onConflict: "learner_id,term,assessment_period" });
+            error = retryRes.error;
+        }
 
         if (error) {
             status.textContent = `Could not save scores: ${error.message}`;
             return;
         }
 
-        status.textContent = `Success! Saved ${upsertRows.length} scores. Aggregate (AGG) & Rubrics (RUB) automatically re-analyzed!`;
+        if (statusBadge) {
+            if (isPublish) {
+                statusBadge.className = "status-badge-inline badge-published";
+                statusBadge.textContent = "✅ Status: Published (Official)";
+            } else {
+                statusBadge.className = "status-badge-inline badge-draft";
+                statusBadge.textContent = "📝 Status: Saved Draft (Unpublished)";
+            }
+        }
+
+        status.textContent = isPublish
+            ? `🚀 Success! ${upsertRows.length} scores officially published. Grade broadsheet and terminal assessment slips now display official results.`
+            : `💾 Draft saved successfully! ${upsertRows.length} scores stored as draft. You can continue uploading or verifying before publishing.`;
+
         await loadSubjectMarksheet();
     }
 
@@ -3362,73 +3902,640 @@
     }
 
     // =========================================================================
-    // MODULE 5: UPLOADS & FILE REPOSITORY ENGINE (Existing Functions)
+    // MODULE 5: ZERAKI RESULTS INGESTION HUB & SPREADSHEET ENGINE
     // =========================================================================
-    function uploadResults() {
-        const school = document.getElementById("uploadSchool");
+    let parsedZerakiRows = [];
+    let activeZerakiFile = null;
+
+    function toggleUploadMode() {
+        const mode = document.getElementById("uploadMode").value;
+        const subjectGroup = document.getElementById("uploadSubjectGroup");
+        if (subjectGroup) {
+            subjectGroup.style.display = mode === "subject" ? "flex" : "none";
+        }
+    }
+
+    function handleUploadScopeChange() {
+        const schoolId = document.getElementById("uploadSchool").value;
+        const grade = document.getElementById("uploadGrade").value;
+        const note = document.getElementById("zerakiTemplateNote");
+        if (schoolId && grade) {
+            note.textContent = `💡 Ready to generate Zeraki template for ${grade}.`;
+        }
+    }
+
+    function openDirectMarksheetFromUpload() {
+        const schoolId = document.getElementById("uploadSchool").value;
+        const grade = document.getElementById("uploadGrade").value;
+        const term = document.getElementById("uploadTerm").value;
+        const assessment = document.getElementById("uploadAssessment").value;
+        const subject = document.getElementById("uploadSubject").value;
+
+        if (schoolId) document.getElementById("scoreSchool").value = schoolId;
+        if (grade) document.getElementById("scoreGrade").value = grade;
+        if (term) document.getElementById("scoreTerm").value = term;
+        if (assessment) document.getElementById("scoreAssessment").value = assessment;
+        if (subject) document.getElementById("scoreSubject").value = subject;
+
+        switchPortalTab("teacherscores");
+    }
+
+    async function downloadZerakiTemplate() {
+        const schoolId = document.getElementById("uploadSchool").value;
+        const grade = document.getElementById("uploadGrade").value;
+        const term = document.getElementById("uploadTerm").value;
+        const assessment = document.getElementById("uploadAssessment").value;
+        const mode = document.getElementById("uploadMode").value;
+        const subjectKey = document.getElementById("uploadSubject").value;
+        const subjectTitle = document.getElementById("uploadSubject").selectedOptions[0]?.textContent || "Subject";
         const status = document.getElementById("uploadStatus");
 
-        if (!school.value || !document.getElementById("uploadTerm").value
-            || !document.getElementById("uploadGrade").value.trim()
-            || !document.getElementById("uploadAssessment").value) {
-            status.textContent = "Select an institution, term, grade, and assessment before choosing a file.";
+        if (!schoolId || !grade) {
+            status.textContent = "Please select Target Institution and Grade Level to generate the template.";
             return;
         }
 
+        status.textContent = `Generating Zeraki mark template for ${grade}...`;
+
+        // 1. Fetch registered learners for this school & grade
+        const { data: learners } = await supabaseClient
+            .from("learners")
+            .select("assessment_number, learner_name, class")
+            .eq("school_id", schoolId)
+            .eq("grade", grade)
+            .order("assessment_number", { ascending: true });
+
+        // 2. Prepare headers
+        let headers = ["Assessment Number", "Learner Name", "Stream"];
+        if (mode === "subject") {
+            headers.push(`${subjectTitle} Points (0-8)`);
+        } else {
+            DEFAULT_ASSESSMENT_FIELDS.forEach(([title]) => {
+                headers.push(`${title} (0-8)`);
+            });
+        }
+
+        // 3. Prepare data rows
+        const rows = [headers];
+        if (learners && learners.length > 0) {
+            learners.forEach(l => {
+                const row = [l.assessment_number || "", l.learner_name || "", l.class || ""];
+                if (mode === "subject") {
+                    row.push(""); // empty point cell for teacher entry
+                } else {
+                    DEFAULT_ASSESSMENT_FIELDS.forEach(() => row.push(""));
+                }
+                rows.push(row);
+            });
+        } else {
+            // Add starter template rows
+            for (let i = 1; i <= 5; i++) {
+                const sampleRow = [`DEMO-00${i}`, `Sample Learner ${i}`, "East"];
+                if (mode === "subject") {
+                    sampleRow.push(Math.min(8, Math.max(1, i + 2)));
+                } else {
+                    DEFAULT_ASSESSMENT_FIELDS.forEach(() => sampleRow.push(6));
+                }
+                rows.push(sampleRow);
+            }
+        }
+
+        // 4. Build Excel file via SheetJS
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Zeraki_Marksheet");
+
+        const cleanGrade = grade.replace(/\s+/g, "");
+        const filename = mode === "subject"
+            ? `Zeraki_${cleanGrade}_${subjectKey}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`
+            : `Zeraki_Broadsheet_${cleanGrade}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`;
+
+        XLSX.writeFile(workbook, filename);
+        status.textContent = `✅ Downloaded Zeraki Excel template: ${filename}. Enter scores and upload below.`;
+    }
+
+    function triggerZerakiFileInput() {
         document.getElementById("resultsFile").click();
     }
 
-    async function handleResultsFile(input) {
-        const file = input.files[0];
+    function handleDragOver(e) {
+        e.preventDefault();
+        document.getElementById("zerakiDropzone")?.classList.add("is-dragover");
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        document.getElementById("zerakiDropzone")?.classList.remove("is-dragover");
+    }
+
+    function handleFileDrop(e) {
+        e.preventDefault();
+        document.getElementById("zerakiDropzone")?.classList.remove("is-dragover");
+        if (e.dataTransfer?.files?.length) {
+            processZerakiFile(e.dataTransfer.files[0]);
+        }
+    }
+
+    function handleZerakiFileSelect(input) {
+        if (input.files?.length) {
+            processZerakiFile(input.files[0]);
+        }
+    }
+
+    async function processZerakiFile(file) {
+        activeZerakiFile = file;
         const status = document.getElementById("uploadStatus");
         const schoolId = document.getElementById("uploadSchool").value;
+        const grade = document.getElementById("uploadGrade").value;
         const term = document.getElementById("uploadTerm").value;
-        const grade = document.getElementById("uploadGrade").value.trim();
         const assessmentPeriod = Number(document.getElementById("uploadAssessment").value);
+        const mode = document.getElementById("uploadMode").value;
+        const subjectKey = document.getElementById("uploadSubject").value;
 
-        if (!file || !schoolId) return;
+        if (!file || !schoolId || !grade) {
+            status.textContent = "Select institution and grade before uploading a results file.";
+            return;
+        }
 
-        const allowed = ["xlsx", "xls", "pdf"];
         const ext = file.name.split(".").pop().toLowerCase();
-        if (!allowed.includes(ext)) {
-            status.textContent = "Please upload an Excel or PDF file.";
+        if (!["xlsx", "xls", "csv"].includes(ext)) {
+            status.textContent = "Please upload an Excel (.xlsx, .xls) or CSV spreadsheet.";
             return;
         }
 
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) return;
+        status.textContent = `Parsing ${file.name} with Zeraki Ingestion Engine...`;
+        document.getElementById("zerakiDropTitle").textContent = `📄 Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        document.getElementById("zerakiDropSub").textContent = "File loaded. Parsing learner rows and mapping subject scores...";
 
-        status.textContent = "Uploading & processing...";
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const safeGrade = grade.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
-        const safeTerm = term.toLowerCase().replace(/\s+/g, "-");
-        const filePath = `${session.user.id}/${schoolId}/${safeTerm}/${safeGrade}/assessment-${assessmentPeriod}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+                if (!jsonRows || jsonRows.length < 2) {
+                    status.textContent = "The uploaded spreadsheet appears empty or missing data rows.";
+                    return;
+                }
 
-        const { error: uploadError } = await supabaseClient.storage.from("results").upload(filePath, file, { cacheControl: "3600", upsert: false });
+                // 1. Parse header row
+                const headerRow = jsonRows[0].map(h => String(h || "").trim().toLowerCase());
+                let colAssessNo = headerRow.findIndex(h => h.includes("assess") || h.includes("adm") || h.includes("reg") || h.includes("upi") || h.includes("number") || h.includes("no"));
+                let colName = headerRow.findIndex(h => h.includes("name") || h.includes("learner") || h.includes("student"));
+                let colStream = headerRow.findIndex(h => h.includes("stream") || h.includes("class"));
 
-        if (uploadError) {
-            status.textContent = `Upload failed: ${uploadError.message}`;
-            return;
-        }
+                if (colAssessNo === -1) colAssessNo = 0;
+                if (colName === -1) colName = 1;
+                if (colStream === -1) colStream = 2;
 
-        await supabaseClient.from("result_uploads").insert({
-            file_name: file.name,
-            storage_path: filePath,
-            file_type: file.type,
-            school_id: schoolId,
-            uploaded_by: session.user.id,
-            term,
-            grade,
-            assessment_period: assessmentPeriod
+                // 2. Fetch enrolled learners for matching
+                const { data: dbLearners } = await supabaseClient
+                    .from("learners")
+                    .select("id, assessment_number, learner_name, grade, class")
+                    .eq("school_id", schoolId)
+                    .eq("grade", grade);
+
+                const learnerMapByNo = new Map();
+                const learnerMapByName = new Map();
+                (dbLearners || []).forEach(l => {
+                    if (l.assessment_number) learnerMapByNo.set(String(l.assessment_number).trim().toLowerCase(), l);
+                    if (l.learner_name) learnerMapByName.set(String(l.learner_name).trim().toLowerCase(), l);
+                });
+
+                // 3. Identify subject columns
+                const subjectColMap = new Map();
+                if (mode === "subject") {
+                    // Look for target subject in headers or default to the 4th column
+                    let sCol = headerRow.findIndex(h => h.includes(subjectKey) || h.includes("point") || h.includes("score") || h.includes("mark"));
+                    if (sCol === -1) sCol = 3;
+                    subjectColMap.set(subjectKey, sCol);
+                } else {
+                    // Broadsheet mapping
+                    SUBJECT_COLUMNS.forEach(sub => {
+                        const colIdx = headerRow.findIndex(h => h.includes(sub) || h.includes(sub.replace(/_/g, " ")));
+                        if (colIdx >= 0) subjectColMap.set(sub, colIdx);
+                    });
+                }
+
+                // 4. Fetch existing database results for AGG recalculation
+                const { data: existingResults } = await supabaseClient
+                    .from("results")
+                    .select("*")
+                    .eq("school_id", schoolId)
+                    .eq("term", term)
+                    .eq("assessment_period", assessmentPeriod);
+
+                const existingMap = new Map();
+                (existingResults || []).forEach(r => existingMap.set(r.learner_id, r));
+
+                parsedZerakiRows = [];
+                let totalPointsSum = 0;
+                let scoredCount = 0;
+
+                for (let r = 1; r < jsonRows.length; r++) {
+                    const rowData = jsonRows[r];
+                    if (!rowData || !rowData.length) continue;
+
+                    const rawNo = String(rowData[colAssessNo] ?? "").trim();
+                    const rawName = String(rowData[colName] ?? "").trim();
+                    const rawStream = String(rowData[colStream] ?? "").trim();
+
+                    if (!rawNo && !rawName) continue;
+
+                    // Match learner
+                    let matchedLearner = learnerMapByNo.get(rawNo.toLowerCase()) || learnerMapByName.get(rawName.toLowerCase());
+
+                    // If learner is not in DB yet, create a virtual learner representation
+                    const learnerId = matchedLearner?.id || `virt_${rawNo || rawName}`;
+                    const learnerName = matchedLearner?.learner_name || rawName;
+                    const assessNo = matchedLearner?.assessment_number || rawNo;
+                    const stream = matchedLearner?.class || rawStream;
+
+                    const existingObj = existingMap.get(learnerId) || {
+                        learner_id: learnerId,
+                        school_id: schoolId,
+                        term: term,
+                        assessment_period: assessmentPeriod
+                    };
+
+                    const resultObj = { ...existingObj };
+
+                    // Parse subject points
+                    let primaryScore = "";
+                    subjectColMap.forEach((colIndex, sub) => {
+                        const val = rowData[colIndex];
+                        if (val !== undefined && val !== null && String(val).trim() !== "") {
+                            const num = Number.parseFloat(String(val).replace(/,/g, ""));
+                            if (Number.isFinite(num)) {
+                                resultObj[sub] = String(num);
+                                if (sub === subjectKey) primaryScore = String(num);
+                            }
+                        }
+                    });
+
+                    // Compute AGG & RUB
+                    let totalPoints = 0;
+                    let hasAnyScore = false;
+                    SUBJECT_COLUMNS.forEach(col => {
+                        const val = Number.parseFloat(String(resultObj[col] ?? "").replace(/,/g, ""));
+                        if (Number.isFinite(val)) {
+                            totalPoints += val;
+                            hasAnyScore = true;
+                        }
+                    });
+
+                    resultObj.aggregate_points = hasAnyScore ? String(totalPoints) : null;
+                    resultObj.aggregate_rubric = hasAnyScore ? calculateAggregateRubricScore(totalPoints) : null;
+
+                    if (primaryScore !== "") {
+                        totalPointsSum += Number.parseFloat(primaryScore);
+                        scoredCount++;
+                    }
+
+                    parsedZerakiRows.push({
+                        learner_id: learnerId,
+                        assessment_number: assessNo,
+                        learner_name: learnerName,
+                        stream: stream,
+                        is_registered: Boolean(matchedLearner),
+                        primary_score: primaryScore,
+                        result_obj: resultObj
+                    });
+                }
+
+                // 5. Render Zeraki Telemetry KPI Stats
+                document.getElementById("kpiZerakiTotal").textContent = dbLearners?.length || 0;
+                document.getElementById("kpiZerakiMatched").textContent = `${parsedZerakiRows.length} rows parsed (${parsedZerakiRows.filter(p => p.is_registered).length} matched)`;
+                document.getElementById("kpiZerakiMean").textContent = scoredCount > 0 ? (totalPointsSum / scoredCount).toFixed(2) : "--";
+                document.getElementById("kpiZerakiState").textContent = "Ready for Verification";
+                document.getElementById("zerakiKpiBar").style.display = "grid";
+
+                // 6. Render Parsed Preview Table
+                const tbody = document.getElementById("zerakiPreviewBody");
+                tbody.innerHTML = parsedZerakiRows.map((item, idx) => {
+                    const matchBadge = item.is_registered
+                        ? `<span class="status-badge-inline badge-published">Matched</span>`
+                        : `<span class="status-badge-inline badge-draft">New Entry</span>`;
+
+                    return `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td><strong style="font-family:'JetBrains Mono',monospace;">${escapePrintText(item.assessment_number)}</strong></td>
+                            <td><strong>${escapePrintText(item.learner_name)}</strong></td>
+                            <td>${escapePrintText(item.stream || "—")}</td>
+                            <td>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    class="points-input zeraki-edit-score"
+                                    data-row-index="${idx}"
+                                    value="${item.primary_score}"
+                                    placeholder="0-8"
+                                    onchange="updateZerakiRowScore(${idx}, this.value)"
+                                >
+                            </td>
+                            <td><strong id="zagg_${idx}">${item.result_obj.aggregate_points || "—"}</strong></td>
+                            <td><span id="zrub_${idx}">${getRubricShortBadge(item.result_obj.aggregate_rubric)}</span></td>
+                            <td>${matchBadge}</td>
+                        </tr>
+                    `;
+                }).join("");
+
+                document.getElementById("zerakiPreviewSection").style.display = "block";
+                status.textContent = `⚡ Zeraki parsed ${parsedZerakiRows.length} learner records. Review and approve changes below.`;
+            } catch (err) {
+                status.textContent = `Error reading file: ${err.message}`;
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function updateZerakiRowScore(index, newScore) {
+        if (!parsedZerakiRows[index]) return;
+        const item = parsedZerakiRows[index];
+        const subjectKey = document.getElementById("uploadSubject").value;
+        item.primary_score = newScore;
+        item.result_obj[subjectKey] = newScore !== "" ? newScore : null;
+
+        let totalPoints = 0;
+        let hasAnyScore = false;
+        SUBJECT_COLUMNS.forEach(col => {
+            const val = Number.parseFloat(String(item.result_obj[col] ?? "").replace(/,/g, ""));
+            if (Number.isFinite(val)) {
+                totalPoints += val;
+                hasAnyScore = true;
+            }
         });
 
-        status.textContent = "File uploaded and stored in repository.";
-        input.value = "";
+        item.result_obj.aggregate_points = hasAnyScore ? String(totalPoints) : null;
+        item.result_obj.aggregate_rubric = hasAnyScore ? calculateAggregateRubricScore(totalPoints) : null;
+
+        const aggEl = document.getElementById(`zagg_${index}`);
+        if (aggEl) aggEl.textContent = item.result_obj.aggregate_points || "—";
+        const rubEl = document.getElementById(`zrub_${index}`);
+        if (rubEl) rubEl.innerHTML = getRubricShortBadge(item.result_obj.aggregate_rubric);
+    }
+
+    async function commitZerakiResults(isPublish = false) {
+        const status = document.getElementById("uploadStatus");
+        const schoolId = document.getElementById("uploadSchool").value;
+        const grade = document.getElementById("uploadGrade").value;
+        const term = document.getElementById("uploadTerm").value;
+        const assessmentPeriod = Number(document.getElementById("uploadAssessment").value);
+
+        if (!parsedZerakiRows || !parsedZerakiRows.length) {
+            status.textContent = "No parsed records to save.";
+            return;
+        }
+
+        status.textContent = isPublish ? "Publishing scores to DRMS institutional database..." : "Saving records as Draft...";
+
+        // 1. If any learners are new/unregistered, enroll them into public.learners first
+        for (const row of parsedZerakiRows) {
+            if (!row.is_registered || String(row.learner_id).startsWith("virt_")) {
+                const { data: newLearner } = await supabaseClient
+                    .from("learners")
+                    .insert({
+                        school_id: schoolId,
+                        grade: grade,
+                        assessment_number: row.assessment_number,
+                        learner_name: row.learner_name,
+                        class: row.stream || null
+                    })
+                    .select("id")
+                    .single();
+
+                if (newLearner?.id) {
+                    row.result_obj.learner_id = newLearner.id;
+                    row.is_registered = true;
+                }
+            }
+            row.result_obj.status = isPublish ? "published" : "draft";
+        }
+
+        // 2. Upsert scores into public.results
+        const upsertRows = parsedZerakiRows.map(r => r.result_obj);
+        let { error: resErr } = await supabaseClient
+            .from("results")
+            .upsert(upsertRows, { onConflict: "learner_id,term,assessment_period" });
+
+        if (resErr && resErr.message?.includes("status")) {
+            const cleanRows = upsertRows.map(r => {
+                const c = { ...r };
+                delete c.status;
+                return c;
+            });
+            const retryRes = await supabaseClient
+                .from("results")
+                .upsert(cleanRows, { onConflict: "learner_id,term,assessment_period" });
+            resErr = retryRes.error;
+        }
+
+        if (resErr) {
+            status.textContent = `Could not commit scores: ${resErr.message}`;
+            return;
+        }
+
+        // 3. Store raw uploaded file in Supabase Storage and result_uploads table for institutional repository
+        if (activeZerakiFile && currentUserSession?.user?.id) {
+            try {
+                const safeFileName = activeZerakiFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                const safeGrade = grade.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+                const safeTerm = term.toLowerCase().replace(/\s+/g, "-");
+                const filePath = `${currentUserSession.user.id}/${schoolId}/${safeTerm}/${safeGrade}/assessment-${assessmentPeriod}/${Date.now()}-${safeFileName}`;
+
+                await supabaseClient.storage.from("results").upload(filePath, activeZerakiFile, { cacheControl: "3600", upsert: true });
+                await supabaseClient.from("result_uploads").insert({
+                    file_name: activeZerakiFile.name,
+                    storage_path: filePath,
+                    file_type: activeZerakiFile.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    school_id: schoolId,
+                    uploaded_by: currentUserSession.user.id,
+                    term,
+                    grade,
+                    assessment_period: assessmentPeriod
+                });
+            } catch (storageErr) {
+                console.warn("Storage upload notice:", storageErr);
+            }
+        }
+
+        document.getElementById("kpiZerakiState").textContent = isPublish ? "Published (Official)" : "Saved Draft";
+        document.getElementById("kpiZerakiState").style.color = isPublish ? "#10b981" : "#d97706";
+
+        status.textContent = isPublish
+            ? `🚀 Success! ${upsertRows.length} learner results officially published! Grade broadsheet and terminal slips updated.`
+            : `💾 Draft saved successfully! ${upsertRows.length} learner scores saved as draft.`;
+
+        await updateLearnerCountKPI();
+        await loadUploadSchools(currentUserRole === "owner");
+    }
+
+    function resetZerakiUpload() {
+        parsedZerakiRows = [];
+        activeZerakiFile = null;
+        document.getElementById("resultsFile").value = "";
+        document.getElementById("zerakiPreviewSection").style.display = "none";
+        document.getElementById("zerakiKpiBar").style.display = "none";
+        document.getElementById("zerakiDropTitle").textContent = "Drag & Drop Zeraki Results Spreadsheet (.xlsx / .csv) Here, or Click to Browse";
+        document.getElementById("zerakiDropSub").textContent = "Automatic column matching, learner identification, aggregate recalculation, and draft preview.";
+        document.getElementById("uploadStatus").textContent = "";
     }
 
     // =========================================================================
-    // MODULE 6: RESULTS REPOSITORY EXPLORER & SCHOOL DIRECTORY
+    // MODULE 6: TEACHER & STAFF ACCOUNT MANAGEMENT ENGINE
+    // =========================================================================
+    async function assignTeacherAccount() {
+        const schoolId = document.getElementById("teacherAssignSchool").value;
+        const name = document.getElementById("teacherFullName").value.trim();
+        const email = document.getElementById("teacherEmail").value.trim().toLowerCase();
+        const subject = document.getElementById("teacherSubject").value;
+        const password = document.getElementById("teacherInitialPassword").value;
+        const status = document.getElementById("teacherAssignStatus");
+        const btn = document.getElementById("btnAssignTeacher");
+
+        if (!schoolId || !name || !email || !password) {
+            status.textContent = "Please fill in all teacher details and initial password.";
+            return;
+        }
+
+        btn.disabled = true;
+        status.textContent = `Assigning account for ${name} (${email})...`;
+
+        try {
+            // 1. Sign up auth account in Supabase
+            const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: name,
+                        role: "teacher",
+                        school_id: schoolId,
+                        subject: subject
+                    }
+                }
+            });
+
+            if (authErr && !authErr.message?.includes("already registered")) {
+                status.textContent = `Authentication assignment error: ${authErr.message}`;
+                btn.disabled = false;
+                return;
+            }
+
+            // 2. Insert into school_teachers table
+            const { error: dbErr } = await supabaseClient
+                .from("school_teachers")
+                .insert({
+                    school_id: schoolId,
+                    teacher_name: name,
+                    email: email,
+                    subject: subject,
+                    created_by: currentUserSession?.user?.id
+                });
+
+            // 3. Save to localStorage backup
+            const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
+            const existingIdx = localBackup.findIndex(t => t.email?.toLowerCase() === email);
+            const teacherObj = {
+                id: authData?.user?.id || `tr_${Date.now()}`,
+                school_id: schoolId,
+                teacher_name: name,
+                email: email,
+                subject: subject,
+                created_at: new Date().toISOString()
+            };
+
+            if (existingIdx >= 0) {
+                localBackup[existingIdx] = teacherObj;
+            } else {
+                localBackup.push(teacherObj);
+            }
+            localStorage.setItem("drms_teachers_backup", JSON.stringify(localBackup));
+
+            status.textContent = `✅ Teacher account assigned for ${name}! Initial password: "${password}". They can log in immediately and change their password via "🔑 Change Password".`;
+
+            document.getElementById("teacherFullName").value = "";
+            document.getElementById("teacherEmail").value = "";
+            await renderSchoolTeachers();
+        } catch (err) {
+            status.textContent = `Error: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function renderSchoolTeachers() {
+        const schoolId = document.getElementById("teacherAssignSchool").value;
+        const tbody = document.getElementById("teachersListBody");
+        if (!tbody) return;
+
+        if (!schoolId) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">Select an institution to view assigned teachers.</td></tr>`;
+            return;
+        }
+
+        let teachers = [];
+        try {
+            const { data, error } = await supabaseClient
+                .from("school_teachers")
+                .select("id, teacher_name, email, subject, school_id, schools(school_name)")
+                .eq("school_id", schoolId);
+            if (!error && data) teachers = data;
+        } catch {}
+
+        // Merge local backup
+        const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
+        localBackup.filter(t => t.school_id === schoolId).forEach(lt => {
+            if (!teachers.some(t => t.email?.toLowerCase() === lt.email?.toLowerCase())) {
+                teachers.push(lt);
+            }
+        });
+
+        if (!teachers.length) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">No teachers assigned to this institution yet. Add a teacher above.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = teachers.map((t, idx) => {
+            const schoolName = t.schools?.school_name || currentUserSchool?.school_name || "Institution";
+            const subjectLabel = t.subject ? t.subject.replace(/_/g, " ").toUpperCase() : "ALL SUBJECTS";
+            return `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><strong>${escapePrintText(t.teacher_name || "Teacher")}</strong></td>
+                    <td><code>${escapePrintText(t.email)}</code></td>
+                    <td><span class="card-badge-pill badge-blue">${escapePrintText(subjectLabel)}</span></td>
+                    <td>${escapePrintText(schoolName)}</td>
+                    <td>
+                        <button type="button" class="remove-school" style="padding:4px 8px; font-size:11px;" onclick="deleteTeacherItem('${t.id}', '${escapePrintText(t.teacher_name)}')">
+                            Revoke
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    async function deleteTeacherItem(teacherId, name) {
+        if (!confirm(`Are you sure you want to revoke teacher account for "${name}"?`)) return;
+        try {
+            await supabaseClient.from("school_teachers").delete().eq("id", teacherId);
+        } catch {}
+
+        // Update local storage backup
+        const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
+        const filtered = localBackup.filter(t => t.id !== teacherId && t.teacher_name !== name);
+        localStorage.setItem("drms_teachers_backup", JSON.stringify(filtered));
+
+        await renderSchoolTeachers();
+    }
+
+    // =========================================================================
+    // MODULE 7: RESULTS REPOSITORY EXPLORER & INSTITUTION DIRECTORY
     // =========================================================================
     function selectUploadedResultsGrade(grade) {
         const gradeInput = document.getElementById("uploadedResultsGrade");
@@ -3453,21 +4560,24 @@
             button.setAttribute("aria-pressed", String(button.dataset.uploadSchool === schoolId));
         });
         selectUploadedResultsGrade("");
+        updateUploadedResultsWizard();
         document.getElementById("uploadsList").innerHTML = schoolId
-            ? "<li class=\"uploads-empty\">Choose a grade to continue.</li>"
+            ? "<li class=\"uploads-empty\">Choose a grade above to continue.</li>"
             : "<li class=\"uploads-empty\">Choose a school with uploaded results.</li>";
     }
 
     function updateUploadedResultsWizard() {
-        const hasSchool = Boolean(document.getElementById("uploadedResultsSchool").value);
-        const hasGrade = Boolean(document.getElementById("uploadedResultsGrade").value);
-        const hasTerm = Boolean(document.getElementById("uploadedResultsTerm").value);
+        const hasSchool = Boolean(document.getElementById("uploadedResultsSchool")?.value);
+        const hasGrade = Boolean(document.getElementById("uploadedResultsGrade")?.value);
+        const hasTerm = Boolean(document.getElementById("uploadedResultsTerm")?.value);
 
         document.querySelectorAll(".grade-choice").forEach((button) => {
             button.disabled = !hasSchool;
         });
-        document.getElementById("uploadedResultsTerm").disabled = !hasGrade;
-        document.getElementById("uploadedResultsAssessment").disabled = !hasTerm;
+        const termEl = document.getElementById("uploadedResultsTerm");
+        if (termEl) termEl.disabled = !hasGrade;
+        const assessEl = document.getElementById("uploadedResultsAssessment");
+        if (assessEl) assessEl.disabled = !hasTerm;
     }
 
     async function viewUploads() {
@@ -3496,10 +4606,6 @@
                 .select("id, file_name, file_type, storage_path, uploaded_at, uploaded_by, school_id, term, grade, assessment_period")
                 .eq("school_id", schoolId)
                 .order("uploaded_at", { ascending: false });
-
-            if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
-                uploadQuery = uploadQuery.eq("uploaded_by", session.user.id);
-            }
 
             const { data: uploads, error } = await uploadQuery;
             if (error) {
@@ -3570,8 +4676,6 @@
 
     async function renderSchools(searchTerm = "") {
         const list = document.getElementById("schoolsList");
-        const status = document.getElementById("schoolStatus");
-
         if (!list) return;
 
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -3727,6 +4831,17 @@
                     "<li class=\"uploads-empty\">Choose a term to continue.</li>";
             });
         });
+
+        // Event delegation for uploadedSchoolChoices
+        const uploadedSchoolChoices = document.getElementById("uploadedSchoolChoices");
+        if (uploadedSchoolChoices) {
+            uploadedSchoolChoices.addEventListener("click", (e) => {
+                const choiceBtn = e.target.closest(".uploaded-school-choice");
+                if (choiceBtn && choiceBtn.dataset.uploadSchool) {
+                    selectUploadedResultsSchool(choiceBtn.dataset.uploadSchool);
+                }
+            });
+        }
     });
     </script>
 </body>
