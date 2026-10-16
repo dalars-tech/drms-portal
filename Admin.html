@@ -107,6 +107,58 @@
             background: transparent;
             color: #2563eb;
             font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .portal-tabs {
+            display: flex;
+            background: #e2e8f0;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 22px;
+            gap: 4px;
+        }
+
+        .portal-tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .portal-tab-btn.active {
+            background: white;
+            color: #2563eb;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        select {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 18px;
+            background: white;
+        }
+
+        .code-request-box {
+            background: #eff6ff;
+            border: 1px dashed #93c5fd;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 18px;
+            font-size: 13px;
+            color: #1e40af;
+            text-align: center;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -117,16 +169,25 @@
 
         <h1>DRMS</h1>
 
-        <p class="subtitle">
-            Administrator Login
+        <p class="subtitle" id="portalSubTitle">
+            Portal Access & Authentication
         </p>
 
+        <!-- Access Mode Switcher -->
+        <div class="portal-tabs">
+            <button type="button" class="portal-tab-btn active" id="tabAdmin" onclick="switchLoginMode('admin')">
+                🏫 School Admin
+            </button>
+            <button type="button" class="portal-tab-btn" id="tabTeacher" onclick="switchLoginMode('teacher')">
+                👨‍🏫 Teacher Access Code
+            </button>
+        </div>
+
+        <!-- 1. Administrator Email/Password Form -->
         <form id="loginForm">
-
             <label for="email">
-                Email Address
+                Administrator Email Address
             </label>
-
             <input
                 type="email"
                 id="email"
@@ -137,7 +198,6 @@
             <label for="password">
                 Password
             </label>
-
             <input
                 type="password"
                 id="password"
@@ -146,14 +206,62 @@
             >
 
             <button type="submit">
-                Sign In
+                Sign In as Administrator
+            </button>
+        </form>
+
+        <!-- 2. Teacher Access via Code Form -->
+        <form id="teacherCodeForm" style="display: none;" onsubmit="event.preventDefault(); handleTeacherCodeLogin();">
+            <label for="teacherAccessCode">
+                Teacher Access Code
+            </label>
+            <input
+                type="text"
+                id="teacherAccessCode"
+                placeholder="e.g. TEACH-7492 or school code"
+                style="font-family: monospace; letter-spacing: 1px; font-weight: bold; text-transform: uppercase;"
+                required
+            >
+
+            <label for="teacherName">
+                Teacher Full Name
+            </label>
+            <input
+                type="text"
+                id="teacherName"
+                placeholder="e.g. Mr. David Kamau"
+                required
+            >
+
+            <label for="teacherSubject">
+                Assigned Learning Area / Subject
+            </label>
+            <select id="teacherSubject" required>
+                <option value="mathematics">Mathematics</option>
+                <option value="english">English</option>
+                <option value="kiswahili">Kiswahili</option>
+                <option value="integrated_science">Integrated Science</option>
+                <option value="social_studies">Social Studies</option>
+                <option value="cre_ire">CRE / IRE</option>
+                <option value="agriculture">Agriculture</option>
+                <option value="creative_arts_sports">Creative Arts & Sports</option>
+                <option value="pre_technical_studies">Pre-Technical Studies</option>
+                <option value="all">All Learning Areas (Broadsheet)</option>
+            </select>
+
+            <button type="submit" style="background: #10b981;">
+                🚀 Enter Teacher Workspace
             </button>
 
+            <div class="code-request-box">
+                💡 <strong>Need an Access Code?</strong><br>
+                Ask your Headteacher or School Administrator to share your school's Teacher Access Code generated from their DRMS Dashboard.
+            </div>
         </form>
 
         <div id="message"></div>
 
-        <button type="button" class="reset-link" onclick="requestPasswordReset()">
+        <button type="button" class="reset-link" id="btnForgotPwd" onclick="requestPasswordReset()">
             Forgot password?
         </button>
 
@@ -164,35 +272,126 @@
     </div>
 
    <script>
+    function switchLoginMode(mode) {
+        const tabAdmin = document.getElementById("tabAdmin");
+        const tabTeacher = document.getElementById("tabTeacher");
+        const loginForm = document.getElementById("loginForm");
+        const teacherCodeForm = document.getElementById("teacherCodeForm");
+        const btnForgotPwd = document.getElementById("btnForgotPwd");
+        const msg = document.getElementById("message");
+        msg.textContent = "";
+
+        if (mode === "teacher") {
+            tabAdmin.classList.remove("active");
+            tabTeacher.classList.add("active");
+            loginForm.style.display = "none";
+            teacherCodeForm.style.display = "block";
+            btnForgotPwd.style.display = "none";
+            document.getElementById("portalSubTitle").textContent = "Subject Teacher Quick Access via Code";
+        } else {
+            tabAdmin.classList.add("active");
+            tabTeacher.classList.remove("active");
+            loginForm.style.display = "block";
+            teacherCodeForm.style.display = "none";
+            btnForgotPwd.style.display = "block";
+            document.getElementById("portalSubTitle").textContent = "Administrator Authentication";
+        }
+    }
+
+    // 1. School Admin Email/Password Login
     document
         .getElementById("loginForm")
         .addEventListener("submit", async function(event) {
-
             event.preventDefault();
 
-            const email =
-                document.getElementById("email").value.trim();
-
-            const password =
-                document.getElementById("password").value;
-
-            const message =
-                document.getElementById("message");
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+            const message = document.getElementById("message");
 
             message.textContent = "Signing in...";
 
+            // Clear any previous teacher session
+            sessionStorage.removeItem("drms_teacher_session");
+
             const { data, error } = await signInWithRateLimit(email, password);
-
             if (error) {
-
-                message.textContent =
-                    "Login failed: " + error.message;
-
+                message.textContent = "Login failed: " + error.message;
                 return;
             }
 
             window.location.href = "dashboard.html";
         });
+
+    // 2. Teacher Access Code Login
+    async function handleTeacherCodeLogin() {
+        const codeInput = document.getElementById("teacherAccessCode").value.trim().toUpperCase();
+        const teacherName = document.getElementById("teacherName").value.trim();
+        const subject = document.getElementById("teacherSubject").value;
+        const message = document.getElementById("message");
+
+        if (!codeInput || !teacherName) {
+            message.textContent = "Please enter your access code and full name.";
+            return;
+        }
+
+        message.textContent = "Verifying teacher access code...";
+
+        try {
+            // Fetch schools from Supabase
+            const { data: schools, error } = await supabaseClient
+                .from("schools")
+                .select("id, school_name, teacher_access_code");
+
+            let matchedSchool = null;
+
+            // Check custom code column or deterministic code format
+            if (schools && schools.length > 0) {
+                matchedSchool = schools.find(s => {
+                    const customCode = String(s.teacher_access_code || "").trim().toUpperCase();
+                    const deterministicCode = `TEACH-${s.id.substring(0, 6).toUpperCase()}`;
+                    const nameCode = String(s.school_name || "").replace(/[^a-zA-Z0-9]/g, "").substring(0, 6).toUpperCase();
+                    return customCode === codeInput || deterministicCode === codeInput || codeInput.includes(nameCode);
+                });
+            }
+
+            // Check local codes backup fallback
+            if (!matchedSchool) {
+                const localCodes = JSON.parse(localStorage.getItem("drms_school_teacher_codes") || "{}");
+                for (const [sId, sData] of Object.entries(localCodes)) {
+                    if (sData.code?.toUpperCase() === codeInput) {
+                        matchedSchool = { id: sId, school_name: sData.school_name };
+                        break;
+                    }
+                }
+            }
+
+            if (!matchedSchool) {
+                message.textContent = "Invalid or expired access code. Please request the current code from your School Administrator.";
+                return;
+            }
+
+            // Store active teacher session in sessionStorage
+            const teacherSession = {
+                role: "teacher",
+                school_id: matchedSchool.id,
+                school_name: matchedSchool.school_name,
+                teacher_name: teacherName,
+                subject: subject,
+                access_code: codeInput,
+                login_at: new Date().toISOString()
+            };
+
+            sessionStorage.setItem("drms_teacher_session", JSON.stringify(teacherSession));
+            message.style.color = "#10b981";
+            message.textContent = `✅ Code verified! Entering ${matchedSchool.school_name} workspace...`;
+
+            setTimeout(() => {
+                window.location.href = "dashboard.html";
+            }, 600);
+        } catch (err) {
+            message.textContent = "Verification error: " + err.message;
+        }
+    }
 
     async function requestPasswordReset() {
         const email = document.getElementById("email").value.trim();
