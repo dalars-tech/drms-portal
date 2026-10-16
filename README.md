@@ -261,6 +261,154 @@ $$;
 grant execute on function public.search_learner_result(text, text, uuid) to anon;
 ```
 
+## Supabase RLS policies for Learner Enrollment & Subject Scores
+
+To enable both the project owner and assigned school administrators/teachers to enroll learners, input subject points, and auto-calculate aggregate scores (AGG) and rubrics (RUB) in Supabase, run this SQL script in the **Supabase SQL Editor**:
+
+```sql
+-- 1. Ensure required columns and constraints exist
+alter table public.learners
+  add column if not exists school_id uuid references public.schools(id),
+  add column if not exists grade text,
+  add column if not exists class text;
+
+create unique index if not exists learners_assessment_no_uniq
+  on public.learners (assessment_number);
+
+alter table public.results
+  add column if not exists school_id uuid references public.schools(id),
+  add column if not exists term text,
+  add column if not exists assessment_period smallint,
+  add column if not exists mathematics text,
+  add column if not exists english text,
+  add column if not exists kiswahili text,
+  add column if not exists integrated_science text,
+  add column if not exists social_studies text,
+  add column if not exists cre_ire text,
+  add column if not exists agriculture text,
+  add column if not exists creative_arts_sports text,
+  add column if not exists pre_technical_studies text,
+  add column if not exists aggregate_points text,
+  add column if not exists aggregate_rubric text;
+
+alter table public.results drop constraint if exists results_learner_id_term_assessment_key;
+alter table public.results add constraint results_learner_id_term_assessment_key 
+  unique (learner_id, term, assessment_period);
+
+-- 2. RLS policies for public.learners (Owner & Assigned School Admins)
+alter table public.learners enable row level security;
+
+drop policy if exists "Authenticated admins can view learners" on public.learners;
+create policy "Authenticated admins can view learners"
+on public.learners for select
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = learners.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+drop policy if exists "Authenticated admins can insert learners" on public.learners;
+create policy "Authenticated admins can insert learners"
+on public.learners for insert
+to authenticated
+with check (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = learners.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+drop policy if exists "Authenticated admins can update learners" on public.learners;
+create policy "Authenticated admins can update learners"
+on public.learners for update
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = learners.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+)
+with check (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = learners.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+drop policy if exists "Authenticated admins can delete learners" on public.learners;
+create policy "Authenticated admins can delete learners"
+on public.learners for delete
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = learners.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+-- 3. RLS policies for public.results (Scores, AGG, RUB)
+alter table public.results enable row level security;
+
+drop policy if exists "Authenticated admins can view results" on public.results;
+create policy "Authenticated admins can view results"
+on public.results for select
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = results.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+drop policy if exists "Authenticated admins can insert results" on public.results;
+create policy "Authenticated admins can insert results"
+on public.results for insert
+to authenticated
+with check (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = results.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+
+drop policy if exists "Authenticated admins can update results" on public.results;
+create policy "Authenticated admins can update results"
+on public.results for update
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = results.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+)
+with check (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = results.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+);
+```
+
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
 
 ## Backups and recovery
