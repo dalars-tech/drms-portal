@@ -406,6 +406,59 @@ with check (
     where schools.id = results.school_id
     and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
   )
+-- 4. Status Column for Results (Draft vs. Published)
+alter table public.results add column if not exists status text default 'draft';
+
+-- 5. School Teachers & Staff Management Table
+create table if not exists public.school_teachers (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid not null references public.schools(id) on delete cascade,
+  teacher_name text not null,
+  email text not null,
+  subject text default 'all',
+  created_at timestamptz default timezone('utc'::text, now()),
+  created_by uuid references auth.users(id) on delete set null
+);
+
+create index if not exists idx_school_teachers_school on public.school_teachers(school_id);
+create index if not exists idx_school_teachers_email on public.school_teachers(lower(email));
+
+-- RLS policies for school_teachers
+alter table public.school_teachers enable row level security;
+
+drop policy if exists "Authenticated admins and teachers view staff" on public.school_teachers;
+create policy "Authenticated admins and teachers view staff"
+on public.school_teachers for select
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = school_teachers.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+  or lower(school_teachers.email) = lower((select auth.jwt() ->> 'email'))
+);
+
+drop policy if exists "Admins manage teachers" on public.school_teachers;
+create policy "Admins manage teachers"
+on public.school_teachers for all
+to authenticated
+using (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = school_teachers.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
+)
+with check (
+  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
+  or exists (
+    select 1 from public.schools
+    where schools.id = school_teachers.school_id
+    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
+  )
 );
 ```
 
