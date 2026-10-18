@@ -209,72 +209,364 @@
             display: none;
         }
 
+        /* Mobile-First Learner Results Scorecard & Institutional Banner */
+        .results-container-card {
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .result-school-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .school-banner-icon {
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #bfdbfe;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+            flex-shrink: 0;
+        }
+
+        .school-banner-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .school-banner-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: #1e40af;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .school-banner-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+            word-break: break-word;
+        }
+
+        .verified-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #10b981;
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            margin-left: auto;
+        }
+
+        /* Learner Profile Card */
+        .learner-profile-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+        }
+
+        .learner-profile-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .learner-avatar-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .learner-names-box {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .learner-full-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+            word-break: break-word;
+        }
+
+        .learner-badges-strip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .learner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .badge-assessment {
+            background: #eef2ff;
+            color: #4338ca;
+            border-color: #c7d2fe;
+            font-family: monospace;
+        }
+
+        .badge-grade {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        .badge-term {
+            background: #faf5ff;
+            color: #6b21a8;
+            border-color: #e9d5ff;
+        }
+
+        /* Mobile-First Scores Grid & Tiles */
+        .scores-card-section {
+            margin-bottom: 18px;
+            width: 100%;
+        }
+
+        .scores-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .scores-section-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        .scores-scale-hint {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .mobile-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .subject-score-tile {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            gap: 10px;
+        }
+
+        .subject-score-tile:hover {
+            background: #ffffff;
+            border-color: #93c5fd;
+        }
+
+        .subject-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .subject-points {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-family: monospace;
+            flex-shrink: 0;
+            text-align: center;
+            min-width: 32px;
+        }
+
+        /* Aggregate & Performance Rubrics Banner */
+        .aggregate-summary-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            border-radius: 12px;
+            margin: 18px 0;
+            gap: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .aggregate-stat-col {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .agg-label {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .agg-val {
+            font-size: 24px;
+            font-weight: 800;
+            color: #60a5fa;
+            font-family: monospace;
+        }
+
+        .rubrics-col {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .rubric-badge-pill {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.18);
+            border: 1px solid #10b981;
+            color: #34d399;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        /* Result Actions Bar */
+        .result-actions-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn-download-pdf {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #16a34a;
+            color: white;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 14px;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+            text-align: center;
+        }
+
+        .btn-download-pdf:hover {
+            background: #15803d;
+            transform: translateY(-1px);
+        }
+
+        .btn-print-slip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-print-slip:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* Legacy helper row compatibility */
         .result-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             gap: 12px;
-            padding: 11px 0;
-            border-bottom: 1px solid #eee;
+            padding: 9px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
         }
 
         .result-row strong {
-            color: #333;
+            color: #334155;
             flex-shrink: 0;
-            line-height: 1.4;
         }
 
         .result-row span {
-            flex: 1 1 auto;
-            min-width: 0;
-            word-break: break-word;
+            color: #0f172a;
+            font-weight: 600;
             text-align: right;
-            line-height: 1.4;
-        }
-
-        .uploaded-sheet-scroll {
-            max-width: 100%;
-            overflow-x: auto;
-            border: 1px solid #dbe2ea;
-        }
-
-        .uploaded-sheet-meta {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px 20px;
-            margin-bottom: 12px;
-        }
-
-        .uploaded-sheet-meta p {
-            margin: 0;
-        }
-
-        .uploaded-sheet-table {
-            width: max-content;
-            min-width: 100%;
-            table-layout: auto;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .uploaded-sheet-table th,
-        .uploaded-sheet-table td {
-            padding: 10px 12px;
-            border: 1px solid #dbe2ea;
-            text-align: left;
-            white-space: normal;
-            overflow-wrap: anywhere;
-            vertical-align: top;
-        }
-
-        .uploaded-sheet-learner-name {
-            min-width: 180px;
-            white-space: nowrap !important;
-            overflow-wrap: normal !important;
-        }
-
-        .uploaded-sheet-table th {
-            background: #eef4ff;
+            word-break: break-word;
         }
 
         .download-button {
@@ -287,83 +579,100 @@
             font-weight: bold;
         }
 
+        /* Mobile Smartphones View Optimization (NO horizontal scroll) */
         @media (max-width: 700px) {
             html, body {
                 width: 100%;
                 max-width: 100vw;
+                overflow-x: hidden !important;
             }
 
             .container {
-                width: min(90vw, 100%);
-                margin: 24px auto;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 12px !important;
+                margin: 16px auto !important;
+                box-sizing: border-box;
             }
 
             .portal-grid {
                 grid-template-columns: 1fr;
-                gap: 18px;
+                gap: 16px;
             }
 
             .card {
-                padding: 20px 16px;
-                margin-bottom: 18px;
+                padding: 16px 12px !important;
+                margin-bottom: 16px;
                 border-radius: 12px;
+                width: 100% !important;
+                box-sizing: border-box;
             }
 
             header {
-                padding: 20px 12px;
+                padding: 18px 12px;
             }
 
             header h1 {
-                font-size: clamp(26px, 7vw, 32px);
+                font-size: clamp(24px, 6vw, 30px);
             }
 
-            .result-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
+            .result-school-banner {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+                padding: 12px !important;
             }
 
-            .result-row strong {
-                flex: 0 0 46%;
-                max-width: 46%;
+            .school-banner-name {
+                font-size: 16px !important;
             }
 
-            .result-row span {
-                flex: 1 1 46%;
-                margin-left: auto;
-                text-align: right;
-                max-width: 46%;
+            .verified-pill {
+                margin-left: 0 !important;
             }
 
-            .aggregate .result-row {
-                align-items: flex-start;
+            .learner-profile-top {
+                align-items: flex-start !important;
             }
 
-            #resultFileRow {
-                flex-wrap: wrap;
-                align-items: center;
+            .learner-full-name {
+                font-size: 16px !important;
             }
 
-            #resultFileRow strong {
-                flex-basis: 100%;
-                max-width: 100%;
+            .mobile-scores-grid {
+                grid-template-columns: 1fr !important;
+                gap: 6px !important;
             }
 
-            .password-field input {
-                padding-right: 74px;
+            .subject-score-tile {
+                padding: 10px 12px !important;
             }
 
-            .password-toggle {
-                padding: 12px 8px;
+            .aggregate-summary-banner {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                padding: 14px !important;
+                gap: 10px !important;
             }
 
-            .download-button {
-                width: 100%;
-                text-align: center;
+            .rubrics-col {
+                align-items: flex-start !important;
+                text-align: left !important;
             }
 
-            .uploaded-sheet-meta {
-                grid-template-columns: minmax(0, 1fr);
+            .result-actions-bar {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .btn-download-pdf, .btn-print-slip {
+                width: 100% !important;
+            }
+
+            .uploaded-sheet-scroll {
+                overflow-x: hidden !important;
+                max-width: 100% !important;
+                border: none !important;
             }
         }
 
@@ -505,109 +814,151 @@
 
     <!-- RESULTS -->
 
-    <div id="resultsCard" class="card hidden">
+    <div id="resultsCard" class="card results-container-card hidden">
 
-        <h2>Learner's Results</h2>
+        <!-- Institutional Header Banner -->
+        <div class="result-school-banner">
+            <div class="school-banner-icon">🏫</div>
+            <div class="school-banner-info">
+                <span class="school-banner-label">School / Institution</span>
+                <h3 class="school-banner-name" id="displaySchoolName">School</h3>
+                <!-- Legacy span for backward compatibility -->
+                <span id="resultSchool" style="display: none;"></span>
+            </div>
+            <span class="verified-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Official Record
+            </span>
+        </div>
 
+        <!-- Learner Profile Card -->
+        <div class="learner-profile-card">
+            <div class="learner-profile-top">
+                <div class="learner-avatar-box">🎓</div>
+                <div class="learner-names-box">
+                    <h3 class="learner-full-name" id="displayLearnerName">—</h3>
+                    <!-- Legacy span for backward compatibility -->
+                    <span id="resultName" style="display: none;"></span>
+                    <div class="learner-badges-strip">
+                        <span class="learner-badge badge-assessment">
+                            <span>Ass. No:</span>&nbsp;<strong id="displayAssessmentNo">—</strong>
+                            <span id="resultAssessment" style="display: none;"></span>
+                        </span>
+                        <span class="learner-badge badge-grade">
+                            <strong id="displayGrade">—</strong>
+                            <span id="resultGrade" style="display: none;"></span>
+                        </span>
+                        <span class="learner-badge badge-term">
+                            <strong id="displayTerm">—</strong>
+                            <span id="resultTerm" style="display: none;"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAPPED RESULT VIEW -->
         <div id="mappedResultView">
-        <div class="result-row">
-            <strong>Assessment No.</strong>
-            <span id="resultAssessment"></span>
-        </div>
+            <div class="scores-card-section">
+                <div class="scores-section-header">
+                    <h4>Learning Areas &amp; Subject Scores</h4>
+                    <span class="scores-scale-hint">CBC Standard Rubrics</span>
+                </div>
 
-        <div class="result-row">
-            <strong>Learner Name</strong>
-            <span id="resultName"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Grade</strong>
-            <span id="resultGrade"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Term</strong>
-            <span id="resultTerm"></span>
-        </div>
-
-        <br>
-
-        <div class="result-row">
-            <strong>Maths</strong>
-            <span id="mathematics"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Eng</strong>
-            <span id="english"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Kisw</strong>
-            <span id="kiswahili"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Int. Sci.</strong>
-            <span id="integratedScience"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>SST</strong>
-            <span id="socialStudies"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>CRE/IRE</strong>
-            <span id="creIre"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Agric</strong>
-            <span id="agriculture"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>C.A. &amp; Sports</strong>
-            <span id="creativeArtsSports"></span>
-        </div>
-
-        <div class="result-row">
-            <strong>Pre-Tech</strong>
-            <span id="preTechnical"></span>
-        </div>
-
-        <div class="aggregate">
-            <div class="result-row">
-                <strong>AGG</strong>
-                <span id="aggregatePoints"></span>
+                <div class="mobile-scores-grid">
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Mathematics</span>
+                        <span class="subject-points" id="mathematics">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">English Language</span>
+                        <span class="subject-points" id="english">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Kiswahili</span>
+                        <span class="subject-points" id="kiswahili">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Integrated Science</span>
+                        <span class="subject-points" id="integratedScience">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Social Studies</span>
+                        <span class="subject-points" id="socialStudies">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">CRE / IRE</span>
+                        <span class="subject-points" id="creIre">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Agriculture &amp; Nutrition</span>
+                        <span class="subject-points" id="agriculture">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Creative Arts &amp; Sports</span>
+                        <span class="subject-points" id="creativeArtsSports">—</span>
+                    </div>
+                    <div class="subject-score-tile">
+                        <span class="subject-name">Pre-Technical Studies</span>
+                        <span class="subject-points" id="preTechnical">—</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="result-row">
-                <strong>RUB</strong>
-                <span id="aggregateRubrics"></span>
+            <!-- Aggregate & Rubrics Banner -->
+            <div class="aggregate-summary-banner">
+                <div class="aggregate-stat-col">
+                    <span class="agg-label">Aggregate Points (AGG)</span>
+                    <span class="agg-val" id="aggregatePoints">—</span>
+                </div>
+                <div class="aggregate-stat-col rubrics-col">
+                    <span class="agg-label">Performance Rubric (RUB)</span>
+                    <span class="rubric-badge-pill" id="aggregateRubrics">—</span>
+                </div>
             </div>
         </div>
-        </div>
 
+        <!-- UPLOADED SPREADSHEET VIEW -->
         <section id="uploadedSheetView" hidden aria-label="Uploaded spreadsheet results">
-            <div class="uploaded-sheet-meta">
+            <div class="uploaded-sheet-meta" style="display: none;">
                 <p><strong>School:</strong> <span id="uploadedSheetSchool"></span></p>
                 <p><strong>Learner:</strong> <span id="uploadedSheetLearner"></span></p>
                 <p><strong>Assessment:</strong> <span id="uploadedSheetAssessment"></span></p>
                 <p><strong>Term:</strong> <span id="uploadedSheetTerm"></span></p>
             </div>
-            <div class="uploaded-sheet-scroll">
-                <table class="uploaded-sheet-table">
-                    <thead><tr id="uploadedSheetHeaders"></tr></thead>
-                    <tbody><tr id="uploadedSheetValues"></tr></tbody>
-                </table>
+
+            <div class="scores-card-section">
+                <div class="scores-section-header">
+                    <h4>Spreadsheet Assessment Results</h4>
+                    <span class="scores-scale-hint">Full Subject Breakdown</span>
+                </div>
+
+                <!-- Smartphone-optimized vertical cards: NO HORIZONTAL SCROLL! -->
+                <div id="uploadedSheetMobileContainer" class="mobile-scores-grid"></div>
+
+                <!-- Collapsible raw table for desktop inspection if desired -->
+                <details class="raw-table-toggle" style="margin-top: 14px; font-size: 12px; color: #64748b;">
+                    <summary style="cursor: pointer; font-weight: 600; padding: 6px 0;">View Full Table View</summary>
+                    <div class="uploaded-sheet-scroll" style="margin-top: 8px; overflow-x: auto; width: 100%;">
+                        <table class="uploaded-sheet-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead><tr id="uploadedSheetHeaders"></tr></thead>
+                            <tbody><tr id="uploadedSheetValues"></tr></tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
         </section>
 
-        <div class="result-row" id="resultFileRow" style="display: none;">
-            <strong>Download Learner Results</strong>
-            <a id="resultFileLink" class="download-button" href="#" download>Download File</a>
+        <!-- Actions Bar (Download / Print) -->
+        <div class="result-actions-bar" id="resultFileRow" style="display: none;">
+            <a id="resultFileLink" class="btn-download-pdf" href="#" download>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download PDF Results Slip
+            </a>
+            <button type="button" class="btn-print-slip" onclick="window.print()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print Slip
+            </button>
         </div>
 
     </div>
@@ -620,6 +971,41 @@
 
 
 <script>
+
+const publicSchoolsMap = new Map();
+
+async function preloadPublicSchools() {
+    try {
+        const cached = localStorage.getItem("drms_schools_cache");
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed)) {
+                parsed.forEach(s => {
+                    if (s.id && s.school_name) {
+                        publicSchoolsMap.set(String(s.id), s.school_name.trim());
+                    }
+                });
+            }
+        }
+    } catch {}
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("schools")
+            .select("id, school_name");
+        if (!error && Array.isArray(data)) {
+            data.forEach(s => {
+                if (s.id && s.school_name) {
+                    publicSchoolsMap.set(String(s.id), s.school_name.trim());
+                }
+            });
+            try {
+                localStorage.setItem("drms_schools_cache", JSON.stringify(data));
+            } catch {}
+        }
+    } catch {}
+}
+preloadPublicSchools();
 
 function messageForDownload(text) {
     const message = document.getElementById("searchMessage");
@@ -706,9 +1092,9 @@ function createLearnerDownload(data, selectedTerm) {
     pdf.setFillColor(37, 99, 235);
     pdf.rect(0, 0, pageWidth, 35, "F");
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(20);
+    pdf.setFontSize(18);
     pdf.setFont(undefined, "bold");
-    pdf.text("DRMS", left, 16);
+    pdf.text(data.school_name || "DRMS", left, 16);
     pdf.setFontSize(11);
     pdf.setFont(undefined, "normal");
     pdf.text("Learner Results Report", left, 25);
@@ -720,7 +1106,8 @@ function createLearnerDownload(data, selectedTerm) {
     pdf.text(learnerName, left, y);
     y += 9;
 
-    const rows = [
+    let rows = [
+        ["School", data.school_name || "—"],
         ["Assessment Number", assessmentNumber],
         ["Grade", formatGradeDisplay(data.grade || "")],
         ["Term", formatTermDisplay(data.term || selectedTerm)],
@@ -736,6 +1123,23 @@ function createLearnerDownload(data, selectedTerm) {
         ["Aggregate Points", data.aggregate_points ?? ""],
         ["Rubrics", data.aggregate_rubrics ?? ""]
     ];
+
+    if (Array.isArray(data.rawColumns) && data.rawColumns.length && !data.mathematics && !data.english) {
+        const ignoredForPdf = [
+            "learnername", "studentname", "pupilname", "candidate", "name",
+            "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber",
+            "school", "schoolname", "school_name", "institution", "academy"
+        ];
+        rows = [
+            ["School", data.school_name || "—"],
+            ["Assessment Number", assessmentNumber],
+            ["Grade", formatGradeDisplay(data.grade || "")],
+            ["Term", formatTermDisplay(data.term || selectedTerm)],
+            ...data.rawColumns
+                .filter(col => col.header && !ignoredForPdf.includes(col.header.toLowerCase().replace(/[^a-z0-9]/g, "")))
+                .map(col => [col.header, col.value ?? ""])
+        ];
+    }
 
     pdf.setFontSize(10);
     rows.forEach(([label, value], index) => {
@@ -1026,8 +1430,39 @@ async function findUploadedSpreadsheetResult(assessmentNumber, selectedTerm, sel
                     || upload.assessment_period === null
                     || upload.assessment_period === undefined
                     || Number(upload.assessment_period) === Number(selectedAssessmentPeriod))) {
+                let schoolName = spreadsheetValue(row, ["school", "schoolname", "school_name", "institution", "academy", "centre", "schoolcentre"]);
+                if (!schoolName && upload.school_id) {
+                    if (publicSchoolsMap.has(String(upload.school_id))) {
+                        schoolName = publicSchoolsMap.get(String(upload.school_id));
+                    }
+                    if (!schoolName) {
+                        try {
+                            const { data: schoolRecord } = await supabaseClient
+                                .from("schools")
+                                .select("school_name")
+                                .eq("id", upload.school_id)
+                                .maybeSingle();
+                            if (schoolRecord?.school_name) {
+                                schoolName = schoolRecord.school_name;
+                                publicSchoolsMap.set(String(upload.school_id), schoolName);
+                            }
+                        } catch {}
+                    }
+                }
+                if (!schoolName && upload.file_name) {
+                    const cleaned = upload.file_name
+                        .replace(/\.(xlsx?|xls|csv)$/i, "")
+                        .replace(/\b(?:grade|form|class|term|assessment|broadsheet|scores|results|upload)\b.*$/i, "")
+                        .replace(/[_\-]+/g, " ")
+                        .trim();
+                    if (cleaned.length >= 3 && !/^\d+$/.test(cleaned)) {
+                        schoolName = cleaned;
+                    }
+                }
                 return {
                     data: {
+                        school_name: schoolName || null,
+                        school_id: upload.school_id || null,
                         assessment_number: spreadsheetValue(row, ["assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber"]),
                         learner_name: spreadsheetValue(row, ["learnername", "studentname", "pupilname", "candidate", "name"]),
                         term: effectiveTerm || selectedTerm,
@@ -1075,29 +1510,74 @@ function mergeUploadedResult(indexedResult, uploadedResult) {
 function renderUploadedSheetRow(columns, schoolName, learnerName, assessmentPeriod, term) {
     const headers = document.getElementById("uploadedSheetHeaders");
     const values = document.getElementById("uploadedSheetValues");
+    const mobileContainer = document.getElementById("uploadedSheetMobileContainer");
 
-    headers.replaceChildren();
-    values.replaceChildren();
+    if (headers) headers.replaceChildren();
+    if (values) values.replaceChildren();
+    if (mobileContainer) mobileContainer.replaceChildren();
+
+    const ignoredForMobile = [
+        "learnername", "studentname", "pupilname", "candidate", "name",
+        "assessmentnumber", "assessmentno", "assessment", "admno", "admissionnumber", "indexnumber",
+        "school", "schoolname", "school_name", "institution", "academy"
+    ];
 
     columns.forEach((column) => {
-        const header = document.createElement("th");
-        header.textContent = column.header;
-        headers.appendChild(header);
+        if (headers && values) {
+            const header = document.createElement("th");
+            header.textContent = column.header;
+            headers.appendChild(header);
 
-        const value = document.createElement("td");
-        const normalizedHeader = column.header.toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (["learnername", "studentname", "pupilname", "candidate", "name"].includes(normalizedHeader)) {
-            value.className = "uploaded-sheet-learner-name";
+            const value = document.createElement("td");
+            const normalizedHeader = column.header.toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (["learnername", "studentname", "pupilname", "candidate", "name"].includes(normalizedHeader)) {
+                value.className = "uploaded-sheet-learner-name";
+            }
+            value.textContent = column.value === null || column.value === undefined
+                ? ""
+                : String(column.value);
+            values.appendChild(value);
         }
-        value.textContent = column.value === null || column.value === undefined
-            ? ""
-            : String(column.value);
-        values.appendChild(value);
+
+        if (mobileContainer) {
+            const normalizedHeader = column.header.toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (!ignoredForMobile.includes(normalizedHeader) && column.header && column.header.trim() !== "") {
+                const tile = document.createElement("div");
+                tile.className = "subject-score-tile";
+
+                const nameSpan = document.createElement("span");
+                nameSpan.className = "subject-name";
+                nameSpan.textContent = column.header;
+
+                const valSpan = document.createElement("span");
+                valSpan.className = "subject-points";
+                const displayVal = (column.value === null || column.value === undefined || String(column.value).trim() === "")
+                    ? "—"
+                    : String(column.value);
+                valSpan.textContent = displayVal;
+
+                tile.append(nameSpan, valSpan);
+                mobileContainer.appendChild(tile);
+            }
+        }
     });
 
     const normalizedTerm = String(term ?? "").trim();
     const termYear = normalizedTerm.match(/\b(?:19|20)\d{2}\b/)?.[0] || String(new Date().getFullYear());
-    document.getElementById("uploadedSheetSchool").textContent = schoolName || "School";
+    const finalSchool = (schoolName && !/^school$|^—$|^-$/i.test(String(schoolName).trim()))
+        ? String(schoolName).trim()
+        : "Institution Results";
+
+    const displaySchoolEl = document.getElementById("displaySchoolName");
+    if (displaySchoolEl) displaySchoolEl.textContent = finalSchool;
+
+    const displayLearnerEl = document.getElementById("displayLearnerName");
+    if (displayLearnerEl) displayLearnerEl.textContent = learnerName || "Learner";
+
+    const displayTermEl = document.getElementById("displayTerm");
+    if (displayTermEl) displayTermEl.textContent = `${formatTermDisplay(normalizedTerm)}, ${termYear}`;
+
+    document.getElementById("uploadedSheetSchool").textContent = finalSchool;
     document.getElementById("uploadedSheetLearner").textContent = learnerName || "";
     document.getElementById("uploadedSheetAssessment").textContent = assessmentPeriod
         ? `Assessment ${assessmentPeriod}`
@@ -1195,6 +1675,84 @@ async function loadResultDownload(assessmentNumber) {
     }
 }
 
+async function ensureSchoolName(data) {
+    if (!data) return data;
+    if (data.school_name && String(data.school_name).trim() && !/^school$|^—$|^-$/i.test(String(data.school_name).trim())) {
+        return data;
+    }
+
+    const schoolId = data.school_id || data.schoolId;
+    if (schoolId && publicSchoolsMap.has(String(schoolId))) {
+        data.school_name = publicSchoolsMap.get(String(schoolId));
+        return data;
+    }
+
+    if (schoolId) {
+        try {
+            const { data: school } = await supabaseClient
+                .from("schools")
+                .select("school_name")
+                .eq("id", schoolId)
+                .maybeSingle();
+            if (school?.school_name) {
+                data.school_name = school.school_name;
+                publicSchoolsMap.set(String(schoolId), school.school_name);
+                return data;
+            }
+        } catch {}
+    }
+
+    if (data.assessment_number) {
+        try {
+            const { data: learner } = await supabaseClient
+                .from("learners")
+                .select("school_id")
+                .eq("assessment_number", data.assessment_number)
+                .maybeSingle();
+            if (learner?.school_id) {
+                data.school_id = learner.school_id;
+                if (publicSchoolsMap.has(String(learner.school_id))) {
+                    data.school_name = publicSchoolsMap.get(String(learner.school_id));
+                    return data;
+                }
+                const { data: school } = await supabaseClient
+                    .from("schools")
+                    .select("school_name")
+                    .eq("id", learner.school_id)
+                    .maybeSingle();
+                if (school?.school_name) {
+                    data.school_name = school.school_name;
+                    publicSchoolsMap.set(String(learner.school_id), school.school_name);
+                    return data;
+                }
+            }
+        } catch {}
+    }
+
+    if (!data.school_name && publicSchoolsMap.size >= 1) {
+        data.school_name = Array.from(publicSchoolsMap.values())[0];
+        return data;
+    }
+
+    if (!data.school_name) {
+        try {
+            const { data: singleSchool } = await supabaseClient
+                .from("schools")
+                .select("id, school_name")
+                .limit(2);
+            if (singleSchool && singleSchool.length > 0) {
+                data.school_name = singleSchool[0].school_name;
+                if (singleSchool[0].id) {
+                    publicSchoolsMap.set(String(singleSchool[0].id), singleSchool[0].school_name);
+                }
+                return data;
+            }
+        } catch {}
+    }
+
+    return data;
+}
+
 async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPeriod) {
     const selectedSchoolId = null;
     let { data, error } = await callSearchLearnerResult(assessmentNumber, selectedTerm, selectedSchoolId);
@@ -1225,7 +1783,9 @@ async function loadAssessmentResult(assessmentNumber, selectedTerm, assessmentPe
         throw error;
     }
 
-    return fillAggregateFields(data);
+    data = fillAggregateFields(data);
+    data = await ensureSchoolName(data);
+    return data;
 }
 
 function addResultRow(container, label, value) {
@@ -1247,6 +1807,7 @@ function renderResultBlock(data, selectedTerm, assessmentPeriod, resultsList) {
     heading.textContent = `Assessment ${data.assessment_period || assessmentPeriod}`;
     block.appendChild(heading);
 
+    addResultRow(block, "School", data.school_name || "—");
     addResultRow(block, "Assessment Number", data.assessment_number || "");
     addResultRow(block, "Learner's Name", data.learner_name || "");
     addResultRow(block, "Grade", formatGradeDisplay(data.grade || ""));
@@ -1339,31 +1900,55 @@ async function searchResults() {
     }
 
     data = fillAggregateFields(data);
+    data = await ensureSchoolName(data);
+
+    const resolvedSchool = (data.school_name && !/^school$|^—$|^-$/i.test(String(data.school_name).trim()))
+        ? String(data.school_name).trim()
+        : "Registered School";
+    data.school_name = resolvedSchool;
+
+    const displaySchoolEl = document.getElementById("displaySchoolName");
+    if (displaySchoolEl) displaySchoolEl.textContent = resolvedSchool;
+
+    const displayLearnerEl = document.getElementById("displayLearnerName");
+    if (displayLearnerEl) displayLearnerEl.textContent = data.learner_name || "Learner";
+
+    const displayAssNoEl = document.getElementById("displayAssessmentNo");
+    if (displayAssNoEl) displayAssNoEl.textContent = data.assessment_number || assessmentNumber;
+
+    const displayGradeEl = document.getElementById("displayGrade");
+    if (displayGradeEl) displayGradeEl.textContent = formatGradeDisplay(data.grade || "") || "Grade —";
+
+    const displayTermEl = document.getElementById("displayTerm");
+    if (displayTermEl) displayTermEl.textContent = formatTermDisplay(data.term || selectedTerm) || "Term —";
+
     if (Array.isArray(data.rawColumns) && data.rawColumns.length) {
         renderUploadedSheetRow(
             data.rawColumns,
-            data.school_name,
+            resolvedSchool,
             data.learner_name,
             data.assessment_period,
             data.term || selectedTerm
         );
     }
     message.textContent = "";
+    document.getElementById("resultSchool").textContent = resolvedSchool;
+    document.getElementById("uploadedSheetSchool").textContent = resolvedSchool;
     document.getElementById("resultAssessment").textContent = data.assessment_number || "";
     document.getElementById("resultName").textContent = data.learner_name || "";
     document.getElementById("resultGrade").textContent = formatGradeDisplay(data.grade || "");
     document.getElementById("resultTerm").textContent = formatTermDisplay(data.term || selectedTerm);
-    document.getElementById("mathematics").textContent = data.mathematics ?? "";
-    document.getElementById("english").textContent = data.english ?? "";
-    document.getElementById("kiswahili").textContent = data.kiswahili ?? "";
-    document.getElementById("integratedScience").textContent = data.integrated_science ?? "";
-    document.getElementById("socialStudies").textContent = data.social_studies ?? "";
-    document.getElementById("creIre").textContent = data.cre_ire ?? "";
-    document.getElementById("agriculture").textContent = data.agriculture ?? "";
-    document.getElementById("creativeArtsSports").textContent = data.creative_arts_sports ?? "";
-    document.getElementById("preTechnical").textContent = data.pre_technical_studies ?? "";
-    document.getElementById("aggregatePoints").textContent = data.aggregate_points ?? "";
-    document.getElementById("aggregateRubrics").textContent = data.aggregate_rubrics ?? "";
+    document.getElementById("mathematics").textContent = (data.mathematics !== null && data.mathematics !== undefined && data.mathematics !== "") ? data.mathematics : "—";
+    document.getElementById("english").textContent = (data.english !== null && data.english !== undefined && data.english !== "") ? data.english : "—";
+    document.getElementById("kiswahili").textContent = (data.kiswahili !== null && data.kiswahili !== undefined && data.kiswahili !== "") ? data.kiswahili : "—";
+    document.getElementById("integratedScience").textContent = (data.integrated_science !== null && data.integrated_science !== undefined && data.integrated_science !== "") ? data.integrated_science : "—";
+    document.getElementById("socialStudies").textContent = (data.social_studies !== null && data.social_studies !== undefined && data.social_studies !== "") ? data.social_studies : "—";
+    document.getElementById("creIre").textContent = (data.cre_ire !== null && data.cre_ire !== undefined && data.cre_ire !== "") ? data.cre_ire : "—";
+    document.getElementById("agriculture").textContent = (data.agriculture !== null && data.agriculture !== undefined && data.agriculture !== "") ? data.agriculture : "—";
+    document.getElementById("creativeArtsSports").textContent = (data.creative_arts_sports !== null && data.creative_arts_sports !== undefined && data.creative_arts_sports !== "") ? data.creative_arts_sports : "—";
+    document.getElementById("preTechnical").textContent = (data.pre_technical_studies !== null && data.pre_technical_studies !== undefined && data.pre_technical_studies !== "") ? data.pre_technical_studies : "—";
+    document.getElementById("aggregatePoints").textContent = data.aggregate_points || "—";
+    document.getElementById("aggregateRubrics").textContent = data.aggregate_rubrics || "—";
     createLearnerDownload(data, selectedTerm);
     resultsCard.classList.remove("hidden");
 }
@@ -1432,6 +2017,7 @@ async function requestPasswordReset(emailId, messageId) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+    preloadPublicSchools();
 });
 
 </script>
