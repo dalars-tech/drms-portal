@@ -6072,4 +6072,61 @@
     };
 })();
 </script>
+    <script>
+(function () {
+    const hasWord = (s) => /zeraki/i.test(s);
+    const swap = (s) => s.replace(/zeraki/gi, "DRMS");
+
+    function fixNode(root) {
+        if (!root) return;
+        if (root.nodeType === Node.TEXT_NODE) {
+            const tag = root.parentElement?.tagName;
+            if (tag !== "SCRIPT" && tag !== "STYLE" && hasWord(root.nodeValue)) {
+                root.nodeValue = swap(root.nodeValue);
+            }
+            return;
+        }
+        if (root.nodeType !== Node.ELEMENT_NODE) return;
+
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let n;
+        while ((n = walker.nextNode())) {
+            const tag = n.parentElement?.tagName;
+            if (tag !== "SCRIPT" && tag !== "STYLE" && hasWord(n.nodeValue)) {
+                n.nodeValue = swap(n.nodeValue);
+            }
+        }
+        const attrEls = [root, ...root.querySelectorAll("[placeholder],[title]")];
+        attrEls.forEach((el) => {
+            ["placeholder", "title"].forEach((a) => {
+                const v = el.getAttribute?.(a);
+                if (v && hasWord(v)) el.setAttribute(a, swap(v));
+            });
+        });
+    }
+
+    // Fix everything already on the page
+    fixNode(document.body);
+    document.title = swap(document.title);
+
+    // Keep fixing text the app writes later (status messages, tables, etc.)
+    new MutationObserver((mutations) => {
+        mutations.forEach((m) => {
+            if (m.type === "characterData") fixNode(m.target);
+            m.addedNodes.forEach(fixNode);
+        });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    // Downloaded template: rename the file and its sheet
+    if (window.XLSX) {
+        const appendSheet = XLSX.utils.book_append_sheet;
+        XLSX.utils.book_append_sheet = (wb, ws, name, ...rest) =>
+            appendSheet(wb, ws, swap(String(name || "")), ...rest);
+
+        const writeFile = XLSX.writeFile;
+        XLSX.writeFile = (wb, filename, ...rest) =>
+            writeFile(wb, swap(String(filename)), ...rest);
+    }
+})();
+</script>
 </html>
