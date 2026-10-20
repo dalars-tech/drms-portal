@@ -5794,4 +5794,282 @@
     });
     </script>
 </body>
+    <script>
+(function () {
+    // ---------- Styles for the on-screen spreadsheet viewer ----------
+    const css = document.createElement("style");
+    css.textContent = `
+        .preview-sheet-view { flex: 1; min-height: 0; overflow: auto; padding: 16px; background: var(--surface-alt); }
+        .preview-sheet-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .preview-sheet-tab { padding: 6px 12px; font-size: 12px; background: white; color: #334155; border: 1px solid var(--border); }
+        .preview-sheet-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .preview-sheet-note { font-size: 12px; color: var(--text-muted); margin: 8px 0; }`;
+    document.head.appendChild(css);
+
+    // ---------- Branding: remove "ENTERPRISE SIS", show EKAI ----------
+    document.title = "DRMS Portal — Academic Results Management System";
+    document.querySelector(".portal-version-tag")?.remove();
+    const welcomeEl = document.querySelector(".welcome p");
+    if (welcomeEl) welcomeEl.textContent = "Welcome";
+
+    const origCheckLogin = window.checkLogin;
+    window.checkLogin = async function () {
+        await origCheckLogin();
+        if (currentUserRole === "owner") {
+            const set = (sel, txt) => { const el = document.querySelector(sel); if (el) el.textContent = txt; };
+            set("#userDisplayName", "EKAI");
+            set("#userAvatar", "EK");
+            set(".welcome p", "Welcome, EKAI");
+            set("#accountRole", "Role: Owner");
+        }
+    };
+
+    // ---------- Inject UI bits needed by the new code ----------
+    const formTitle = document.querySelector("#learnerEnrollForm h3");
+    if (formTitle) formTitle.id = "learnerFormTitle";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.id = "btnCancelEditLearner";
+    cancelBtn.className = "btn-secondary";
+    cancelBtn.textContent = "Cancel Edit";
+    cancelBtn.hidden = true;
+    cancelBtn.onclick = () => window.resetLearnerForm();
+    document.getElementById("enrollStatus")?.before(cancelBtn);
+
+    const sheetView = document.createElement("div");
+    sheetView.id = "previewSheetView";
+    sheetView.className = "preview-sheet-view";
+    sheetView.style.display = "none";
+    document.getElementById("previewFrame")?.after(sheetView);
+
+    // ---------- Enrollment: working edit + delete ----------
+    let enrolledLearnersCache = new Map();
+
+    function setEnrollStatus(msg, kind) {
+        const el = document.getElementById("enrollStatus");
+        if (!el) return;
+        el.textContent = msg || "";
+        el.style.color = kind === "error" ? "var(--danger)" : kind === "ok" ? "#059669" : "#1e3a8a";
+    }
+
+    window.resetLearnerForm = function (keepStatus) {
+        editingLearnerId = null;
+        document.getElementById("enrollAssessmentNo").value = "";
+        document.getElementById("enrollLearnerName").value = "";
+        document.getElementById("enrollClass").value = "";
+        document.getElementById("btnSaveLearner").textContent = "➕ Register Learner";
+        cancelBtn.hidden = true;
+        if (formTitle) formTitle.textContent = "Add New Learner to Grade";
+        if (keepStatus !== true) setEnrollStatus("");
+    };
+
+    window.saveSingleLearner = async function () {
+        const schoolId = document.getElementById("enrollSchool").value;
+        const grade = document.getElementById("enrollGrade").value;
+        const stream = document.getElementById("enrollClass").value.trim();
+        const assessmentNo = document.getElementById("enrollAssessmentNo").value.trim();
+        const name = document.getElementById("enrollLearnerName").value.trim();
+        const btn = document.getElementById("btnSaveLearner");
+
+        if (!schoolId || !grade || !assessmentNo || !name) {
+            setEnrollStatus("School, Grade, Assessment Number, and Name are required.", "error");
+            return;
+        }
+        const payload = { school_id: schoolId, grade, class: stream || null, assessment_number: assessmentNo, learner_name: name };
+
+        btn.disabled = true;
+        setEnrollStatus(editingLearnerId ? "Updating learner..." : "Saving learner...");
+        try {
+            if (editingLearnerId) {
+                const { data, error } = await supabaseClient.from("learners").update(payload).eq("id", editingLearnerId).select();
+                if (error) { setEnrollStatus(`Update failed: ${error.message}`, "error"); return; }
+                if (!data || !data.length) {
+                    setEnrollStatus("Update was blocked: no rows changed. This usually means the learners table has no UPDATE permission (RLS policy) for your account.", "error");
+                    return;
+                }
+                window.resetLearnerForm(true);
+                setEnrollStatus("Learner updated successfully.", "ok");
+            } else {
+                const { error } = await supabaseClient.from("learners").upsert(payload, { onConflict: "assessment_number" });
+                if (error) { setEnrollStatus(`Registration failed: ${error.message}`, "error"); return; }
+                window.resetLearnerForm(true);
+                setEnrollStatus("Learner registered successfully!", "ok");
+            }
+            await updateLearnerCountKPI();
+            await window.filterEnrolledLearners();
+        } finally {
+            btn.disabled = false;
+        }
+    };
+
+    window.filterEnrolledLearners = async function () {
+        const schoolId = document.getElementById("enrollSchool").value;
+        const grade = document.getElementById("enrollGrade").value;
+        const term = document.getElementById("enrollSearch")?.value.toLowerCase().trim() || "";
+        const tbody = document.getElementById("learnersTableBody");
+        if (!tbody) return;
+
+        let query = supabaseClient.from("learners")
+            .select("id, school_id, grade, class, assessment_number, learner_name")
+            .order("assessment_number", { ascending: true });
+        if (schoolId) query = query.eq("school_id", schoolId);
+        if (grade) query = query.eq("grade", grade);
+
+        const { data: learners, error } = await query;
+        if (error) {
+            tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Could not load learners: ${escapePrintText(error.message)}</td></tr>`;
+            return;
+        }
+        enrolledLearnersCache = new Map((learners || []).map(l => [String(l.id), l]));
+
+        const filtered = (learners || []).filter(l => !term
+            || (l.learner_name || "").toLowerCase().includes(term)
+            || (l.assessment_number || "").toLowerCase().includes(term)
+            || (l.class || "").toLowerCase().includes(term));
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 20px;">No enrolled learners found.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = filtered.map((l, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong style="font-family:'JetBrains Mono',monospace;">${escapePrintText(l.assessment_number)}</strong></td>
+                <td><strong>${escapePrintText(l.learner_name)}</strong></td>
+                <td><span class="card-badge-pill badge-blue">${escapePrintText(l.grade)}</span></td>
+                <td>${escapePrintText(l.class || "—")}</td>
+                <td>
+                    <button type="button" class="btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editLearnerRecord('${escapePrintText(l.id)}')">Edit</button>
+                    <button type="button" class="btn-danger" style="padding:4px 8px; font-size:12px; margin-left:4px;" onclick="deleteLearnerRecord('${escapePrintText(l.id)}')">Delete</button>
+                </td>
+            </tr>`).join("");
+    };
+
+    window.editLearnerRecord = function (id) {
+        const l = enrolledLearnersCache.get(String(id));
+        if (!l) { setEnrollStatus("Could not find that learner. Refresh the list and try again.", "error"); return; }
+        editingLearnerId = l.id;
+        document.getElementById("enrollSchool").value = l.school_id;
+        document.getElementById("enrollGrade").value = l.grade;
+        document.getElementById("enrollClass").value = l.class || "";
+        document.getElementById("enrollAssessmentNo").value = l.assessment_number || "";
+        document.getElementById("enrollLearnerName").value = l.learner_name || "";
+        document.getElementById("btnSaveLearner").textContent = "💾 Update Learner";
+        cancelBtn.hidden = false;
+        if (formTitle) formTitle.textContent = `Editing: ${l.learner_name}`;
+        setEnrollStatus("Change the details, then click Update Learner.");
+        document.getElementById("learnerEnrollForm").scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("enrollLearnerName").focus();
+    };
+
+    window.deleteLearnerRecord = async function (id) {
+        const l = enrolledLearnersCache.get(String(id));
+        const name = l?.learner_name || "this learner";
+        if (!confirm(`Remove "${name}" from the enrollment list?`)) return;
+
+        const { data, error } = await supabaseClient.from("learners").delete().eq("id", id).select();
+        if (error) {
+            setEnrollStatus(error.code === "23503"
+                ? `Can't delete ${name}: other records (such as saved scores) still reference this learner.`
+                : `Could not delete: ${error.message}`, "error");
+            return;
+        }
+        if (!data || !data.length) {
+            setEnrollStatus("Delete was blocked: no rows removed. This usually means the learners table has no DELETE permission (RLS policy) for your account.", "error");
+            return;
+        }
+        if (String(editingLearnerId) === String(id)) window.resetLearnerForm(true);
+        setEnrollStatus(`${name} removed.`, "ok");
+        await updateLearnerCountKPI();
+        await window.filterEnrolledLearners();
+    };
+
+    // ---------- Results Repository: view spreadsheets on screen ----------
+    let previewWorkbook = null;
+
+    function hideSheetView() {
+        sheetView.style.display = "none";
+        sheetView.innerHTML = "";
+    }
+
+    const origOpenPreview = window.openPreview;
+    window.openPreview = function (...args) { hideSheetView(); return origOpenPreview(...args); };
+
+    const origClosePreview = window.closePreview;
+    window.closePreview = function (...args) { hideSheetView(); return origClosePreview(...args); };
+
+    window.previewRepositoryFile = async function (storagePath, fileName, fileType) {
+        if (!storagePath) { alert("Storage path for this file is unavailable."); return; }
+        const isPdf = String(fileName || "").toLowerCase().endsWith(".pdf") || String(fileType || "").includes("pdf");
+
+        if (isPdf) {
+            try {
+                const { data, error } = await supabaseClient.storage.from("results").createSignedUrl(storagePath, 3600);
+                if (error || !data?.signedUrl) {
+                    alert("Could not load secure preview: " + (error?.message || "File not located in storage"));
+                    return;
+                }
+                window.openPreview(fileName, fileType, data.signedUrl);
+            } catch (err) { alert("Preview error: " + err.message); }
+            return;
+        }
+
+        // Excel / CSV: render as a table inside the modal
+        document.getElementById("previewTitle").textContent = `Results Preview: ${fileName}`;
+        const frame = document.getElementById("previewFrame");
+        if (frame) { frame.style.display = "none"; frame.src = "about:blank"; }
+        const notice = document.getElementById("previewSpreadsheetNotice");
+        if (notice) notice.style.display = "none";
+        const downBtn = document.getElementById("previewDownloadBtn");
+        if (downBtn) downBtn.style.display = "none";
+        sheetView.style.display = "block";
+        sheetView.innerHTML = `<p class="preview-sheet-note">Loading results…</p>`;
+        document.getElementById("previewModal").hidden = false;
+
+        try {
+            const { data: blob, error } = await supabaseClient.storage.from("results").download(storagePath);
+            if (error || !blob) throw new Error(error?.message || "File not found in storage");
+            previewWorkbook = XLSX.read(await blob.arrayBuffer(), { type: "array" });
+            renderSheet(previewWorkbook.SheetNames[0]);
+        } catch (err) {
+            sheetView.innerHTML = `<p class="preview-sheet-note" style="color:var(--danger);">Could not display this file: ${escapePrintText(err.message)}</p>`;
+        }
+    };
+
+    function renderSheet(sheetName) {
+        const rows = XLSX.utils.sheet_to_json(previewWorkbook.Sheets[sheetName], { header: 1, defval: "" });
+        const MAX = 1000;
+        const shown = rows.slice(0, MAX);
+        const colCount = shown.reduce((m, r) => Math.max(m, r.length), 0);
+
+        const tabs = previewWorkbook.SheetNames.length > 1
+            ? `<div class="preview-sheet-tabs">${previewWorkbook.SheetNames.map(n =>
+                `<button type="button" class="preview-sheet-tab ${n === sheetName ? "active" : ""}" data-sheet="${escapePrintText(n)}">${escapePrintText(n)}</button>`).join("")}</div>`
+            : "";
+
+        if (!shown.length || !colCount) {
+            sheetView.innerHTML = tabs + `<p class="preview-sheet-note">This sheet is empty.</p>`;
+        } else {
+            const [head, ...body] = shown;
+            const cols = Array.from({ length: colCount }, (_, i) => i);
+            sheetView.innerHTML = tabs
+                + `<div class="portal-table-container" style="margin-top:0;"><table class="portal-data-table">`
+                + `<thead><tr>${cols.map(i => `<th>${escapePrintText(head[i] ?? "")}</th>`).join("")}</tr></thead>`
+                + `<tbody>${body.map(r => `<tr>${cols.map(i => `<td>${escapePrintText(r[i] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody>`
+                + `</table></div>`
+                + (rows.length > MAX ? `<p class="preview-sheet-note">Showing the first ${MAX} of ${rows.length} rows.</p>` : "");
+        }
+        sheetView.querySelectorAll(".preview-sheet-tab").forEach(b =>
+            b.addEventListener("click", () => renderSheet(b.dataset.sheet)));
+    }
+
+    // ---------- Fix: "Preview Slips On Screen" needed two clicks ----------
+    const origPreviewSlips = window.previewSlipsOnScreen;
+    window.previewSlipsOnScreen = async function () {
+        await printGradeResults(true);
+        origPreviewSlips();
+    };
+})();
+</script>
 </html>
