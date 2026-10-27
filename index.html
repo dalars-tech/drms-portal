@@ -2018,6 +2018,26 @@ async function requestPasswordReset(emailId, messageId) {
 
 window.addEventListener("DOMContentLoaded", () => {
     preloadPublicSchools();
+
+    // Auto-search if accessed via Parent Dispatch direct link
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramAssessment = urlParams.get("assessment") || urlParams.get("assessmentNumber");
+        const paramTerm = urlParams.get("term");
+        if (paramAssessment) {
+            const input = document.getElementById("assessmentNumber");
+            if (input) input.value = paramAssessment.trim();
+            if (paramTerm) {
+                const termSelect = document.getElementById("term");
+                if (termSelect) termSelect.value = paramTerm.trim();
+            }
+            setTimeout(() => {
+                if (typeof searchResults === "function") searchResults();
+            }, 300);
+        }
+    } catch (e) {
+        console.warn("URL param parsing notice:", e);
+    }
 });
 
 </script>
