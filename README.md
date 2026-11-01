@@ -1,11 +1,15 @@
 # drms-portal
 Digital Results Management System-Results Portal
 
+## License
+
+Original DRMS project code is licensed under the MIT License; see [`LICENSE`](./LICENSE). MIT is an open-source license, not a declaration that the work is copyright-free: copyright notices and license terms still apply. Verify that you have rights to all existing code, fonts, images, and dependencies before distribution; third-party materials retain their own licenses.
+
 ## Supabase Storage setup
 
-The administrator upload uses a private storage bucket named `results`. Create it in the Supabase dashboard under **Storage**, using the exact name `results`, then run the policies below in the Supabase SQL Editor. The application stores files under each uploader's user ID.
+The school administrator and teacher upload uses a private storage bucket named `results`. Create it in the Supabase dashboard under **Storage**, using the exact name `results`, then run the policies below in the Supabase SQL Editor. The application stores files under each uploader's user ID.
 
-For the public learner portal to create signed download URLs, also add a `SELECT` policy that permits access to the stored result files. A simple policy for this project is:
+The public learner page currently looks up upload metadata and creates signed URLs for uploaded spreadsheet files. Those spreadsheets may contain results for many learners. Do not grant anonymous access to the `result_uploads` table or result files in production until that workflow is replaced with a server-side, learner-scoped download flow. The policies below intentionally omit public `SELECT` access.
 
 ```sql
 create policy "Authenticated users can upload result files"
@@ -15,11 +19,6 @@ with check (
 	bucket_id = 'results'
 	and (storage.foldername(name))[1] = (select auth.uid()::text)
 );
-
-create policy "Anyone can read result files"
-on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'results');
 
 drop policy if exists "Authenticated users can create upload records" on public.result_uploads;
 
@@ -38,11 +37,6 @@ with check (
 		)
 	)
 );
-
-create policy "Anyone can read upload records"
-on public.result_uploads for select
-to anon, authenticated
-using (true);
 
 drop policy if exists "Authenticated users can delete their upload records" on public.result_uploads;
 
@@ -162,7 +156,25 @@ The owner account is `bert36766@gmail.com`. Add each school administrator's Supa
 
 Do not invite school administrators as Supabase organization or project members. Create them as Supabase Auth users only, then assign their exact Auth email to a school. They should receive only the portal URL and their login details. Never share the project's service-role key.
 
-The application hides school management for school administrators, but database RLS policies are the security boundary. Verify that `schools` INSERT, UPDATE, and DELETE policies are owner-only, and that `result_uploads` SELECT is restricted to the uploader or the project owner. Do not use a public `result_uploads` SELECT policy in production if upload metadata should remain private; the public learner portal uses the RPC and does not need direct upload-record access.
+The application hides school management for school administrators, but database RLS policies are the security boundary. Verify that `schools` INSERT, UPDATE, and DELETE policies are owner-only, and that `result_uploads` SELECT is restricted to the uploader or the project owner. The current public learner page still attempts to read upload metadata and whole uploaded spreadsheets; that download fallback is not safe for production and must be replaced with a learner-scoped server-side flow before enabling access to uploaded files. The structured learner result search uses an RPC separately.
+
+## School roles and teacher assignments
+
+The dashboard uses Supabase Auth for all owner, school-admin, and teacher sign-ins. Its role-specific navigation is a usability aid, not authorization. Before using real learner information, enable and test RLS policies so that school admins and teachers can only access records belonging to their assigned school. The dashboard reads teacher assignments from `public.school_teachers`; it does not treat browser storage or user-editable Auth metadata as proof of a teacher role.
+
+Apply [`supabase/migrations/20261101110000_school_teachers.sql`](./supabase/migrations/20261101110000_school_teachers.sql) in the Supabase SQL Editor to create the teacher-assignment table and its school-scoped policies. The migration assumes `schools.id` is a UUID and that `schools` already has RLS enabled. It also makes teacher email unique across schools, matching the dashboard's one-school-per-teacher role model.
+
+Create teacher Auth accounts in Supabase **Authentication > Users** using the same email that will be recorded in the dashboard's teacher assignment. The dashboard stores the school, teacher name, email, and subject assignment only; it does not create credentials or change Auth accounts. Removing a teacher assignment does not delete or disable the teacher's Auth account. The migration only secures teacher assignments and assigned-school lookup; it does not provide RLS policies for `learners`, `results`, `result_uploads`, or Storage. Verify those policies separately before using real learner information.
+
+To let assigned teachers use **Upload Results** for any subject while limiting their learner and result access to their assigned school, apply [`supabase/migrations/20261101120000_teacher_result_uploads.sql`](./supabase/migrations/20261101120000_teacher_result_uploads.sql) after the school-teacher migration. It adds the school and upload metadata columns if needed, enables RLS, adds school-scoped access for teachers, school administrators, and the project owner, and adds restrictive scope policies so older permissive policies cannot expand access to other schools. The private `results` bucket and authenticated upload policy above must also be configured.
+
+Before launch, test each role with separate accounts against the live database: an owner across multiple schools, a school admin limited to one school, and a teacher limited to their assigned school and subject. Verify that direct API requests are denied when they cross these boundaries; hiding a dashboard control is not sufficient.
+
+## Login and learner-search activity
+
+After applying the school-teacher migration, apply [`supabase/migrations/20261101113000_portal_activity.sql`](./supabase/migrations/20261101113000_portal_activity.sql). The owner dashboard will then show recent successful dashboard sign-ins (name, email, resolved role, school, and time) and daily/all-time valid learner-search totals and matches. Search analytics store only aggregate counts; they do not store assessment numbers, learner names, or search terms. The activity tables are owner-readable only, and the login event is recorded once per Supabase Auth session.
+
+The public search counter is called by the browser and is useful for operational reporting, but it is not tamper-proof against automated callers. It does not collect IP addresses or identify parent users. Establish a retention period and delete old login events periodically in accordance with your privacy requirements. The dashboard activity panel requires the owner account configured in the SQL migrations.
 
 ## Printing grade results
 
@@ -216,6 +228,9 @@ create index if not exists learners_school_assessment_idx
 create index if not exists results_school_term_idx
   on public.results (school_id, term);
 
+create index if not exists result_uploads_school_assessment_idx
+  on public.result_uploads (school_id, term, grade, assessment_period, uploaded_at desc);
+
 create or replace function public.search_learner_result(
   search_assessment_number text,
   search_term text,
@@ -259,207 +274,6 @@ as $$
 $$;
 
 grant execute on function public.search_learner_result(text, text, uuid) to anon;
-```
-
-## Supabase RLS policies for Learner Enrollment & Subject Scores
-
-To enable both the project owner and assigned school administrators/teachers to enroll learners, input subject points, and auto-calculate aggregate scores (AGG) and rubrics (RUB) in Supabase, run this SQL script in the **Supabase SQL Editor**:
-
-```sql
--- 1. Ensure required columns and constraints exist
-alter table public.learners
-  add column if not exists school_id uuid references public.schools(id),
-  add column if not exists grade text,
-  add column if not exists class text;
-
-create unique index if not exists learners_assessment_no_uniq
-  on public.learners (assessment_number);
-
-alter table public.results
-  add column if not exists school_id uuid references public.schools(id),
-  add column if not exists term text,
-  add column if not exists assessment_period smallint,
-  add column if not exists mathematics text,
-  add column if not exists english text,
-  add column if not exists kiswahili text,
-  add column if not exists integrated_science text,
-  add column if not exists social_studies text,
-  add column if not exists cre_ire text,
-  add column if not exists agriculture text,
-  add column if not exists creative_arts_sports text,
-  add column if not exists pre_technical_studies text,
-  add column if not exists aggregate_points text,
-  add column if not exists aggregate_rubric text;
-
-alter table public.results drop constraint if exists results_learner_id_term_assessment_key;
-alter table public.results add constraint results_learner_id_term_assessment_key 
-  unique (learner_id, term, assessment_period);
-
--- 2. RLS policies for public.learners (Owner & Assigned School Admins)
-alter table public.learners enable row level security;
-
-drop policy if exists "Authenticated admins can view learners" on public.learners;
-create policy "Authenticated admins can view learners"
-on public.learners for select
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = learners.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
-drop policy if exists "Authenticated admins can insert learners" on public.learners;
-create policy "Authenticated admins can insert learners"
-on public.learners for insert
-to authenticated
-with check (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = learners.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
-drop policy if exists "Authenticated admins can update learners" on public.learners;
-create policy "Authenticated admins can update learners"
-on public.learners for update
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = learners.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-)
-with check (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = learners.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
-drop policy if exists "Authenticated admins can delete learners" on public.learners;
-create policy "Authenticated admins can delete learners"
-on public.learners for delete
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = learners.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
--- 3. RLS policies for public.results (Scores, AGG, RUB)
-alter table public.results enable row level security;
-
-drop policy if exists "Authenticated admins can view results" on public.results;
-create policy "Authenticated admins can view results"
-on public.results for select
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = results.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
-drop policy if exists "Authenticated admins can insert results" on public.results;
-create policy "Authenticated admins can insert results"
-on public.results for insert
-to authenticated
-with check (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = results.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
-
-drop policy if exists "Authenticated admins can update results" on public.results;
-create policy "Authenticated admins can update results"
-on public.results for update
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = results.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-)
-with check (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = results.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
--- 4. Status Column for Results (Draft vs. Published)
-alter table public.results add column if not exists status text default 'draft';
-
--- 5. School Teachers & Staff Management Table
-create table if not exists public.school_teachers (
-  id uuid primary key default gen_random_uuid(),
-  school_id uuid not null references public.schools(id) on delete cascade,
-  teacher_name text not null,
-  email text not null,
-  subject text default 'all',
-  created_at timestamptz default timezone('utc'::text, now()),
-  created_by uuid references auth.users(id) on delete set null
-);
-
-create index if not exists idx_school_teachers_school on public.school_teachers(school_id);
-create index if not exists idx_school_teachers_email on public.school_teachers(lower(email));
-
--- RLS policies for school_teachers
-alter table public.school_teachers enable row level security;
-
-drop policy if exists "Authenticated admins and teachers view staff" on public.school_teachers;
-create policy "Authenticated admins and teachers view staff"
-on public.school_teachers for select
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = school_teachers.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-  or lower(school_teachers.email) = lower((select auth.jwt() ->> 'email'))
-);
-
-drop policy if exists "Admins manage teachers" on public.school_teachers;
-create policy "Admins manage teachers"
-on public.school_teachers for all
-to authenticated
-using (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = school_teachers.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-)
-with check (
-  lower((select auth.jwt() ->> 'email')) = 'bert36766@gmail.com'
-  or exists (
-    select 1 from public.schools
-    where schools.id = school_teachers.school_id
-    and lower(schools.administrator_email) = lower((select auth.jwt() ->> 'email'))
-  )
-);
 ```
 
 If the portal displays `Unable to search results`, open the browser console or use the message on the page to see the exact database error. A `42883` error means the function has not been created, while a permission error means its `EXECUTE` grant is missing. The function should return the learner result columns used by `index.html`, including `assessment_number`, `learner_name`, `grade`, `class`, and the subject and aggregate fields.
