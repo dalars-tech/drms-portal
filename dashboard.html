@@ -4211,11 +4211,13 @@ index.html
     async function checkCloudLatency() {
         const pingBadge = document.getElementById("networkPingBadge");
         const pingText = document.getElementById("networkPingText");
+        const healthText = document.getElementById("metricSystemHealth");
         const offlineBanner = document.getElementById("offlineBanner");
 
         if (!navigator.onLine) {
             if (pingBadge) pingBadge.className = "network-ping-badge offline";
             if (pingText) pingText.textContent = "🔴 Offline";
+            if (healthText) healthText.textContent = "Offline";
             if (offlineBanner) offlineBanner.style.display = "flex";
             return;
         }
@@ -4227,10 +4229,12 @@ index.html
             if (error) {
                 if (pingText) pingText.textContent = "🟡 Database unavailable";
                 if (pingBadge) pingBadge.className = "network-ping-badge slow";
+                if (healthText) healthText.textContent = "Unavailable";
                 return;
             }
             const latency = Math.round(performance.now() - t0);
             if (pingText) pingText.textContent = `🟢 ${latency}ms`;
+            if (healthText) healthText.textContent = "Operational";
             if (pingBadge) {
                 pingBadge.className = latency > 400 ? "network-ping-badge slow" : "network-ping-badge";
             }
@@ -4238,6 +4242,7 @@ index.html
             console.error("Database connection check failed:", error);
             if (pingText) pingText.textContent = "🟡 Database unavailable";
             if (pingBadge) pingBadge.className = "network-ping-badge slow";
+            if (healthText) healthText.textContent = "Unavailable";
         }
     }
     setInterval(checkCloudLatency, 30000);
