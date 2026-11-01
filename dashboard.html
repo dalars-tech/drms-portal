@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DRMS National Educational Portal — Academic Results Management System</title>
+    <title>DRMS - Digital Results Management System</title>
 
     <!-- Google Fonts for Modern Educational UI -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,6 +43,20 @@
             --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.05);
             --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
             --shadow-elevated: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05);
+        }
+
+        .profile-trigger {
+            cursor: pointer;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+        }
+
+        .profile-trigger:hover,
+        .profile-trigger:focus-visible {
+            background: rgba(255, 255, 255, 0.16);
+            outline: 2px solid rgba(255, 255, 255, 0.75);
+            outline-offset: 2px;
         }
 
         * {
@@ -178,7 +192,9 @@
         .portal-header-right {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
+            margin-left: auto;
+            position: relative;
         }
 
         .user-profile-badge {
@@ -221,6 +237,34 @@
             font-size: 11px;
             color: #93c5fd;
             font-weight: 600;
+        }
+
+        .profile-modal-content {
+            padding: 20px 24px 24px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .profile-detail {
+            display: grid;
+            gap: 4px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-detail-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .profile-detail-value {
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+            overflow-wrap: anywhere;
         }
 
         .account-role, #accountRole, #assignedSchool {
@@ -281,12 +325,99 @@
             border-color: #ef4444;
         }
 
+        .menu-toggle {
+            width: 44px;
+            height: 44px;
+            padding: 10px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .menu-toggle:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.16);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            border-radius: 2px;
+            background: white;
+        }
+
+        .workspace-tabs-bar {
+            position: fixed;
+            top: 82px;
+            right: 24px;
+            z-index: 100;
+            display: none;
+            width: min(390px, calc(100vw - 32px));
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            align-items: stretch;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevated);
+        }
+
+        .workspace-tabs-bar[hidden] {
+            display: none;
+        }
+
+        .workspace-tabs-bar.open {
+            display: flex;
+        }
+
+        .workspace-tabs-group {
+            align-items: stretch;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            gap: 3px;
+        }
+
+        .tab-btn {
+            width: 100%;
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .workspace-menu-actions {
+            display: grid;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .workspace-menu-actions .header-btn {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .workspace-menu-actions button[hidden],
+        .workspace-tabs-group button[hidden] {
+            display: none;
+        }
+
         /* Container & Layout */
         .portal-main {
             width: 95%;
             max-width: 1400px;
             margin: 24px auto 60px;
             flex: 1;
+        }
+
+        body.auth-pending .portal-main {
+            visibility: hidden;
         }
 
         /* KPI Telemetry Banner */
@@ -1687,15 +1818,61 @@
 
         @media (max-width: 768px) {
             .portal-header {
-                height: auto;
-                padding: 14px 18px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
+                height: 64px;
+                padding: 0 14px;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
             }
-            .portal-header-center, .portal-header-right {
-                width: 100%;
-                justify-content: space-between;
+
+            .portal-title-block h1 {
+                font-size: 16px;
+            }
+
+            .portal-title-block p,
+            .user-meta-text {
+                display: none;
+            }
+
+            .profile-trigger {
+                padding: 4px 7px;
+                gap: 5px;
+            }
+
+            .profile-trigger .user-meta-text {
+                display: flex;
+            }
+
+            .profile-trigger .user-name {
+                display: none;
+            }
+
+            .profile-trigger .user-role {
+                display: none;
+            }
+
+            .profile-trigger .user-meta-text::after {
+                content: "Profile";
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            .portal-logo-icon {
+                width: 38px;
+                height: 38px;
+            }
+
+            .portal-header-center,
+            .btn-schools-header,
+            .btn-password-header,
+            .btn-logout-header {
+                display: none;
+            }
+
+            .workspace-tabs-bar {
+                top: 72px;
+                right: 12px;
+                max-height: calc(100vh - 84px);
             }
             .telemetry-row {
                 grid-template-columns: 1fr;
@@ -1970,7 +2147,7 @@
         }
 
         /* ==========================================================================
-           ENTERPRISE EDUCATIONAL SYSTEM EXPANSION STYLES
+           SCHOOL EDUCATIONAL SYSTEM EXPANSION STYLES
            ========================================================================== */
 
         /* Header Global School Switcher & Latency Ping */
@@ -2562,18 +2739,18 @@
     </style>
 </head>
 
-<body>
+<body class="auth-pending">
 
     <!-- Offline Notification Banner -->
     <div id="offlineBanner" class="offline-banner" style="display: none;" role="alert">
         <span>⚠️</span>
-        <span>Network connection interrupted. Operating in high-concurrency safe mode — pending records will sync automatically when back online.</span>
+        <span>Network connection interrupted. Check your connection before uploading results or saving changes.</span>
     </div>
 
     <!-- Floating System Toast Container -->
     <div id="drmsToastContainer" class="toast-container" aria-live="polite"></div>
 
-    <!-- Enterprise Application Header -->
+    <!-- DRMS Application Header -->
     <header class="portal-header">
         <div class="portal-brand">
             <div class="portal-logo-icon">
@@ -2582,9 +2759,16 @@
                 </svg>
             </div>
             <div class="portal-title-block">
-                <h1>DRMS Portal <span class="portal-version-tag">ENTERPRISE SIS</span></h1>
+                <h1>DRMS <span class="portal-version-tag">EDUCATION PORTAL</span></h1>
                 <p>Digital Results Management & Continuous Assessment System</p>
             </div>
+            <button type="button" class="user-profile-badge profile-trigger" id="profileTrigger" onclick="openMyProfile()" aria-haspopup="dialog">
+                <span id="userAvatar" class="user-avatar-circle" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; box-shadow: 0 0 14px rgba(245, 158, 11, 0.45); font-weight: 800;">DR</span>
+                <span class="user-meta-text">
+                    <span id="userDisplayName" class="user-name">My Profile</span>
+                    <span id="accountRole" class="user-role">Checking account...</span>
+                </span>
+            </button>
         </div>
 
         <div class="portal-header-center">
@@ -2596,34 +2780,28 @@
                 </select>
             </div>
 
-            <!-- Live Latency / Supabase Telemetry Heartbeat -->
-            <span id="networkPingBadge" class="network-ping-badge" title="Live Supabase Cloud Sync Latency">
+            <!-- Latest database connection check -->
+            <span id="networkPingBadge" class="network-ping-badge" title="Latest database connection check">
                 <span class="status-pulse"></span>
-                <span id="networkPingText">🟢 24ms</span>
+                <span id="networkPingText">Checking...</span>
             </span>
 
             <span id="liveClock" class="live-clock">--:--:--</span>
         </div>
 
         <div class="portal-header-right">
-            <div class="user-profile-badge">
-                <div id="userAvatar" class="user-avatar-circle" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; box-shadow: 0 0 14px rgba(245, 158, 11, 0.45); font-weight: 800;">EK</div>
-                <div class="user-meta-text">
-                    <span id="userDisplayName" class="user-name">EKAI</span>
-                    <span id="accountRole" class="user-role">Role: Portal Owner</span>
-                </div>
-            </div>
-
-            <button type="button" class="header-btn btn-schools-header" id="btnManageSchoolsHeader" onclick="manageSchools()">
+            <button type="button" class="header-btn btn-schools-header" id="btnManageSchoolsHeader" onclick="manageSchools()" hidden>
                 🏫 Institutions
             </button>
 
-            <button type="button" class="header-btn btn-password-header" id="btnChangePasswordHeader" onclick="openPasswordChangeModal()">
+            <button type="button" class="header-btn btn-password-header" id="btnChangePasswordHeader" onclick="openPasswordChangeModal()" hidden>
                 🔑 Password
             </button>
 
-            <button type="button" class="header-btn btn-logout-header" onclick="logout()">
-                Sign Out
+            <button type="button" id="workspaceMenuToggle" class="header-btn menu-toggle" aria-label="Open dashboard menu" aria-controls="workspaceNavigation" aria-expanded="false" onclick="toggleWorkspaceMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
             </button>
         </div>
     </header>
@@ -2671,7 +2849,7 @@
         </section>
 
         <!-- Segmented Navigation Tabs -->
-        <nav class="workspace-tabs-bar" aria-label="Portal Navigation Tabs">
+        <nav id="workspaceNavigation" class="workspace-tabs-bar" aria-label="Portal Navigation Tabs" hidden>
             <div class="workspace-tabs-group">
                 <button type="button" class="tab-btn active" id="tabBtnOverview" onclick="switchPortalTab('overview')">
                     <span>📊 Command Center</span>
@@ -2715,6 +2893,9 @@
                 <h2>Portal Session:</h2>
                 <p>Welcome, Owner</p>
             </div>
+            <div class="workspace-menu-actions" aria-label="Account actions">
+                <button type="button" class="header-btn btn-logout-header" onclick="logout()">Sign Out</button>
+            </div>
         </nav>
 
         <!-- ========================================== -->
@@ -2726,7 +2907,7 @@
                 <div class="hero-top-row">
                     <div class="hero-title-group">
                         <h2>🏛️ National Continuous Assessment & Results Command Center</h2>
-                        <p>Enterprise student information architecture engineered for countrywide scale. Monitor academic mastery, verify continuous assessment scores, generate one-sheet terminal slips, and dispatch results to thousands of parents seamlessly.</p>
+                        <p>Manage learner enrollment, assessment results, school reports, and family updates in one place.</p>
                     </div>
                     <div class="hero-school-chip">
                         <span>🏫 Active Scope:</span>
@@ -2767,17 +2948,17 @@
                         <div class="exec-metric-icon amber">🎯</div>
                         <div class="exec-metric-info">
                             <span class="exec-metric-label">National Mean AGG</span>
-                            <div class="exec-metric-val" id="metricNationalMean">48.2</div>
-                            <span class="exec-metric-sub">Meeting Expectation (ME1)</span>
+                            <div class="exec-metric-val" id="metricNationalMean">--</div>
+                            <span class="exec-metric-sub">Available when results are loaded</span>
                         </div>
                     </div>
 
                     <div class="exec-metric-card">
                         <div class="exec-metric-icon indigo">⚡</div>
                         <div class="exec-metric-info">
-                            <span class="exec-metric-label">System Concurrency</span>
-                            <div class="exec-metric-val" id="metricSystemHealth">100%</div>
-                            <span class="exec-metric-sub">Zero-Hanging Buffer Active</span>
+                            <span class="exec-metric-label">Service Status</span>
+                            <div class="exec-metric-val" id="metricSystemHealth">Checking...</div>
+                            <span class="exec-metric-sub">Service availability is checked live</span>
                         </div>
                     </div>
                 </div>
@@ -2804,7 +2985,7 @@
 
                     <button type="button" class="launch-btn" onclick="switchPortalTab('upload')">
                         <div class="launch-icon-box" style="background:#faf5ff; color:#7c3aed;">📤</div>
-                        <strong>Zeraki / Excel Sync</strong>
+                        <strong>Import Results</strong>
                         <span>Ingest school broadsheets with automatic AGG/RUB computation</span>
                     </button>
 
@@ -2823,10 +3004,62 @@
                     <button type="button" class="launch-btn" onclick="switchPortalTab('parentdispatch')">
                         <div class="launch-icon-box" style="background:#f0fdf4; color:#15803d;">💬</div>
                         <strong>Parent Dispatch Hub</strong>
-                        <span>Generate WhatsApp/SMS result links for thousands of parents</span>
+                        <span>Prepare a result link to share with a parent</span>
                     </button>
                 </div>
             </div>
+
+            <section class="card portal-activity-card" id="portalActivityCard" hidden aria-labelledby="portalActivityHeading">
+                <div class="card-header-bar">
+                    <div class="card-title-group">
+                        <h2 id="portalActivityHeading">Portal Activity</h2>
+                        <p>Authenticated dashboard sign-ins and privacy-preserving learner search totals.</p>
+                    </div>
+                    <button type="button" class="btn-secondary" onclick="loadPortalActivity()">Refresh activity</button>
+                </div>
+                <div class="executive-metrics-grid">
+                    <div class="exec-metric-card">
+                        <div class="exec-metric-info">
+                            <span class="exec-metric-label">Searches Today</span>
+                            <div class="exec-metric-val" id="activitySearchesToday">--</div>
+                        </div>
+                    </div>
+                    <div class="exec-metric-card">
+                        <div class="exec-metric-info">
+                            <span class="exec-metric-label">Results Found Today</span>
+                            <div class="exec-metric-val" id="activityMatchesToday">--</div>
+                        </div>
+                    </div>
+                    <div class="exec-metric-card">
+                        <div class="exec-metric-info">
+                            <span class="exec-metric-label">All Searches</span>
+                            <div class="exec-metric-val" id="activitySearchesTotal">--</div>
+                        </div>
+                    </div>
+                    <div class="exec-metric-card">
+                        <div class="exec-metric-info">
+                            <span class="exec-metric-label">All Results Found</span>
+                            <div class="exec-metric-val" id="activityMatchesTotal">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="portal-table-container">
+                    <table class="teachers-table">
+                        <thead>
+                            <tr>
+                                <th>Signed-in user</th>
+                                <th>Role</th>
+                                <th>School</th>
+                                <th>Dashboard sign-in</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portalLoginActivityBody">
+                            <tr><td colspan="4">Loading recent sign-ins...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="portalActivityStatus" class="school-status" role="status" aria-live="polite"></p>
+            </section>
 
             <!-- Analytics Visualizer & Term Milestones Grid -->
             <div class="analytics-row-grid">
@@ -2835,7 +3068,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <h3 style="font-size: 16px; font-weight: 800; color: var(--brand-dark);">📈 CBC Performance Competency Distribution</h3>
-                            <p style="font-size: 12px; color: var(--text-muted);">Real-time distribution across the 8 Ministry of Education rubric levels</p>
+                            <p style="font-size: 12px; color: var(--text-muted);">CBC rubric distribution is not yet connected to loaded results.</p>
                         </div>
                         <span class="card-badge-pill badge-green">Ministry CBC Benchmark</span>
                     </div>
@@ -2844,39 +3077,39 @@
                         <div class="rubric-bar-item">
                             <span class="rubric-bar-label">Exceeding (EE1 &amp; EE2)</span>
                             <div class="rubric-track">
-                                <div class="rubric-fill ee" id="rubricBarEE" style="width: 38%;"></div>
+                                <div class="rubric-fill ee" id="rubricBarEE" style="width: 0%;"></div>
                             </div>
-                            <span class="rubric-bar-val" id="rubricValEE">38%</span>
+                            <span class="rubric-bar-val" id="rubricValEE">--</span>
                         </div>
 
                         <div class="rubric-bar-item">
                             <span class="rubric-bar-label">Meeting (ME1 &amp; ME2)</span>
                             <div class="rubric-track">
-                                <div class="rubric-fill me" id="rubricBarME" style="width: 44%;"></div>
+                                <div class="rubric-fill me" id="rubricBarME" style="width: 0%;"></div>
                             </div>
-                            <span class="rubric-bar-val" id="rubricValME">44%</span>
+                            <span class="rubric-bar-val" id="rubricValME">--</span>
                         </div>
 
                         <div class="rubric-bar-item">
                             <span class="rubric-bar-label">Approaching (AE1 &amp; AE2)</span>
                             <div class="rubric-track">
-                                <div class="rubric-fill ae" id="rubricBarAE" style="width: 14%;"></div>
+                                <div class="rubric-fill ae" id="rubricBarAE" style="width: 0%;"></div>
                             </div>
-                            <span class="rubric-bar-val" id="rubricValAE">14%</span>
+                            <span class="rubric-bar-val" id="rubricValAE">--</span>
                         </div>
 
                         <div class="rubric-bar-item">
                             <span class="rubric-bar-label">Below (BE1 &amp; BE2)</span>
                             <div class="rubric-track">
-                                <div class="rubric-fill be" id="rubricBarBE" style="width: 4%;"></div>
+                                <div class="rubric-fill be" id="rubricBarBE" style="width: 0%;"></div>
                             </div>
-                            <span class="rubric-bar-val" id="rubricValBE">4%</span>
+                            <span class="rubric-bar-val" id="rubricValBE">--</span>
                         </div>
                     </div>
 
                     <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
                         <span>💡 Aggregate Points Formula: Sum of 9 CBC Subject areas (Max 72 pts)</span>
-                        <span>Official Ministry Rubrics</span>
+                        <span>CBC rubric levels</span>
                     </div>
                 </div>
 
@@ -2884,41 +3117,41 @@
                 <div class="milestones-card">
                     <div>
                         <h3 style="font-size: 16px; font-weight: 800; color: var(--brand-dark);">🗓️ Continuous Assessment Cycle</h3>
-                        <p style="font-size: 12px; color: var(--text-muted);">Progress of the 3 mandatory continuous evaluations</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">Assessment publication status is not connected to this summary.</p>
                     </div>
 
                     <div class="milestone-steps">
-                        <div class="milestone-step completed">
-                            <div class="milestone-badge">✓</div>
+                        <div class="milestone-step">
+                            <div class="milestone-badge">1</div>
                             <div class="milestone-info">
                                 <div class="milestone-title">Assessment 1 (Beginning of Term / CAT 1)</div>
                                 <div class="milestone-sub">Diagnostic evaluation baseline</div>
                             </div>
-                            <span class="milestone-status-tag done">Published</span>
+                            <span class="milestone-status-tag">Not tracked</span>
                         </div>
 
-                        <div class="milestone-step completed">
-                            <div class="milestone-badge">✓</div>
+                        <div class="milestone-step">
+                            <div class="milestone-badge">2</div>
                             <div class="milestone-info">
                                 <div class="milestone-title">Assessment 2 (Mid-Term / CAT 2)</div>
                                 <div class="milestone-sub">Formative progression evaluation</div>
                             </div>
-                            <span class="milestone-status-tag done">Published</span>
+                            <span class="milestone-status-tag">Not tracked</span>
                         </div>
 
-                        <div class="milestone-step active">
-                            <div class="milestone-badge">⏳</div>
+                        <div class="milestone-step">
+                            <div class="milestone-badge">3</div>
                             <div class="milestone-info">
                                 <div class="milestone-title">Assessment 3 (End of Term / CAT 3)</div>
                                 <div class="milestone-sub">Summative terminal mastery exam</div>
                             </div>
-                            <span class="milestone-status-tag in-progress">In Progress</span>
+                            <span class="milestone-status-tag">Not tracked</span>
                         </div>
                     </div>
 
                     <div style="background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid var(--border); font-size: 11.5px; color: #475569; display: flex; align-items: center; justify-content: space-between;">
-                        <span>🛡️ Engine: High-Concurrency Virtualizer</span>
-                        <span style="color:#059669; font-weight:700;">🟢 Safe for 10,000+ Concurrent Parents</span>
+                        <span>Service capacity depends on database and network configuration.</span>
+                        <span style="color:#475569; font-weight:700;">Check connection status above</span>
                     </div>
                 </div>
             </div>
@@ -2928,7 +3161,7 @@
         <!-- TAB 1: REPORTS STATION (Slips & Grade Broadsheet Analysis) -->
         <!-- ========================================== -->
         <section id="panePrint" class="workspace-pane">
-            
+
             <!-- Section A: Single-Sheet Individual Learner Slips -->
             <div class="card print-card">
                 <div class="card-header-bar">
@@ -3049,7 +3282,7 @@
                     </div>
                     <div class="analytics-stat-card">
                         <span class="stat-label">Overall Pass Rate</span>
-                        <div class="stat-num" id="statPassRate">100%</div>
+                        <div class="stat-num" id="statPassRate">--</div>
                     </div>
                 </div>
 
@@ -3348,17 +3581,17 @@
         </section>
 
         <!-- ========================================== -->
-        <!-- TAB 4: ZERAKI RESULTS INGESTION HUB -->
+        <!-- TAB 4: RESULTS RESULTS INGESTION HUB -->
         <!-- ========================================== -->
         <section id="paneUpload" class="workspace-pane">
             <div class="card upload-card">
                 <div class="card-header-bar">
                     <div class="card-title-group">
-                        <h2>⚡ Zeraki Results Ingestion Hub</h2>
+                        <h2>⚡ Assessment Results</h2>
                         <p>Download customized Excel marksheets for enrolled learners, upload filled sheets with live parsing & validation, auto-calculate AGG/RUB, and publish when verified.</p>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <span class="card-badge-pill badge-purple">Zeraki Engine</span>
+                        <span class="card-badge-pill badge-purple">Results Import</span>
                         <span class="card-badge-pill badge-blue">CBC Automated</span>
                     </div>
                 </div>
@@ -3435,26 +3668,26 @@
                     </div>
                 </div>
 
-                <!-- Zeraki Quick-Action Bar -->
+                <!-- Results Quick-Action Bar -->
                 <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                        <button type="button" class="btn-accent" onclick="downloadZerakiTemplate()">
-                            📥 Download Zeraki Excel Template (.xlsx)
+                        <button type="button" class="btn-accent" onclick="downloadResultsTemplate()">
+                            📥 Download Excel Results Template (.xlsx)
                         </button>
                         <button type="button" class="btn-secondary" onclick="openDirectMarksheetFromUpload()">
                             ✍️ Direct Online Marksheet Entry
                         </button>
                     </div>
-                    <span id="zerakiTemplateNote" style="font-size: 13px; color: var(--text-muted);">
+                    <span id="resultsTemplateNote" style="font-size: 13px; color: var(--text-muted);">
                         💡 Pre-populates all enrolled learners for the selected school & grade.
                     </span>
                 </div>
 
                 <!-- Drag & Drop Zone -->
-                <div id="zerakiDropzone" class="upload-dropzone" onclick="triggerZerakiFileInput()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
+                <div id="resultsDropzone" class="upload-dropzone" onclick="triggerResultsFileInput()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
                     <div class="upload-icon-circle">📊</div>
-                    <h4 id="zerakiDropTitle">Drag & Drop Zeraki Results Spreadsheet (.xlsx / .csv) Here, or Click to Browse</h4>
-                    <p id="zerakiDropSub">Automatic column matching, learner identification, aggregate recalculation, and draft preview.</p>
+                    <h4 id="resultsDropTitle">Drag and drop an Excel or CSV results file here, or click to browse</h4>
+                    <p id="resultsDropSub">Automatic column matching, learner identification, aggregate recalculation, and draft preview.</p>
                 </div>
 
                 <input
@@ -3462,33 +3695,33 @@
                     type="file"
                     accept=".xlsx,.xls,.csv,.pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     hidden
-                    onchange="handleZerakiFileSelect(this)"
+                    onchange="handleResultsFileSelect(this)"
                 >
 
                 <div id="uploadStatus" class="upload-status" aria-live="polite"></div>
 
-                <!-- Zeraki Live Telemetry / Verification Stats (Visible when spreadsheet is parsed) -->
-                <div id="zerakiKpiBar" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0;">
+                <!-- Results Live Telemetry / Verification Stats (Visible when spreadsheet is parsed) -->
+                <div id="resultsKpiBar" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0;">
                     <div class="telemetry-card" style="padding: 12px 16px;">
                         <div class="telemetry-label">Registered Enrolled</div>
-                        <div class="telemetry-value" id="kpiZerakiTotal">0</div>
+                        <div class="telemetry-value" id="kpiResultsTotal">0</div>
                     </div>
                     <div class="telemetry-card" style="padding: 12px 16px;">
                         <div class="telemetry-label">Matched in File</div>
-                        <div class="telemetry-value" id="kpiZerakiMatched">0</div>
+                        <div class="telemetry-value" id="kpiResultsMatched">0</div>
                     </div>
                     <div class="telemetry-card" style="padding: 12px 16px;">
                         <div class="telemetry-label">Mean / Average Score</div>
-                        <div class="telemetry-value" id="kpiZerakiMean">--</div>
+                        <div class="telemetry-value" id="kpiResultsMean">--</div>
                     </div>
                     <div class="telemetry-card" style="padding: 12px 16px;">
                         <div class="telemetry-label">Ingestion State</div>
-                        <div class="telemetry-value" id="kpiZerakiState" style="color: #d97706; font-size: 18px;">Pending Approval</div>
+                        <div class="telemetry-value" id="kpiResultsState" style="color: #d97706; font-size: 18px;">Pending Approval</div>
                     </div>
                 </div>
 
                 <!-- Parsed Results Table Preview -->
-                <div id="zerakiPreviewSection" style="display: none; margin-top: 20px;">
+                <div id="resultsPreviewSection" style="display: none; margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <h3 style="font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 2px;">
@@ -3500,33 +3733,33 @@
                         </div>
 
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" class="btn-warning" onclick="commitZerakiResults(false)">
+                            <button type="button" class="btn-warning" onclick="commitResultsResults(false)">
                                 💾 Save Changes (Draft)
                             </button>
-                            <button type="button" class="btn-success" onclick="commitZerakiResults(true)">
+                            <button type="button" class="btn-success" onclick="commitResultsResults(true)">
                                 🚀 Publish Results
                             </button>
-                            <button type="button" class="btn-secondary" onclick="resetZerakiUpload()">
+                            <button type="button" class="btn-secondary" onclick="resetResultsUpload()">
                                 🔄 Discard
                             </button>
                         </div>
                     </div>
 
                     <div class="portal-table-container">
-                        <table class="portal-data-table" id="zerakiPreviewTable">
-                            <thead id="zerakiPreviewHead">
+                        <table class="portal-data-table" id="resultsPreviewTable">
+                            <thead id="resultsPreviewHead">
                                 <tr>
                                     <th style="width: 50px;">#</th>
                                     <th>Assessment Number</th>
                                     <th>Learner Name</th>
                                     <th>Stream</th>
-                                    <th id="thZerakiSubject">Score Points</th>
+                                    <th id="thResultsSubject">Score Points</th>
                                     <th>Calculated AGG</th>
                                     <th>Calculated Rubric (RUB)</th>
                                     <th>Match Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="zerakiPreviewBody"></tbody>
+                            <tbody id="resultsPreviewBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -3769,10 +4002,10 @@ index.html
             <div class="card" id="teacherManagementCard" style="margin-top: 24px;">
                 <div class="card-header-bar">
                     <div class="card-title-group">
-                        <h2>👨‍🏫 School Teachers & Staff Accounts</h2>
-                        <p>Assign subject teachers to your institution. Teachers receive dedicated accounts to view learners and enter/upload scores for their learning areas.</p>
+                        <h2>👨‍🏫 School Staff Assignments</h2>
+                        <p>Record a teacher's assigned school and learning area. Create the teacher's Supabase Auth account separately before they sign in.</p>
                     </div>
-                    <span class="card-badge-pill badge-green">Teacher Access Control</span>
+                    <span class="card-badge-pill badge-green">Teacher Role Assignments</span>
                 </div>
 
                 <form class="teacher-form-grid" onsubmit="event.preventDefault(); assignTeacherAccount();">
@@ -3809,14 +4042,9 @@ index.html
                         </select>
                     </div>
 
-                    <div class="teacher-form-field">
-                        <label for="teacherInitialPassword">Initial Password</label>
-                        <input id="teacherInitialPassword" type="text" placeholder="Secret initial password (min 6 chars)" minlength="6" required value="Teacher@2025">
-                    </div>
-
                     <div>
                         <button id="btnAssignTeacher" type="submit" class="btn-accent" style="height: 42px;">
-                            ➕ Assign Teacher
+                            ➕ Save Teacher Assignment
                         </button>
                     </div>
                 </form>
@@ -3878,6 +4106,41 @@ index.html
         </div>
     </div>
 
+    <div id="myProfileModal" class="preview-modal" hidden onclick="if (event.target === this) closeMyProfile();">
+        <section class="preview-panel" style="max-width: 480px; height: auto;" role="dialog" aria-modal="true" aria-labelledby="myProfileTitle">
+            <header class="preview-header">
+                <h2 id="myProfileTitle">My Profile</h2>
+                <button type="button" class="btn-secondary" onclick="closeMyProfile()" aria-label="Close profile">✕</button>
+            </header>
+            <div class="profile-modal-content">
+                <div class="profile-detail">
+                    <span class="profile-detail-label">Name</span>
+                    <span class="profile-detail-value" id="myProfileName">—</span>
+                </div>
+                <div class="profile-detail">
+                    <span class="profile-detail-label">Email</span>
+                    <span class="profile-detail-value" id="myProfileEmail">—</span>
+                </div>
+                <div class="profile-detail">
+                    <span class="profile-detail-label">Role</span>
+                    <span class="profile-detail-value" id="myProfileRole">—</span>
+                </div>
+                <div class="profile-detail">
+                    <span class="profile-detail-label">School</span>
+                    <span class="profile-detail-value" id="myProfileSchool">—</span>
+                </div>
+                <div class="profile-detail" id="myProfileSubjectRow" hidden>
+                    <span class="profile-detail-label">Assigned learning area</span>
+                    <span class="profile-detail-value" id="myProfileSubject">—</span>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn-secondary" onclick="closeMyProfile()">Close</button>
+                    <button type="button" class="btn-accent" id="profileChangePasswordButton" onclick="closeMyProfile(); openPasswordChangeModal();">Change Password</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <!-- Self-Service Change Password Modal -->
     <div id="passwordModal" class="preview-modal" hidden>
         <div class="preview-panel" style="max-width: 480px; height: auto;" role="dialog" aria-modal="true" aria-labelledby="pwdModalTitle">
@@ -3911,13 +4174,13 @@ index.html
     <div id="printReport" class="print-report"></div>
 
     <!-- ==========================================================================
-       ENTERPRISE JAVASCRIPT LOGIC
+       SCHOOL JAVASCRIPT LOGIC
        ========================================================================== -->
     <script>
     const PORTAL_OWNER_EMAIL = "bert36766@gmail.com";
 
     // =========================================================================
-    // HIGH-SCALE ENTERPRISE UTILITIES (ZERO-HANGING SAFEGUARDS)
+    // HIGH-SCALE SCHOOL UTILITIES (ZERO-HANGING SAFEGUARDS)
     // =========================================================================
 
     // Floating Non-Blocking Toast Notification Engine
@@ -3960,23 +4223,30 @@ index.html
         if (offlineBanner) offlineBanner.style.display = "none";
         const t0 = performance.now();
         try {
-            await supabaseClient.from("schools").select("id", { count: "exact", head: true });
+            const { error } = await supabaseClient.from("schools").select("id", { count: "exact", head: true });
+            if (error) {
+                if (pingText) pingText.textContent = "🟡 Database unavailable";
+                if (pingBadge) pingBadge.className = "network-ping-badge slow";
+                return;
+            }
             const latency = Math.round(performance.now() - t0);
             if (pingText) pingText.textContent = `🟢 ${latency}ms`;
             if (pingBadge) {
                 pingBadge.className = latency > 400 ? "network-ping-badge slow" : "network-ping-badge";
             }
-        } catch {
-            if (pingText) pingText.textContent = "🟡 Active";
+        } catch (error) {
+            console.error("Database connection check failed:", error);
+            if (pingText) pingText.textContent = "🟡 Database unavailable";
+            if (pingBadge) pingBadge.className = "network-ping-badge slow";
         }
     }
     setInterval(checkCloudLatency, 30000);
     window.addEventListener("online", () => {
-        showToast("Network restored. All services synchronized.", "success", "Back Online");
+        showToast("Network restored. Check the current page before retrying.", "success", "Back Online");
         checkCloudLatency();
     });
     window.addEventListener("offline", () => {
-        showToast("Operating offline. Changes preserved in local memory.", "warning", "Offline Mode");
+        showToast("Connection unavailable. Uploads and changes need an active connection.", "warning", "Offline Mode");
         checkCloudLatency();
     });
 
@@ -4014,6 +4284,18 @@ index.html
 
     // Portal Tab Switcher
     function switchPortalTab(tabKey) {
+        const roleTabs = {
+            owner: new Set(["overview", "learners", "teacherscores", "upload", "print", "repository", "parentdispatch", "schools"]),
+            school_admin: new Set(["overview", "learners", "teacherscores", "upload", "print", "repository", "parentdispatch", "schools"]),
+            teacher: new Set(["teacherscores"])
+        };
+        if (!roleTabs[currentUserRole]?.has(tabKey)) {
+            showToast("This section is not available for your account.", "warning", "Access Restricted");
+            toggleWorkspaceMenu(false);
+            return;
+        }
+
+        toggleWorkspaceMenu(false);
         document.querySelectorAll(".workspace-tabs-group .tab-btn").forEach(btn => btn.classList.remove("active"));
         document.querySelectorAll(".workspace-pane").forEach(pane => pane.classList.remove("active"));
 
@@ -4127,11 +4409,190 @@ index.html
     setInterval(updateLiveClock, 1000);
     updateLiveClock();
 
+    function toggleWorkspaceMenu(forceOpen) {
+        const menu = document.getElementById("workspaceNavigation");
+        const toggle = document.getElementById("workspaceMenuToggle");
+        if (!menu || !toggle) return;
+
+        const shouldOpen = typeof forceOpen === "boolean"
+            ? forceOpen
+            : menu.hidden;
+        menu.hidden = !shouldOpen;
+        menu.classList.toggle("open", shouldOpen);
+        toggle.setAttribute("aria-expanded", String(shouldOpen));
+        toggle.setAttribute("aria-label", shouldOpen ? "Close dashboard menu" : "Open dashboard menu");
+    }
+
+    function setDashboardRoleAccess(role) {
+        const roleTabs = {
+            owner: new Set(["overview", "learners", "teacherscores", "upload", "print", "repository", "parentdispatch", "schools"]),
+            school_admin: new Set(["overview", "learners", "teacherscores", "upload", "print", "repository", "parentdispatch", "schools"]),
+            teacher: new Set(["teacherscores"])
+        };
+        const allowedTabs = roleTabs[role] || new Set();
+        const tabKeys = {
+            tabBtnOverview: "overview",
+            tabBtnLearners: "learners",
+            tabBtnTeacherScores: "teacherscores",
+            tabBtnUpload: "upload",
+            tabBtnPrint: "print",
+            tabBtnRepository: "repository",
+            tabBtnParentDispatch: "parentdispatch",
+            tabBtnSchools: "schools"
+        };
+
+        for (const [tabId, key] of Object.entries(tabKeys)) {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.hidden = !allowedTabs.has(key);
+        }
+        document.querySelectorAll(".launch-btn[onclick]").forEach((button) => {
+            const tabKey = button.getAttribute("onclick")?.match(/switchPortalTab\('([^']+)'\)/)?.[1];
+            if (tabKey) button.hidden = !allowedTabs.has(tabKey);
+        });
+
+        const isOwner = role === "owner";
+        const isAdmin = role === "school_admin";
+        const manageSchoolsButton = document.getElementById("btnManageSchoolsHeader");
+        const changePasswordButton = document.getElementById("btnChangePasswordHeader");
+        const schoolManagementCard = document.getElementById("schoolManagementCard");
+        const teacherManagementCard = document.getElementById("teacherManagementCard");
+        const portalActivityCard = document.getElementById("portalActivityCard");
+        const learnerEnrollForm = document.getElementById("learnerEnrollForm");
+        const bulkEnrollSection = document.getElementById("bulkEnrollSection");
+        const singleEnrollmentMode = document.getElementById("btnModeSingleEnroll");
+        const bulkEnrollmentMode = document.getElementById("btnModeBulkEnroll");
+        const scoreSubject = document.getElementById("scoreSubject");
+
+        if (manageSchoolsButton) {
+            manageSchoolsButton.hidden = !isOwner && !isAdmin;
+            manageSchoolsButton.textContent = isAdmin ? "👨‍🏫 Staff & Teachers" : "🏫 Manage Schools";
+        }
+        if (changePasswordButton) changePasswordButton.hidden = !currentUserSession;
+        if (schoolManagementCard) schoolManagementCard.hidden = !isOwner;
+        if (portalActivityCard) portalActivityCard.hidden = !isOwner;
+        if (teacherManagementCard) teacherManagementCard.hidden = role === "teacher";
+        if (learnerEnrollForm) learnerEnrollForm.hidden = role === "teacher";
+        if (bulkEnrollSection) bulkEnrollSection.hidden = role === "teacher";
+        if (singleEnrollmentMode) singleEnrollmentMode.hidden = role === "teacher";
+        if (bulkEnrollmentMode) bulkEnrollmentMode.hidden = role === "teacher";
+        if (scoreSubject) {
+            const assignedSubject = role === "teacher" ? currentUserTeacherProfile?.subject : null;
+            scoreSubject.disabled = Boolean(assignedSubject && assignedSubject !== "all");
+            if (scoreSubject.disabled) scoreSubject.value = assignedSubject;
+        }
+
+        const schoolTab = document.getElementById("tabBtnSchools");
+        const schoolLabel = schoolTab?.querySelector("span");
+        if (schoolLabel) schoolLabel.textContent = isAdmin ? "Staff & Teachers" : "Schools";
+    }
+
     // Current Session State
     let currentUserSession = null;
-    let currentUserRole = "owner"; // "owner" | "school_admin" | "teacher"
+    let currentUserRole = null; // "owner" | "school_admin" | "teacher"
     let currentUserSchool = null;
     let currentUserTeacherProfile = null;
+
+    function openMyProfile() {
+        if (!currentUserSession?.user) return;
+
+        const user = currentUserSession.user;
+        const displayName = document.getElementById("userDisplayName")?.textContent
+            || user.user_metadata?.full_name
+            || currentUserTeacherProfile?.teacher_name
+            || user.email
+            || "User";
+        const roleName = currentUserRole === "owner"
+            ? "Portal Owner"
+            : currentUserRole === "school_admin"
+                ? "School Admin / DOS"
+                : "Teacher";
+        const subject = currentUserTeacherProfile?.subject;
+
+        document.getElementById("myProfileName").textContent = displayName;
+        document.getElementById("myProfileEmail").textContent = user.email || "—";
+        document.getElementById("myProfileRole").textContent = roleName;
+        document.getElementById("myProfileSchool").textContent = currentUserSchool?.school_name || "All schools";
+        document.getElementById("myProfileSubject").textContent = subject && subject !== "all"
+            ? subject.replace(/_/g, " ").toUpperCase()
+            : "All subjects";
+        document.getElementById("myProfileSubjectRow").hidden = currentUserRole !== "teacher";
+        document.getElementById("profileChangePasswordButton").hidden = !currentUserSession;
+        document.getElementById("myProfileModal").hidden = false;
+        document.getElementById("myProfileModal").querySelector("button")?.focus();
+    }
+
+    function closeMyProfile() {
+        document.getElementById("myProfileModal").hidden = true;
+        document.getElementById("profileTrigger")?.focus();
+    }
+
+    async function loadPortalActivity() {
+        if (currentUserRole !== "owner") return;
+
+        const status = document.getElementById("portalActivityStatus");
+        const body = document.getElementById("portalLoginActivityBody");
+        if (status) status.textContent = "Refreshing portal activity...";
+
+        let statsResult;
+        let loginResult;
+        try {
+            [statsResult, loginResult] = await Promise.all([
+                supabaseClient.rpc("get_learner_search_stats"),
+                supabaseClient
+                    .from("portal_login_events")
+                    .select("email, display_name, role, school_name, logged_in_at")
+                    .order("logged_in_at", { ascending: false })
+                    .limit(20)
+            ]);
+        } catch (error) {
+            console.error("Could not load portal activity:", error);
+            if (status) status.textContent = `Could not load portal activity: ${error.message || "Database request failed."}`;
+            if (body) body.innerHTML = "<tr><td colspan='4'>Activity history is temporarily unavailable.</td></tr>";
+            return;
+        }
+
+        if (statsResult.error) {
+            console.error("Could not load learner search statistics:", statsResult.error);
+            if (status) status.textContent = `Could not load search counts: ${statsResult.error.message}`;
+        } else {
+            const stats = statsResult.data || {};
+            document.getElementById("activitySearchesToday").textContent = stats.today_searches ?? 0;
+            document.getElementById("activityMatchesToday").textContent = stats.today_matched ?? 0;
+            document.getElementById("activitySearchesTotal").textContent = stats.total_searches ?? 0;
+            document.getElementById("activityMatchesTotal").textContent = stats.total_matched ?? 0;
+        }
+
+        if (loginResult.error) {
+            console.error("Could not load portal login history:", loginResult.error);
+            if (body) body.innerHTML = `<tr><td colspan="4">Could not load sign-ins: ${escapePrintText(loginResult.error.message)}</td></tr>`;
+            if (status) status.textContent = `Could not load sign-in history: ${loginResult.error.message}`;
+            return;
+        }
+
+        if (body) {
+            const events = loginResult.data || [];
+            body.innerHTML = events.length
+                ? events.map((event) => `
+                    <tr>
+                        <td><strong>${escapePrintText(event.display_name || event.email)}</strong><br><small>${escapePrintText(event.email)}</small></td>
+                        <td>${escapePrintText(event.role.replace(/_/g, " "))}</td>
+                        <td>${escapePrintText(event.school_name || (event.role === "owner" ? "All schools" : "—"))}</td>
+                        <td>${escapePrintText(new Date(event.logged_in_at).toLocaleString())}</td>
+                    </tr>
+                `).join("")
+                : "<tr><td colspan='4'>No dashboard sign-ins recorded yet.</td></tr>";
+        }
+        if (status && !statsResult.error) status.textContent = "Activity counts do not store learner names, assessment numbers, or search terms.";
+    }
+
+    async function recordLearnerSearch(resultFound) {
+        const { error } = await supabaseClient.rpc("record_learner_search", {
+            result_found: Boolean(resultFound)
+        });
+        if (error) {
+            console.error("Could not record learner search count:", error);
+        }
+    }
 
     // Self-Service Password Modal Functions
     function openPasswordChangeModal() {
@@ -4199,52 +4660,6 @@ index.html
 
     // Authentication Guard & Role-Based Workspaces
     async function checkLogin() {
-        // ──────────────────────────────────────────────────────
-        // TEACHER ACCESS CODE SESSION (no Supabase Auth needed)
-        // ──────────────────────────────────────────────────────
-        const teacherCodeSession = JSON.parse(sessionStorage.getItem("drms_teacher_session") || "null");
-        if (teacherCodeSession && teacherCodeSession.role === "teacher" && teacherCodeSession.school_id) {
-            currentUserRole = "teacher";
-            currentUserSchool = { id: teacherCodeSession.school_id, school_name: teacherCodeSession.school_name };
-            currentUserTeacherProfile = {
-                teacher_name: teacherCodeSession.teacher_name,
-                subject: teacherCodeSession.subject,
-                school_id: teacherCodeSession.school_id
-            };
-
-            // Set UI labels
-            const displayName = teacherCodeSession.teacher_name || "Teacher";
-            const welcomeP = document.querySelector(".welcome p");
-            if (welcomeP) welcomeP.textContent = "Welcome, " + displayName;
-            const userDisplayName = document.getElementById("userDisplayName");
-            if (userDisplayName) userDisplayName.textContent = displayName;
-            const userAvatar = document.getElementById("userAvatar");
-            if (userAvatar) {
-                const initials = displayName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
-                userAvatar.textContent = initials || "TR";
-            }
-            const subjectLabel = teacherCodeSession.subject && teacherCodeSession.subject !== "all"
-                ? teacherCodeSession.subject.replace(/_/g, " ").toUpperCase()
-                : "All Subjects";
-            const accountRole = document.getElementById("accountRole");
-            if (accountRole) accountRole.textContent = `Teacher: ${subjectLabel}`;
-            const assignedSchoolEl = document.getElementById("assignedSchool");
-            if (assignedSchoolEl) assignedSchoolEl.textContent = "School: " + (teacherCodeSession.school_name || "Assigned");
-            const kpiScopeText = document.getElementById("kpiScopeText");
-            if (kpiScopeText) kpiScopeText.textContent = teacherCodeSession.school_name || "My School";
-
-            // Apply teacher code restrictions — only Subject Scores & Learner Enrollment visible
-            applyTeacherCodeRestrictions(teacherCodeSession);
-
-            // Populate school dropdowns with just their school
-            await loadSchoolDropdownsForCodeTeacher(teacherCodeSession);
-            await updateLearnerCountKPI();
-            return;
-        }
-
-        // ──────────────────────────────────────────────────────
-        // STANDARD SUPABASE AUTH SESSION
-        // ──────────────────────────────────────────────────────
         const {
             data: { session }
         } = await supabaseClient.auth.getSession();
@@ -4265,50 +4680,31 @@ index.html
         if (isOwner) {
             roleLabel = "Portal Owner";
         } else {
-            // 1. Check if user is a registered School Administrator
-            const { data: adminSchools } = await supabaseClient
+            const { data: adminSchools, error: adminLookupError } = await supabaseClient
                 .from("schools")
                 .select("id, school_name, administrator_name")
                 .eq("administrator_email", userEmail)
                 .limit(1);
+
+            if (adminLookupError) {
+                throw new Error(`Could not verify school administrator access: ${adminLookupError.message}`);
+            }
 
             if (adminSchools && adminSchools.length > 0) {
                 currentUserRole = "school_admin";
                 assignedSchool = adminSchools[0];
                 roleLabel = "School Administrator";
             } else {
-                // 2. Check if user is an Assigned Subject Teacher
-                let teacherRecord = null;
-                try {
-                    const { data: tData } = await supabaseClient
-                        .from("school_teachers")
-                        .select("id, school_id, teacher_name, email, subject, schools(id, school_name)")
-                        .eq("email", userEmail)
-                        .limit(1);
-                    if (tData && tData.length > 0) {
-                        teacherRecord = tData[0];
-                    }
-                } catch (e) {
-                    console.warn("Could not query school_teachers table:", e);
-                }
+                const { data: teacherRecords, error: teacherLookupError } = await supabaseClient
+                    .from("school_teachers")
+                    .select("id, school_id, teacher_name, email, subject, schools(id, school_name)")
+                    .eq("email", userEmail)
+                    .limit(1);
 
-                // Check user metadata fallback
-                if (!teacherRecord && session.user.user_metadata?.role === "teacher") {
-                    teacherRecord = {
-                        school_id: session.user.user_metadata.school_id,
-                        teacher_name: session.user.user_metadata.full_name || userEmail,
-                        subject: session.user.user_metadata.subject || ""
-                    };
+                if (teacherLookupError) {
+                    throw new Error(`Could not verify teacher access: ${teacherLookupError.message}`);
                 }
-
-                // Check local backup storage fallback
-                if (!teacherRecord) {
-                    const localTeachers = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
-                    const match = localTeachers.find(t => t.email?.toLowerCase() === userEmail);
-                    if (match) {
-                        teacherRecord = match;
-                    }
-                }
+                const teacherRecord = teacherRecords?.[0];
 
                 if (teacherRecord && teacherRecord.school_id) {
                     currentUserRole = "teacher";
@@ -4320,12 +4716,15 @@ index.html
                     if (teacherRecord.schools?.school_name) {
                         assignedSchool = teacherRecord.schools;
                     } else {
-                        const { data: sData } = await supabaseClient
+                        const { data: sData, error: schoolLookupError } = await supabaseClient
                             .from("schools")
                             .select("id, school_name")
                             .eq("id", teacherRecord.school_id)
                             .single();
-                        assignedSchool = sData || { id: teacherRecord.school_id, school_name: "Assigned Institution" };
+                        if (schoolLookupError || !sData) {
+                            throw new Error(`Could not load the teacher's assigned school: ${schoolLookupError?.message || "School record not found."}`);
+                        }
+                        assignedSchool = sData;
                     }
                 } else {
                     await supabaseClient.auth.signOut();
@@ -4374,31 +4773,24 @@ index.html
 
         const kpiScopeText = document.getElementById("kpiScopeText");
         if (kpiScopeText) kpiScopeText.textContent = isOwner ? "Global Scope" : (assignedSchool?.school_name || "My School");
+        setDashboardRoleAccess(currentUserRole);
+
+        try {
+            const { error: activityError } = await supabaseClient.rpc("record_portal_login");
+            if (activityError) {
+                throw activityError;
+            }
+        } catch (activityError) {
+            console.error("Could not record portal sign-in:", activityError);
+            const activityStatus = document.getElementById("portalActivityStatus");
+            if (isOwner && activityStatus) {
+                activityStatus.textContent = "Sign-in tracking is unavailable. Apply the portal activity migration in Supabase to enable this feature.";
+            }
+        }
 
         // UI Role Customization
         if (currentUserRole === "teacher") {
-            // Subject Teacher (auth-based): access to Marksheets, Enrolled Learners, Reports, Zeraki Upload
-            const schoolCard = document.getElementById("schoolManagementCard");
-            if (schoolCard) schoolCard.hidden = true;
-            const schoolsTab = document.getElementById("tabBtnSchools");
-            if (schoolsTab) schoolsTab.hidden = true;
-            const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
-            if (btnSchoolsHeader) btnSchoolsHeader.hidden = true;
-            // Hide Print and Repository tabs for auth-based teachers too
-            const tabPrint = document.getElementById("tabBtnPrint");
-            if (tabPrint) tabPrint.hidden = true;
-            const tabRepo = document.getElementById("tabBtnRepository");
-            if (tabRepo) tabRepo.hidden = true;
-
-            // Auto-select subject if assigned
-            if (currentUserTeacherProfile?.subject && currentUserTeacherProfile.subject !== "all") {
-                const scoreSubject = document.getElementById("scoreSubject");
-                if (scoreSubject) scoreSubject.value = currentUserTeacherProfile.subject;
-                const uploadSubject = document.getElementById("uploadSubject");
-                if (uploadSubject) uploadSubject.value = currentUserTeacherProfile.subject;
-            }
-
-            // Default active tab to Subject Scores Marksheet
+            // Teachers land directly in their assigned subject workflow.
             switchPortalTab("teacherscores");
         } else if (currentUserRole === "school_admin") {
             // School Admin: manage teachers for their school, cannot create/delete schools
@@ -4426,6 +4818,11 @@ index.html
 
         await loadUploadSchools(isOwner);
         await updateLearnerCountKPI();
+        document.body.classList.remove("auth-pending");
+        if (isOwner) {
+            await loadPortalActivity();
+            setInterval(loadPortalActivity, 60000);
+        }
     }
 
     async function logout() {
@@ -4435,19 +4832,23 @@ index.html
     }
 
     async function updateLearnerCountKPI() {
-        try {
-            let query = supabaseClient.from("learners").select("*", { count: "exact", head: true });
-            if (currentUserSchool?.id && currentUserRole !== "owner") {
-                query = query.eq("school_id", currentUserSchool.id);
-            }
-            const { count, error } = await query;
-            if (!error && count !== null) {
-                const kpi = document.getElementById("kpiLearnersCount");
-                if (kpi) kpi.textContent = count;
-                const badge = document.getElementById("badgeEnrollmentCount");
-                if (badge) badge.textContent = `${count} Students`;
-            }
-        } catch {}
+        let query = supabaseClient.from("learners").select("*", { count: "exact", head: true });
+        if (currentUserSchool?.id && currentUserRole !== "owner") {
+            query = query.eq("school_id", currentUserSchool.id);
+        }
+        const { count, error } = await query;
+        const kpi = document.getElementById("kpiLearnersCount");
+        const badge = document.getElementById("badgeEnrollmentCount");
+        if (error) {
+            console.error("Could not load learner count:", error);
+            if (kpi) kpi.textContent = "Unavailable";
+            if (badge) badge.textContent = "Unavailable";
+            return;
+        }
+        if (count !== null) {
+            if (kpi) kpi.textContent = count;
+            if (badge) badge.textContent = `${count} Students`;
+        }
     }
 
     // Populate Schools into all Select elements
@@ -4464,7 +4865,7 @@ index.html
             data: { session }
         } = await supabaseClient.auth.getSession();
 
-        if (!session) return;
+        if (!session) throw new Error("Your sign-in has expired. Sign in again to load school data.");
 
         let schoolQuery = supabaseClient
             .from("schools")
@@ -4480,7 +4881,10 @@ index.html
         }
 
         const { data: schools, error } = await schoolQuery;
-        if (error) return;
+        if (error) {
+            console.error("Could not load assigned schools:", error);
+            throw new Error(`Could not load assigned schools: ${error.message}`);
+        }
 
         const targets = [select, printSelect, enrollSelect, scoreSelect, teacherSchoolSelect].filter(Boolean);
         targets.forEach((schoolSelect) => {
@@ -5091,7 +5495,7 @@ index.html
         if (streamFilter) {
             const currentStream = streamFilter.value;
             const streams = Array.from(new Set(learners.map(l => (l.class || "").trim()).filter(Boolean))).sort();
-            streamFilter.innerHTML = `<option value="">All Streams (${learners.length} Students)</option>` + 
+            streamFilter.innerHTML = `<option value="">All Streams (${learners.length} Students)</option>` +
                 streams.map(s => `<option value="${escapePrintText(s)}">Stream: ${escapePrintText(s)}</option>`).join("");
             if (streams.includes(currentStream)) {
                 streamFilter.value = currentStream;
@@ -5226,7 +5630,7 @@ index.html
             if (rubEl) rubEl.innerHTML = getRubricShortBadge(updatedObj.aggregate_rubric);
         }
 
-        // Chunked batch saving to ensure enterprise scalability without request timeouts
+        // Chunked batch saving to ensure school scalability without request timeouts
         const chunkSize = 50;
         let saveError = null;
         let savedCount = 0;
@@ -5447,12 +5851,12 @@ index.html
             <div class="print-broadsheet-page">
                 <div class="print-school-header">
                     <h1 class="print-school-name">${escapePrintText(d.schoolName.toUpperCase())}</h1>
-                    <div class="print-doc-title">OFFICIAL GRADE OVERALL MERIT BROADSHEET & RESULTS ANALYSIS</div>
+                    <div class="print-doc-title">GRADE OVERALL MERIT BROADSHEET & RESULTS ANALYSIS</div>
                     <div class="print-doc-meta">
-                        <span><strong>Grade:</strong> ${escapePrintText(d.grade)}</span> &bull; 
-                        <span><strong>Term:</strong> ${escapePrintText(d.term)}</span> &bull; 
-                        <span><strong>Academic Year:</strong> ${d.year}</span> &bull; 
-                        <span><strong>Enrolled Candidates:</strong> ${d.total}</span> &bull; 
+                        <span><strong>Grade:</strong> ${escapePrintText(d.grade)}</span> &bull;
+                        <span><strong>Term:</strong> ${escapePrintText(d.term)}</span> &bull;
+                        <span><strong>Academic Year:</strong> ${d.year}</span> &bull;
+                        <span><strong>Enrolled Candidates:</strong> ${d.total}</span> &bull;
                         <span><strong>Grade Mean AGG:</strong> ${d.meanAgg}</span>
                     </div>
                 </div>
@@ -5585,7 +5989,7 @@ index.html
                 .eq("grade", grade);
 
             const streams = Array.from(new Set((learners || []).map(l => (l.class || "").trim()).filter(Boolean))).sort();
-            streamSelect.innerHTML = '<option value="">All Streams (' + (learners?.length || 0) + ' Learners)</option>' + 
+            streamSelect.innerHTML = '<option value="">All Streams (' + (learners?.length || 0) + ' Learners)</option>' +
                 streams.map(s => `<option value="${escapePrintText(s)}">Stream: ${escapePrintText(s)}</option>`).join("");
         } catch (e) {
             console.warn("Could not populate print streams:", e);
@@ -5738,10 +6142,10 @@ index.html
                     <!-- 1. School Name -->
                     <div class="print-school-header">
                         <h1 class="print-school-name">${escapePrintText(schoolName)}</h1>
-                        <div class="print-doc-title">OFFICIAL LEARNER TERMINAL ASSESSMENT REPORT</div>
+                        <div class="print-doc-title">LEARNER TERMINAL ASSESSMENT REPORT</div>
                         <div class="print-doc-meta">
-                            <span><strong>Grade:</strong> ${escapePrintText(grade)}</span> &bull; 
-                            <span><strong>Term:</strong> ${escapePrintText(term)}</span> &bull; 
+                            <span><strong>Grade:</strong> ${escapePrintText(grade)}</span> &bull;
+                            <span><strong>Term:</strong> ${escapePrintText(term)}</span> &bull;
                             <span><strong>Academic Year:</strong> ${new Date().getFullYear()}</span>
                         </div>
                     </div>
@@ -5777,9 +6181,9 @@ index.html
                         <div class="print-legend-row">
                             <div class="print-legend-col">
                                 <strong>CBC Performance Rubric:</strong>
-                                EE1 = Exceeding 1 (64-72) &bull; EE2 = Exceeding 2 (55-63) &bull; 
-                                ME1 = Meeting 1 (46-54) &bull; ME2 = Meeting 2 (37-45) &bull; 
-                                AE1 = Approaching 1 (28-36) &bull; AE2 = Approaching 2 (19-27) &bull; 
+                                EE1 = Exceeding 1 (64-72) &bull; EE2 = Exceeding 2 (55-63) &bull;
+                                ME1 = Meeting 1 (46-54) &bull; ME2 = Meeting 2 (37-45) &bull;
+                                AE1 = Approaching 1 (28-36) &bull; AE2 = Approaching 2 (19-27) &bull;
                                 BE1 = Below 1 (10-18) &bull; BE2 = Below 2 (0-9)
                             </div>
                         </div>
@@ -5873,10 +6277,10 @@ index.html
     }
 
     // =========================================================================
-    // MODULE 5: ZERAKI RESULTS INGESTION HUB & SPREADSHEET ENGINE
+    // MODULE 5: RESULTS RESULTS INGESTION HUB & SPREADSHEET ENGINE
     // =========================================================================
-    let parsedZerakiRows = [];
-    let activeZerakiFile = null;
+    let parsedResultsRows = [];
+    let activeResultsFile = null;
 
     function toggleUploadMode() {
         const mode = document.getElementById("uploadMode").value;
@@ -5889,9 +6293,9 @@ index.html
     function handleUploadScopeChange() {
         const schoolId = document.getElementById("uploadSchool").value;
         const grade = document.getElementById("uploadGrade").value;
-        const note = document.getElementById("zerakiTemplateNote");
+        const note = document.getElementById("resultsTemplateNote");
         if (schoolId && grade) {
-            note.textContent = `💡 Ready to generate Zeraki template for ${grade}.`;
+            note.textContent = `💡 Ready to generate Results template for ${grade}.`;
         }
     }
 
@@ -5911,7 +6315,7 @@ index.html
         switchPortalTab("teacherscores");
     }
 
-    async function downloadZerakiTemplate() {
+    async function downloadResultsTemplate() {
         const schoolId = document.getElementById("uploadSchool").value;
         const grade = document.getElementById("uploadGrade").value;
         const term = document.getElementById("uploadTerm").value;
@@ -5926,7 +6330,7 @@ index.html
             return;
         }
 
-        status.textContent = `Generating Zeraki mark template for ${grade}...`;
+        status.textContent = `Generating Results mark template for ${grade}...`;
 
         // 1. Fetch registered learners for this school & grade
         const { data: learners } = await supabaseClient
@@ -5974,47 +6378,47 @@ index.html
         // 4. Build Excel file via SheetJS
         const worksheet = XLSX.utils.aoa_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Zeraki_Marksheet");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Results_Marksheet");
 
         const cleanGrade = grade.replace(/\s+/g, "");
         const filename = mode === "subject"
-            ? `Zeraki_${cleanGrade}_${subjectKey}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`
-            : `Zeraki_Broadsheet_${cleanGrade}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`;
+            ? `Results_${cleanGrade}_${subjectKey}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`
+            : `Results_Broadsheet_${cleanGrade}_${term.replace(/\s+/g, "")}_A${assessment}.xlsx`;
 
         XLSX.writeFile(workbook, filename);
-        status.textContent = `✅ Downloaded Zeraki Excel template: ${filename}. Enter scores and upload below.`;
+        status.textContent = `✅ Downloaded Results Excel template: ${filename}. Enter scores and upload below.`;
     }
 
-    function triggerZerakiFileInput() {
+    function triggerResultsFileInput() {
         document.getElementById("resultsFile").click();
     }
 
     function handleDragOver(e) {
         e.preventDefault();
-        document.getElementById("zerakiDropzone")?.classList.add("is-dragover");
+        document.getElementById("resultsDropzone")?.classList.add("is-dragover");
     }
 
     function handleDragLeave(e) {
         e.preventDefault();
-        document.getElementById("zerakiDropzone")?.classList.remove("is-dragover");
+        document.getElementById("resultsDropzone")?.classList.remove("is-dragover");
     }
 
     function handleFileDrop(e) {
         e.preventDefault();
-        document.getElementById("zerakiDropzone")?.classList.remove("is-dragover");
+        document.getElementById("resultsDropzone")?.classList.remove("is-dragover");
         if (e.dataTransfer?.files?.length) {
-            processZerakiFile(e.dataTransfer.files[0]);
+            processResultsFile(e.dataTransfer.files[0]);
         }
     }
 
-    function handleZerakiFileSelect(input) {
+    function handleResultsFileSelect(input) {
         if (input.files?.length) {
-            processZerakiFile(input.files[0]);
+            processResultsFile(input.files[0]);
         }
     }
 
-    async function processZerakiFile(file) {
-        activeZerakiFile = file;
+    async function processResultsFile(file) {
+        activeResultsFile = file;
         const status = document.getElementById("uploadStatus");
         const schoolId = document.getElementById("uploadSchool").value;
         const grade = document.getElementById("uploadGrade").value;
@@ -6034,9 +6438,9 @@ index.html
             return;
         }
 
-        status.textContent = `Parsing ${file.name} with Zeraki Ingestion Engine...`;
-        document.getElementById("zerakiDropTitle").textContent = `📄 Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-        document.getElementById("zerakiDropSub").textContent = "File loaded. Parsing learner rows and mapping subject scores...";
+        status.textContent = `Parsing ${file.name} with Results Ingestion Engine...`;
+        document.getElementById("resultsDropTitle").textContent = `📄 Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        document.getElementById("resultsDropSub").textContent = "File loaded. Parsing learner rows and mapping subject scores...";
 
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -6102,7 +6506,7 @@ index.html
                 const existingMap = new Map();
                 (existingResults || []).forEach(r => existingMap.set(r.learner_id, r));
 
-                parsedZerakiRows = [];
+                parsedResultsRows = [];
                 let totalPointsSum = 0;
                 let scoredCount = 0;
 
@@ -6166,7 +6570,7 @@ index.html
                         scoredCount++;
                     }
 
-                    parsedZerakiRows.push({
+                    parsedResultsRows.push({
                         learner_id: learnerId,
                         assessment_number: assessNo,
                         learner_name: learnerName,
@@ -6177,16 +6581,16 @@ index.html
                     });
                 }
 
-                // 5. Render Zeraki Telemetry KPI Stats
-                document.getElementById("kpiZerakiTotal").textContent = dbLearners?.length || 0;
-                document.getElementById("kpiZerakiMatched").textContent = `${parsedZerakiRows.length} rows parsed (${parsedZerakiRows.filter(p => p.is_registered).length} matched)`;
-                document.getElementById("kpiZerakiMean").textContent = scoredCount > 0 ? (totalPointsSum / scoredCount).toFixed(2) : "--";
-                document.getElementById("kpiZerakiState").textContent = "Ready for Verification";
-                document.getElementById("zerakiKpiBar").style.display = "grid";
+                // 5. Render Results Telemetry KPI Stats
+                document.getElementById("kpiResultsTotal").textContent = dbLearners?.length || 0;
+                document.getElementById("kpiResultsMatched").textContent = `${parsedResultsRows.length} rows parsed (${parsedResultsRows.filter(p => p.is_registered).length} matched)`;
+                document.getElementById("kpiResultsMean").textContent = scoredCount > 0 ? (totalPointsSum / scoredCount).toFixed(2) : "--";
+                document.getElementById("kpiResultsState").textContent = "Ready for Verification";
+                document.getElementById("resultsKpiBar").style.display = "grid";
 
                 // 6. Render Parsed Preview Table
-                const tbody = document.getElementById("zerakiPreviewBody");
-                tbody.innerHTML = parsedZerakiRows.map((item, idx) => {
+                const tbody = document.getElementById("resultsPreviewBody");
+                tbody.innerHTML = parsedResultsRows.map((item, idx) => {
                     const matchBadge = item.is_registered
                         ? `<span class="status-badge-inline badge-published">Matched</span>`
                         : `<span class="status-badge-inline badge-draft">New Entry</span>`;
@@ -6201,11 +6605,11 @@ index.html
                                 <input
                                     type="number"
                                     step="any"
-                                    class="points-input zeraki-edit-score"
+                                    class="points-input results-edit-score"
                                     data-row-index="${idx}"
                                     value="${item.primary_score}"
                                     placeholder="0-8"
-                                    onchange="updateZerakiRowScore(${idx}, this.value)"
+                                    onchange="updateResultsRowScore(${idx}, this.value)"
                                 >
                             </td>
                             <td><strong id="zagg_${idx}">${item.result_obj.aggregate_points || "—"}</strong></td>
@@ -6215,8 +6619,8 @@ index.html
                     `;
                 }).join("");
 
-                document.getElementById("zerakiPreviewSection").style.display = "block";
-                status.textContent = `⚡ Zeraki parsed ${parsedZerakiRows.length} learner records. Review and approve changes below.`;
+                document.getElementById("resultsPreviewSection").style.display = "block";
+                status.textContent = `⚡ Results parsed ${parsedResultsRows.length} learner records. Review and approve changes below.`;
             } catch (err) {
                 status.textContent = `Error reading file: ${err.message}`;
             }
@@ -6224,9 +6628,9 @@ index.html
         reader.readAsArrayBuffer(file);
     }
 
-    function updateZerakiRowScore(index, newScore) {
-        if (!parsedZerakiRows[index]) return;
-        const item = parsedZerakiRows[index];
+    function updateResultsRowScore(index, newScore) {
+        if (!parsedResultsRows[index]) return;
+        const item = parsedResultsRows[index];
         const subjectKey = document.getElementById("uploadSubject").value;
         item.primary_score = newScore;
         item.result_obj[subjectKey] = newScore !== "" ? newScore : null;
@@ -6250,14 +6654,14 @@ index.html
         if (rubEl) rubEl.innerHTML = getRubricShortBadge(item.result_obj.aggregate_rubric);
     }
 
-    async function commitZerakiResults(isPublish = false) {
+    async function commitResultsResults(isPublish = false) {
         const status = document.getElementById("uploadStatus");
         const schoolId = document.getElementById("uploadSchool").value;
         const grade = document.getElementById("uploadGrade").value;
         const term = document.getElementById("uploadTerm").value;
         const assessmentPeriod = Number(document.getElementById("uploadAssessment").value);
 
-        if (!parsedZerakiRows || !parsedZerakiRows.length) {
+        if (!parsedResultsRows || !parsedResultsRows.length) {
             status.textContent = "No parsed records to save.";
             return;
         }
@@ -6265,7 +6669,7 @@ index.html
         status.textContent = isPublish ? "Publishing scores to DRMS institutional database..." : "Saving records as Draft...";
 
         // 1. If any learners are new/unregistered, enroll them into public.learners first
-        for (const row of parsedZerakiRows) {
+        for (const row of parsedResultsRows) {
             if (!row.is_registered || String(row.learner_id).startsWith("virt_")) {
                 const { data: newLearner } = await supabaseClient
                     .from("learners")
@@ -6288,7 +6692,7 @@ index.html
         }
 
         // 2. Upsert scores into public.results
-        const upsertRows = parsedZerakiRows.map(r => r.result_obj);
+        const upsertRows = parsedResultsRows.map(r => r.result_obj);
         let { error: resErr } = await supabaseClient
             .from("results")
             .upsert(upsertRows, { onConflict: "learner_id,term,assessment_period" });
@@ -6311,18 +6715,18 @@ index.html
         }
 
         // 3. Store raw uploaded file in Supabase Storage and result_uploads table for institutional repository
-        if (activeZerakiFile && currentUserSession?.user?.id) {
+        if (activeResultsFile && currentUserSession?.user?.id) {
             try {
-                const safeFileName = activeZerakiFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                const safeFileName = activeResultsFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
                 const safeGrade = grade.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
                 const safeTerm = term.toLowerCase().replace(/\s+/g, "-");
                 const filePath = `${currentUserSession.user.id}/${schoolId}/${safeTerm}/${safeGrade}/assessment-${assessmentPeriod}/${Date.now()}-${safeFileName}`;
 
-                await supabaseClient.storage.from("results").upload(filePath, activeZerakiFile, { cacheControl: "3600", upsert: true });
+                await supabaseClient.storage.from("results").upload(filePath, activeResultsFile, { cacheControl: "3600", upsert: true });
                 await supabaseClient.from("result_uploads").insert({
-                    file_name: activeZerakiFile.name,
+                    file_name: activeResultsFile.name,
                     storage_path: filePath,
-                    file_type: activeZerakiFile.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    file_type: activeResultsFile.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     school_id: schoolId,
                     uploaded_by: currentUserSession.user.id,
                     term,
@@ -6334,8 +6738,8 @@ index.html
             }
         }
 
-        document.getElementById("kpiZerakiState").textContent = isPublish ? "Published (Official)" : "Saved Draft";
-        document.getElementById("kpiZerakiState").style.color = isPublish ? "#10b981" : "#d97706";
+        document.getElementById("kpiResultsState").textContent = isPublish ? "Published (Official)" : "Saved Draft";
+        document.getElementById("kpiResultsState").style.color = isPublish ? "#10b981" : "#d97706";
 
         status.textContent = isPublish
             ? `🚀 Success! ${upsertRows.length} learner results officially published! Grade broadsheet and terminal slips updated.`
@@ -6348,14 +6752,14 @@ index.html
         }
     }
 
-    function resetZerakiUpload() {
-        parsedZerakiRows = [];
-        activeZerakiFile = null;
+    function resetResultsUpload() {
+        parsedResultsRows = [];
+        activeResultsFile = null;
         document.getElementById("resultsFile").value = "";
-        document.getElementById("zerakiPreviewSection").style.display = "none";
-        document.getElementById("zerakiKpiBar").style.display = "none";
-        document.getElementById("zerakiDropTitle").textContent = "Drag & Drop Zeraki Results Spreadsheet (.xlsx / .csv) Here, or Click to Browse";
-        document.getElementById("zerakiDropSub").textContent = "Automatic column matching, learner identification, aggregate recalculation, and draft preview.";
+        document.getElementById("resultsPreviewSection").style.display = "none";
+        document.getElementById("resultsKpiBar").style.display = "none";
+        document.getElementById("resultsDropTitle").textContent = "Drag and drop an Excel or CSV results file here, or click to browse";
+        document.getElementById("resultsDropSub").textContent = "Automatic column matching, learner identification, aggregate recalculation, and draft preview.";
         document.getElementById("uploadStatus").textContent = "";
     }
 
@@ -6367,76 +6771,45 @@ index.html
         const name = document.getElementById("teacherFullName").value.trim();
         const email = document.getElementById("teacherEmail").value.trim().toLowerCase();
         const subject = document.getElementById("teacherSubject").value;
-        const password = document.getElementById("teacherInitialPassword").value;
         const status = document.getElementById("teacherAssignStatus");
         const btn = document.getElementById("btnAssignTeacher");
 
-        if (!schoolId || !name || !email || !password) {
-            status.textContent = "Please fill in all teacher details and initial password.";
+        if (currentUserRole !== "owner" && (currentUserRole !== "school_admin" || schoolId !== currentUserSchool?.id)) {
+            showToast("You can only assign teachers to a school you administer.", "warning", "Access Restricted");
+            return;
+        }
+
+        if (!schoolId || !name || !email) {
+            status.textContent = "Please provide the school, teacher name, email, and learning area.";
             return;
         }
 
         btn.disabled = true;
-        status.textContent = `Assigning account for ${name} (${email})...`;
+        status.textContent = `Saving teacher assignment for ${name} (${email})...`;
 
         try {
-            // 1. Sign up auth account in Supabase
-            const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: name,
-                        role: "teacher",
-                        school_id: schoolId,
-                        subject: subject
-                    }
-                }
-            });
-
-            if (authErr && !authErr.message?.includes("already registered")) {
-                status.textContent = `Authentication assignment error: ${authErr.message}`;
-                btn.disabled = false;
-                return;
-            }
-
-            // 2. Insert into school_teachers table
-            const { error: dbErr } = await supabaseClient
+            const { error } = await supabaseClient
                 .from("school_teachers")
                 .insert({
                     school_id: schoolId,
                     teacher_name: name,
-                    email: email,
+                    email,
                     subject: subject,
                     created_by: currentUserSession?.user?.id
                 });
 
-            // 3. Save to localStorage backup
-            const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
-            const existingIdx = localBackup.findIndex(t => t.email?.toLowerCase() === email);
-            const teacherObj = {
-                id: authData?.user?.id || `tr_${Date.now()}`,
-                school_id: schoolId,
-                teacher_name: name,
-                email: email,
-                subject: subject,
-                created_at: new Date().toISOString()
-            };
-
-            if (existingIdx >= 0) {
-                localBackup[existingIdx] = teacherObj;
-            } else {
-                localBackup.push(teacherObj);
+            if (error) {
+                throw new Error(error.message);
             }
-            localStorage.setItem("drms_teachers_backup", JSON.stringify(localBackup));
 
-            status.textContent = `✅ Teacher account assigned for ${name}! Initial password: "${password}". They can log in immediately and change their password via "🔑 Change Password".`;
+            status.textContent = `Teacher assignment saved for ${name}. The teacher must have a Supabase Auth account using ${email} before signing in.`;
 
             document.getElementById("teacherFullName").value = "";
             document.getElementById("teacherEmail").value = "";
             await renderSchoolTeachers();
         } catch (err) {
-            status.textContent = `Error: ${err.message}`;
+            console.error("Could not save teacher assignment:", err);
+            status.textContent = `Could not save teacher assignment: ${err.message || "Database request failed."}`;
         } finally {
             btn.disabled = false;
         }
@@ -6452,22 +6825,24 @@ index.html
             return;
         }
 
-        let teachers = [];
-        try {
-            const { data, error } = await supabaseClient
-                .from("school_teachers")
-                .select("id, teacher_name, email, subject, school_id, schools(school_name)")
-                .eq("school_id", schoolId);
-            if (!error && data) teachers = data;
-        } catch {}
+        if (currentUserRole === "school_admin" && schoolId !== currentUserSchool?.id) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:var(--danger); padding:16px;'>You can only view staff assigned to your school.</td></tr>";
+            return;
+        }
+        if (currentUserRole !== "owner" && currentUserRole !== "school_admin") {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:var(--danger); padding:16px;'>Staff management is not available for your account.</td></tr>";
+            return;
+        }
 
-        // Merge local backup
-        const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
-        localBackup.filter(t => t.school_id === schoolId).forEach(lt => {
-            if (!teachers.some(t => t.email?.toLowerCase() === lt.email?.toLowerCase())) {
-                teachers.push(lt);
-            }
-        });
+        const { data: teachers, error } = await supabaseClient
+            .from("school_teachers")
+            .select("id, teacher_name, email, subject, school_id, schools(school_name)")
+            .eq("school_id", schoolId);
+        if (error) {
+            console.error("Could not load school staff:", error);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:16px;">Could not load staff: ${escapePrintText(error.message)}</td></tr>`;
+            return;
+        }
 
         if (!teachers.length) {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">No teachers assigned to this institution yet. Add a teacher above.</td></tr>`;
@@ -6486,7 +6861,7 @@ index.html
                     <td>${escapePrintText(schoolName)}</td>
                     <td>
                         <button type="button" class="remove-school" style="padding:4px 8px; font-size:11px;" onclick="deleteTeacherItem('${t.id}', '${escapePrintText(t.teacher_name)}')">
-                            Revoke
+                            Unassign
                         </button>
                     </td>
                 </tr>
@@ -6495,16 +6870,25 @@ index.html
     }
 
     async function deleteTeacherItem(teacherId, name) {
-        if (!confirm(`Are you sure you want to revoke teacher account for "${name}"?`)) return;
-        try {
-            await supabaseClient.from("school_teachers").delete().eq("id", teacherId);
-        } catch {}
+        if (currentUserRole !== "owner" && currentUserRole !== "school_admin") {
+            showToast("Staff management is not available for your account.", "warning", "Access Restricted");
+            return;
+        }
+        if (!confirm(`Remove ${name} from the school staff assignment list? This does not delete their Supabase Auth account.`)) return;
 
-        // Update local storage backup
-        const localBackup = JSON.parse(localStorage.getItem("drms_teachers_backup") || "[]");
-        const filtered = localBackup.filter(t => t.id !== teacherId && t.teacher_name !== name);
-        localStorage.setItem("drms_teachers_backup", JSON.stringify(filtered));
-
+        let query = supabaseClient.from("school_teachers").delete().eq("id", teacherId);
+        if (currentUserRole === "school_admin") {
+            query = query.eq("school_id", currentUserSchool.id);
+        }
+        const { data, error } = await query.select("id");
+        if (error) {
+            showToast(`Could not remove staff assignment: ${error.message}`, "error", "Database Error");
+            return;
+        }
+        if (!data?.length) {
+            showToast("No matching staff assignment was removed. Check your access and try again.", "warning", "Assignment Not Changed");
+            return;
+        }
         await renderSchoolTeachers();
     }
 
@@ -6798,7 +7182,7 @@ index.html
                 <div class="repo-empty-card">
                     <div class="repo-empty-icon">📂</div>
                     <h3>No Results Uploaded Yet for ${escapePrintText(schoolName)}</h3>
-                    <p>There are no uploaded result spreadsheets or broadsheets stored for this school yet. Upload Zeraki or custom Excel spreadsheets in the Upload tab and they will automatically appear here organized by grade.</p>
+                    <p>No result files have been uploaded for this school yet. Upload an Excel results file from the Upload Results tab to see it organized by grade.</p>
                     <button type="button" class="btn-primary-action" onclick="switchPortalTab('upload')">
                         <span>➕ Go to Results Upload</span>
                     </button>
@@ -7118,8 +7502,8 @@ index.html
     let parentDispatchLearnersCache = [];
 
     async function populateParentDispatchLearners() {
-        const schoolId = document.getElementById("globalHeaderSchool")?.value || 
-                         document.getElementById("printSchool")?.value || 
+        const schoolId = document.getElementById("globalHeaderSchool")?.value ||
+                         document.getElementById("printSchool")?.value ||
                          document.getElementById("scoreSchool")?.value;
         const grade = document.getElementById("parentDispatchGrade")?.value;
         const learnerSelect = document.getElementById("parentDispatchLearner");
@@ -7148,7 +7532,7 @@ index.html
             }
 
             parentDispatchLearnersCache = learners;
-            learnerSelect.innerHTML = '<option value="">Select student...</option>' + 
+            learnerSelect.innerHTML = '<option value="">Select student...</option>' +
                 learners.map(l => `<option value="${l.id}">${escapePrintText(l.learner_name)} (${escapePrintText(l.assessment_number)})${l.class ? ' - ' + escapePrintText(l.class) : ''}</option>`).join("");
 
             if (learners.length > 0) {
@@ -7339,7 +7723,9 @@ index.html
             .select("id, school_name, administrator_name, administrator_email, created_at")
             .order("created_at", { ascending: false });
 
-        if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
+        if (currentUserRole === "school_admin" && currentUserSchool?.id) {
+            query = query.eq("id", currentUserSchool.id);
+        } else if (session.user.email?.toLowerCase() !== PORTAL_OWNER_EMAIL) {
             query = query.eq("created_by", session.user.id);
         }
 
@@ -7368,15 +7754,19 @@ index.html
                     <strong>${escapePrintText(s.school_name)}</strong>
                     <span>${escapePrintText(s.administrator_name || 'No Admin Name')} (${escapePrintText(s.administrator_email || 'No Email')})</span>
                 </div>
-                <div class="school-actions">
+                ${currentUserRole === "owner" ? `<div class="school-actions">
                     <button type="button" class="edit-school" onclick="editSchoolItem('${s.id}', '${escapePrintText(s.school_name)}', '${escapePrintText(s.administrator_name || '')}', '${escapePrintText(s.administrator_email || '')}')">Edit</button>
                     <button type="button" class="remove-school" onclick="deleteSchoolItem('${s.id}', '${escapePrintText(s.school_name)}')">Remove</button>
-                </div>
+                </div>` : ""}
             </li>
         `).join("");
     }
 
     function editSchoolItem(id, name, admin, email) {
+        if (currentUserRole !== "owner") {
+            showToast("Only the portal owner can edit school records.", "warning", "Access Restricted");
+            return;
+        }
         editingSchoolId = id;
         document.getElementById("schoolName").value = name;
         document.getElementById("schoolAdmin").value = admin;
@@ -7386,6 +7776,10 @@ index.html
     }
 
     async function deleteSchoolItem(id, name) {
+        if (currentUserRole !== "owner") {
+            showToast("Only the portal owner can remove schools.", "warning", "Access Restricted");
+            return;
+        }
         if (!confirm(`Are you sure you want to remove school "${name}"?`)) return;
         const { error } = await supabaseClient.from("schools").delete().eq("id", id);
         if (error) {
@@ -7397,6 +7791,10 @@ index.html
     }
 
     async function saveSchool() {
+        if (currentUserRole !== "owner") {
+            showToast("Only the portal owner can manage school records.", "warning", "Access Restricted");
+            return;
+        }
         const name = document.getElementById("schoolName").value.trim();
         const admin = document.getElementById("schoolAdmin").value.trim();
         const adminEmail = document.getElementById("schoolAdminEmail").value.trim().toLowerCase();
@@ -7449,75 +7847,45 @@ index.html
     }
 
     // =========================================================================
-    // TEACHER ACCESS CODE SESSION: Restricted Dashboard Helpers
-    // =========================================================================
-    function applyTeacherCodeRestrictions(teacherSession) {
-        // Hide all admin-only tabs and header buttons
-        const hiddenTabs = ["tabBtnPrint", "tabBtnUpload", "tabBtnRepository", "tabBtnSchools"];
-        hiddenTabs.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.hidden = true;
-        });
-
-        // Hide admin-only header buttons
-        const btnSchoolsHeader = document.getElementById("btnManageSchoolsHeader");
-        if (btnSchoolsHeader) btnSchoolsHeader.hidden = true;
-        const btnPasswordHeader = document.getElementById("btnChangePasswordHeader");
-        if (btnPasswordHeader) btnPasswordHeader.hidden = true;
-
-        // Hide school management and teacher management cards
-        const schoolCard = document.getElementById("schoolManagementCard");
-        if (schoolCard) schoolCard.hidden = true;
-        const teacherCard = document.getElementById("teacherManagementCard");
-        if (teacherCard) teacherCard.hidden = true;
-
-        // Auto-select subject for the teacher's assigned learning area
-        if (teacherSession.subject && teacherSession.subject !== "all") {
-            const scoreSubject = document.getElementById("scoreSubject");
-            if (scoreSubject) {
-                scoreSubject.value = teacherSession.subject;
-                scoreSubject.disabled = true; // Lock to their assigned subject
-            }
-        }
-
-        // Default to Subject Scores Entry tab
-        switchPortalTab("teacherscores");
-    }
-
-    async function loadSchoolDropdownsForCodeTeacher(teacherSession) {
-        const schoolId = teacherSession.school_id;
-        const schoolName = teacherSession.school_name || "Assigned School";
-
-        // Populate all school dropdown selects with just this teacher's school
-        const selectIds = ["uploadSchool", "printSchool", "enrollSchool", "scoreSchool", "teacherAssignSchool"];
-        selectIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.innerHTML = `<option value="${schoolId}">${escapePrintText(schoolName)}</option>`;
-                el.value = schoolId;
-                el.disabled = true;
-            }
-        });
-
-        // Trigger initial marksheet load
-        loadSubjectMarksheet();
-    }
-
-    // Override logout for code-auth teachers
-    const _originalLogout = logout;
-    async function logout() {
-        sessionStorage.removeItem("drms_teacher_session");
-        try {
-            await supabaseClient.auth.signOut();
-        } catch {}
-        window.location.href = "Admin.html";
-    }
-
-    // =========================================================================
     // Initialize Application
     // =========================================================================
     document.addEventListener("DOMContentLoaded", () => {
-        checkLogin();
+        const menu = document.getElementById("workspaceNavigation");
+        const menuActions = menu?.querySelector(".workspace-menu-actions");
+        const header = document.querySelector(".portal-header-right");
+        if (menu && menuActions && header) {
+            header.appendChild(menu);
+            menuActions.append(
+                document.getElementById("btnManageSchoolsHeader"),
+                document.getElementById("btnChangePasswordHeader")
+            );
+        }
+
+        document.addEventListener("click", (event) => {
+            if (!event.target.closest(".portal-header-right")) {
+                toggleWorkspaceMenu(false);
+            }
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !menu?.hidden) {
+                toggleWorkspaceMenu(false);
+                document.getElementById("workspaceMenuToggle")?.focus();
+            }
+            if (event.key === "Escape" && !document.getElementById("myProfileModal")?.hidden) {
+                closeMyProfile();
+            }
+        });
+
+        checkLogin().catch((error) => {
+            console.error("Dashboard access setup failed:", error);
+            setDashboardRoleAccess(null);
+            showToast(
+                `Your role or school data could not be verified. Reload and try again. ${error.message || ""}`,
+                "error",
+                "Dashboard unavailable"
+            );
+        });
 
         const schoolSearch = document.getElementById("schoolSearch");
         if (schoolSearch) {
